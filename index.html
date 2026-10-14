@@ -1,0 +1,145 @@
+
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17152b">
+  <title>Swar Sadhika AI — WebGPU Test</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #17152b;
+      color: #f7f4ff;
+    }
+    body {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 { font-size: 1.8rem; }
+    .panel {
+      margin: 16px 0;
+      padding: 18px;
+      border: 1px solid #51476d;
+      border-radius: 14px;
+      background: #211e39;
+    }
+    .status { overflow-wrap: anywhere; line-height: 1.65; }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #d8b4fe;
+      color: #21152e;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .note { color: #d0c9e2; line-height: 1.6; }
+    code { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <h1>स्वर साधिका AI</h1>
+  <p class="note">प्रारम्भिक WebGPU क्षमता परीक्षण</p>
+
+  <section class="panel">
+    <h2>परीक्षण की स्थिति</h2>
+    <div id="status" class="status" aria-live="polite">
+      परीक्षण शुरू नहीं हुआ है।
+    </div>
+  </section>
+
+  <button id="testButton" type="button">WebGPU परीक्षण चलाएँ</button>
+
+  <section class="panel">
+    <h2>इस परीक्षण का अर्थ</h2>
+    <p>यह पृष्ठ जाँचता है कि ब्राउज़र WebGPU API उपलब्ध कराता है या नहीं,
+    GPU adapter मिलता है या नहीं, और GPU device बनाया जा सकता है या नहीं।</p>
+    <p><strong>यह गायन मॉडल का परीक्षण नहीं है।</strong> अभी इस पृष्ठ में
+    कोई AI singing model या मानव-सदृश गायन इंजन शामिल नहीं है।</p>
+  </section>
+
+  <script>
+    const statusBox = document.getElementById("status");
+    const testButton = document.getElementById("testButton");
+
+    function show(message) {
+      statusBox.textContent = message;
+    }
+
+    async function runTest() {
+      testButton.disabled = true;
+      testButton.textContent = "परीक्षण चल रहा है…";
+
+      try {
+        show("1/3 — ब्राउज़र की WebGPU सुविधा जाँची जा रही है…");
+
+        if (!("gpu" in navigator) || !navigator.gpu) {
+          show(
+            "परिणाम: WebGPU API उपलब्ध नहीं है।\n\n" +
+            "संभावित कारण: ब्राउज़र समर्थन, डिवाइस, सेटिंग या सुरक्षा नीति। " +
+            "इस परिणाम से अकेले यह सिद्ध नहीं होता कि फोन का GPU अनुपयोगी है।"
+          );
+          return;
+        }
+
+        show("2/3 — GPU adapter माँगा जा रहा है…");
+        const adapter = await navigator.gpu.requestAdapter();
+
+        if (!adapter) {
+          show(
+            "परिणाम: WebGPU API मिली, लेकिन कोई GPU adapter उपलब्ध नहीं हुआ। " +
+            "GPU device बनाना संभव नहीं हुआ।"
+          );
+          return;
+        }
+
+        let adapterInfo = "अतिरिक्त adapter जानकारी उपलब्ध नहीं है।";
+        try {
+          if (adapter.info) {
+            const info = adapter.info;
+            adapterInfo = [
+              info.vendor ? "Vendor: " + info.vendor : "",
+              info.architecture ? "Architecture: " + info.architecture : "",
+              info.device ? "Device: " + info.device : "",
+              info.description ? "Description: " + info.description : ""
+            ].filter(Boolean).join("\n") || adapterInfo;
+          }
+        } catch (_) {}
+
+        show("3/3 — GPU device बनाया जा रहा है…");
+        const device = await adapter.requestDevice();
+
+        device.lost.then((info) => {
+          show(
+            "GPU device बाद में खो गया।\nकारण: " +
+            (info.message || info.reason || "अज्ञात")
+          );
+        });
+
+        show(
+          "परिणाम: WebGPU device सफलतापूर्वक बनाया गया।\n\n" +
+          adapterInfo + "\n\n" +
+          "सीमा: इससे केवल WebGPU की प्रारम्भिक उपलब्धता सिद्ध होती है। " +
+          "AI मॉडल का चलना, उसकी गति, मेमोरी की पर्याप्तता या गायन की गुणवत्ता " +
+          "अभी प्रमाणित नहीं हुई है।"
+        );
+      } catch (error) {
+        show(
+          "परीक्षण विफल हुआ।\n" +
+          "त्रुटि: " + (error?.name || "Error") + "\n" +
+          "विवरण: " + (error?.message || String(error))
+        );
+      } finally {
+        testButton.disabled = false;
+        testButton.textContent = "पुनः WebGPU परीक्षण चलाएँ";
+      }
+    }
+
+    testButton.addEventListener("click", runTest);
+  </script>
+</body>
+</html>
