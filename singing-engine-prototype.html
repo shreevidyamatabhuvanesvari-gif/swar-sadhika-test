@@ -1,59 +1,104 @@
-
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#17152b">
-  <title>Swar Sadhika AI — Sanskrit Engine Test</title>
+  <meta name="description" content="GitHub Pages पर Vāgdhenu browser-based Sanskrit chant engine का वास्तविक परीक्षण।">
+  <title>स्वर-साधिका — संस्कृत गायन इंजन परीक्षण</title>
   <style>
     :root {
       color-scheme: dark;
-      font-family: system-ui, sans-serif;
-      background: #17152b;
-      color: #f7f4ff;
-      --panel: #211e39;
-      --border: #51476d;
-      --accent: #d8b4fe;
-      --muted: #d0c9e2;
+      --bg: #11101d;
+      --panel: #1c1a2d;
+      --line: #3a3655;
+      --text: #f5f1ff;
+      --muted: #c0bad5;
+      --accent: #e6ba71;
+      --good: #8fe0b7;
+      --bad: #ffaaa9;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
-      max-width: 760px;
-      margin: auto;
-      padding: 22px 15px 44px;
+      margin: 0;
+      background: radial-gradient(ellipse at top, #292344 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Noto Sans Devanagari", sans-serif;
+      line-height: 1.55;
     }
 
-    h1 { font-size: 1.55rem; margin-bottom: 6px; }
-    h2 { font-size: 1.08rem; margin-top: 0; }
+    main {
+      width: min(820px, 100%);
+      margin: auto;
+      padding: clamp(14px, 4vw, 30px);
+      padding-bottom: 48px;
+    }
 
-    .muted { color: var(--muted); line-height: 1.65; }
+    .top {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .mark {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid #70628f;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #4b3c73, #25213b);
+      font-size: 28px;
+      color: var(--accent);
+    }
+
+    h1 {
+      font-size: clamp(1.35rem, 5vw, 2rem);
+      line-height: 1.2;
+      margin: 0 0 5px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: .94rem;
+    }
 
     .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin: 15px 0;
+      background: rgba(28, 26, 45, .94);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: clamp(15px, 3vw, 22px);
+      margin: 14px 0;
+      box-shadow: 0 10px 30px #0002;
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      margin: 0 0 12px;
+      color: #f6d9a5;
     }
 
     label {
       display: block;
-      font-weight: 700;
-      margin: 14px 0 7px;
+      font-weight: 650;
+      margin: 13px 0 6px;
     }
 
-    textarea, select, input[type="range"] {
+    textarea,
+    select,
+    input[type="number"] {
       width: 100%;
-    }
-
-    textarea, select {
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      background: #17152b;
-      color: #fff;
+      background: #12111e;
+      color: var(--text);
+      border: 1px solid #514a72;
+      border-radius: 11px;
       padding: 12px;
       font: inherit;
     }
@@ -61,362 +106,587 @@
     textarea {
       min-height: 145px;
       resize: vertical;
-      line-height: 1.8;
+      font-size: 1.1rem;
+      line-height: 1.9;
     }
 
-    button {
-      width: 100%;
-      min-height: 46px;
-      padding: 12px;
-      margin-top: 10px;
+    select:focus,
+    textarea:focus,
+    input:focus,
+    button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: .88rem;
+      margin: 7px 0 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    button,
+    .download {
+      appearance: none;
       border: 0;
-      border-radius: 10px;
+      border-radius: 12px;
+      padding: 12px 17px;
       font: inherit;
       font-weight: 750;
+      text-decoration: none;
       cursor: pointer;
+      text-align: center;
     }
 
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .primary { background: var(--accent); color: #241633; }
-    .secondary {
-      background: #35304e;
-      color: white;
-      border: 1px solid #686083;
+    button.primary {
+      background: var(--accent);
+      color: #20192b;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    button.secondary,
+    .download {
+      background: #302b49;
+      color: var(--text);
+      border: 1px solid #514a72;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: wait;
     }
 
     .status {
+      background: #12111e;
+      border: 1px solid #3d3858;
+      border-radius: 12px;
+      padding: 13px;
+      overflow-wrap: anywhere;
+      min-height: 52px;
+    }
+
+    .status[data-kind="success"] {
+      border-color: #437b60;
+      color: var(--good);
+    }
+
+    .status[data-kind="error"] {
+      border-color: #8b4848;
+      color: var(--bad);
+    }
+
+    .progress-track {
+      height: 8px;
+      background: #0e0d17;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #ae8ee8, var(--accent));
+      transition: width .2s ease;
+    }
+
+    audio {
+      width: 100%;
+      margin-top: 14px;
+    }
+
+    .note {
+      font-size: .88rem;
+      color: var(--muted);
+      margin: 10px 0 0;
+    }
+
+    .checks {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #302b49;
+      border: 1px solid #514a72;
+      font-size: .8rem;
+      color: #d6cfe9;
+    }
+
+    details {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    pre {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-      line-height: 1.65;
-      padding: 12px;
-      border: 1px solid #66567f;
+      background: #0d0c15;
       border-radius: 9px;
-      background: #181529;
+      padding: 10px;
+      color: #ffc4c2;
+      font-size: .8rem;
     }
 
-    progress { width: 100%; height: 13px; }
-
-    audio { width: 100%; margin-top: 10px; }
-
-    .small { font-size: .9rem; }
-
-    .tag {
-      display: inline-block;
-      background: #35304e;
-      padding: 4px 8px;
-      border-radius: 7px;
-      margin: 3px 4px 3px 0;
+    footer {
+      color: var(--muted);
       font-size: .82rem;
+      padding: 4px 3px;
     }
 
-    a { color: #e1c9ff; overflow-wrap: anywhere; }
+    @media (max-width: 560px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .top {
+        align-items: flex-start;
+      }
+
+      .mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+      }
+
+      .actions > * {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>स्वर साधिका AI</h1>
-    <p class="muted">
-      वास्तविक ब्राउज़र-आधारित संस्कृत चैंट मॉडल का परीक्षण
-    </p>
-    <span class="tag">GitHub Pages</span>
-    <span class="tag">WebGPU / WASM</span>
-    <span class="tag">स्थानीय inference</span>
+<main>
+  <header class="top">
+    <div class="mark" aria-hidden="true">स्व</div>
+    <div>
+      <h1>स्वर-साधिका</h1>
+      <p class="subtitle">वास्तविक संस्कृत chant engine परीक्षण · GitHub Pages</p>
+    </div>
   </header>
 
-  <section class="panel">
-    <h2>1. परीक्षण की जानकारी</h2>
-    <p class="muted small">
-      यह Vāgdhenu के browser inference implementation का प्रारम्भिक
-      एकीकरण है। मॉडल संस्कृत श्लोक की मीटर-आधारित चैंटिंग के लिए बनाया
-      गया है। यह अभी सामान्य स्त्री-स्वर वाली AI गायिका का विकल्प नहीं है।
-    </p>
+  <section class="panel" aria-labelledby="input-title">
+    <h2 id="input-title">१. संस्कृत पाठ</h2>
 
-    <p class="small">
-      पहली बार मॉडल लोड करने के लिए इंटरनेट आवश्यक है। मॉडल सामग्री
-      Hugging Face से और JavaScript runtime CDN से लोड होती है।
-      पाठ inference के लिए किसी AI API को नहीं भेजा जाता।
-    </p>
-  </section>
+    <label for="verse">श्लोक / मंत्र / स्तोत्रांश</label>
 
-  <section class="panel">
-    <h2>2. संस्कृत पाठ</h2>
-
-    <label for="verse">एक श्लोक दर्ज करें</label>
-    <textarea id="verse" spellcheck="false">वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।
+    <textarea id="verse" spellcheck="false" lang="sa">वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।
 जगतः पितरौ वन्दे पार्वतीपरमेश्वरौ ॥</textarea>
 
-    <p class="muted small">
-      प्रारम्भ में एक छोटा, गैर-वैदिक संस्कृत श्लोक आज़माएँ।
-      यह परीक्षण अभी लंबे पाठ, सभी वैदिक ऋचाओं या हर प्रकार के मंत्र
-      की शुद्धता प्रमाणित नहीं करता।
+    <p class="hint">
+      पहले परीक्षण में एक छोटा, स्पष्ट संस्कृत श्लोक उपयोग करें।
+      बहुत लंबा पाठ मॉडल और फ़ोन की मेमोरी पर अधिक भार डाल सकता है।
     </p>
-
-    <label for="steps">गायन/चैंट जनरेशन के चरण (NFE)</label>
-    <select id="steps">
-      <option value="4">4 — प्रारम्भिक, कम समय</option>
-      <option value="7" selected>7 — अनुशंसित प्रारम्भिक परीक्षण</option>
-      <option value="10">10 — अधिक चरण</option>
-    </select>
-
-    <label for="speed">पाठ की गति: <span id="speedText">0.90×</span></label>
-    <input id="speed" type="range" min="0.65" max="1.15"
-      value="0.9" step="0.05">
-
-    <button id="generate" class="primary" type="button">
-      वास्तविक संस्कृत ऑडियो उत्पन्न करें
-    </button>
   </section>
 
-  <section class="panel">
-    <h2>3. मॉडल और inference की स्थिति</h2>
+  <section class="panel" aria-labelledby="settings-title">
+    <h2 id="settings-title">२. इंजन सेटिंग</h2>
 
-    <div id="status" class="status" role="status" aria-live="polite">
-      अभी मॉडल लोड नहीं हुआ है। परीक्षण शुरू करने पर मॉडल डाउनलोड और
-      प्रारम्भ होगा।
+    <div class="grid">
+      <div>
+        <label for="backend">गणना इंजन</label>
+
+        <select id="backend">
+          <option value="wasm">WASM SIMD — Android के लिए अनुशंसित</option>
+          <option value="onnx">ONNX WebGPU — प्रयोगात्मक परीक्षण</option>
+        </select>
+
+        <p class="hint">
+          WebGPU API उपलब्ध होना अपने-आप मॉडल के सफलतापूर्वक चलने की गारंटी नहीं है।
+        </p>
+      </div>
+
+      <div>
+        <label for="steps">गायन-निर्माण चरण (NFE)</label>
+
+        <select id="steps">
+          <option value="3">3 — तेज़ प्रारम्भिक परीक्षण</option>
+          <option value="4" selected>4 — मोबाइल परीक्षण</option>
+          <option value="6">6 — संतुलित</option>
+          <option value="8">8 — अधिक समय लग सकता है</option>
+          <option value="12">12 — धीमा परीक्षण</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="speed">गायन की गति</label>
+        <input id="speed" type="number" min="0.6" max="1.3" step="0.05" value="0.90">
+        <p class="hint">0.90 सामान्य प्रारम्भिक मान है।</p>
+      </div>
+
+      <div>
+        <label>डिवाइस की जाँच</label>
+        <div class="checks">
+          <span class="chip" id="secure-chip">Secure context: जाँच…</span>
+          <span class="chip" id="gpu-chip">WebGPU: जाँच…</span>
+        </div>
+        <p class="hint">
+          ये ब्राउज़र क्षमताओं के संकेत हैं, इंजन परीक्षण का परिणाम नहीं।
+        </p>
+      </div>
     </div>
 
-    <progress id="progress" value="0" max="100"></progress>
-    <p id="provider" class="muted small">Inference engine: अभी अज्ञात</p>
+    <div class="actions">
+      <button class="primary" id="generate">संस्कृत ऑडियो उत्पन्न करें</button>
+      <button class="secondary" id="reset">मूल श्लोक रखें</button>
+    </div>
   </section>
 
-  <section class="panel">
-    <h2>4. उत्पन्न ऑडियो</h2>
+  <section class="panel" aria-labelledby="result-title">
+    <h2 id="result-title">३. परीक्षण परिणाम</h2>
 
-    <audio id="audio" controls hidden></audio>
+    <div class="status" id="status" role="status" aria-live="polite" data-kind="info">
+      अभी इंजन लोड नहीं हुआ है। “संस्कृत ऑडियो उत्पन्न करें” दबाने पर आधिकारिक इंजन लोड होगा।
+    </div>
 
-    <a id="download" hidden download="swar-sadhika-chant.wav">
-      उत्पन्न WAV ऑडियो डाउनलोड करें
-    </a>
+    <div class="progress-track" aria-label="प्रगति">
+      <div class="progress" id="progress"></div>
+    </div>
 
-    <p id="audioInfo" class="muted small">
-      ऑडियो उत्पन्न होने पर यहाँ प्लेयर दिखाई देगा।
+    <audio id="audio" controls preload="metadata" hidden></audio>
+
+    <div class="actions" id="result-actions" hidden>
+      <a class="download" id="download" download="sanskrit-chant.wav">WAV डाउनलोड करें</a>
+    </div>
+
+    <details id="diagnostics" hidden>
+      <summary>लोडिंग / त्रुटि का तकनीकी विवरण</summary>
+      <pre id="diagnostics-text"></pre>
+    </details>
+
+    <p class="note">
+      पहली बार मॉडल के वज़न डाउनलोड होने में समय लग सकता है। मॉडल वज़न Hugging Face
+      से लोड होते हैं; इस फ़ाइल में कोई AI API key या अलग inference server नहीं जोड़ा गया है।
     </p>
   </section>
 
-  <section class="panel">
-    <h2>5. परीक्षण की सीमा</h2>
-
-    <p class="muted small">
-      वास्तविक ऑडियो सफलतापूर्वक बनना यह सिद्ध करेगा कि यह संस्कृत
-      चैंट मॉडल इस ब्राउज़र में चला। इससे यह सिद्ध नहीं होगा कि मॉडल
-      स्वाभाविक स्त्री-स्वर में स्वतंत्र धुन वाला गायन कर सकता है।
-      उस लक्ष्य के लिए अलग singing-synthesis मॉडल आवश्यक है।
-    </p>
-
-    <p class="muted small">
-      स्रोत: 
-      <a href="https://github.com/hemanth/sanskrit-tts-web"
-         target="_blank" rel="noopener">Browser inference implementation</a>
-      ·
-      <a href="https://huggingface.co/gnumanth/sanskrit-tts-onnx"
-         target="_blank" rel="noopener">ONNX model files</a>
-    </p>
-  </section>
+  <footer>
+    सावधानी: यह पृष्ठ Vāgdhenu के संस्कृत छंद-आधारित chant इंजन का परीक्षण है।
+    इससे किसी स्वतंत्र रूप से धुन रचने वाले महिला-स्वर AI की उपलब्धता या उस लक्ष्य की पूर्णता सिद्ध नहीं होती।
+  </footer>
+</main>
 
 <script type="module">
   const $ = (id) => document.getElementById(id);
+  const originalVerse = $('verse').value;
+  const statusEl = $('status');
+  const progressEl = $('progress');
+  const generateBtn = $('generate');
+  const audioEl = $('audio');
+  const downloadEl = $('download');
+  const resultActions = $('result-actions');
+  const diagnostics = $('diagnostics');
+  const diagnosticsText = $('diagnostics-text');
 
-  const button = $("generate");
-  const status = $("status");
-  const progress = $("progress");
-  const providerText = $("provider");
-  const audio = $("audio");
-  const download = $("download");
-  const audioInfo = $("audioInfo");
-  const speed = $("speed");
+  // आधिकारिक app.js की तरह VagdhenuWebEngine सीधे लोड करें।
+  // इससे package-level index.js पर निर्भरता हट जाती है।
+  const ENGINE_MODULE_URLS = [
+    'https://h3manth.com/ai/sanskrit-tts/vagdhenu-onnx.js?v=38',
+    'https://hemanth.github.io/sanskrit-tts-web/vagdhenu-onnx.js?v=38',
+    'https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
+    'https://raw.githubusercontent.com/hemanth/sanskrit-tts-web/main/vagdhenu-onnx.js'
+  ];
 
-  const UPSTREAM_MODULE =
-    "https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/index.js";
+  let engineModule = null;
+  let engine = null;
+  let activeBackend = null;
+  let currentAudioUrl = null;
+  let importLog = [];
 
-  let voice = null;
-  let currentObjectUrl = null;
-  let generationId = 0;
-
-  function setStatus(message) {
-    status.textContent = message;
+  function setStatus(message, kind = 'info') {
+    statusEl.textContent = message;
+    statusEl.dataset.kind = kind;
   }
 
-  function updateProgress(info) {
-    if (!info || typeof info !== "object") return;
-
-    if (typeof info.message === "string") {
-      setStatus(info.message);
-    }
-
-    if (Number.isFinite(info.progress)) {
-      progress.value = Math.min(100, Math.max(0, info.progress));
-    }
+  function setProgress(value) {
+    const n = Number(value);
+    const pct = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+    progressEl.style.width = `${pct}%`;
   }
 
-  function getProvider() {
-    return voice?.engine?.provider || "अभी उपलब्ध नहीं";
+  function setDiagnostic(text) {
+    diagnosticsText.textContent = text;
+    diagnostics.hidden = !text;
   }
 
-  async function checkWebGPU() {
-    if (!navigator.gpu) {
-      return "WebGPU API अनुपलब्ध; मॉडल WASM fallback का उपयोग कर सकता है।";
+  function progressCallback(info) {
+    if (!info || typeof info !== 'object') return;
+
+    if (Number.isFinite(Number(info.progress))) {
+      setProgress(info.progress);
     }
 
-    try {
-      const adapter = await navigator.gpu.requestAdapter();
-      if (!adapter) return "WebGPU API उपलब्ध है, लेकिन adapter नहीं मिला।";
-
-      const device = await adapter.requestDevice();
-      device.destroy();
-
-      const info = adapter.info || {};
-      const gpuName = [info.vendor, info.architecture, info.device]
-        .filter(Boolean).join(" ");
-
-      return "WebGPU device बनाने का परीक्षण सफल।" +
-        (gpuName ? " GPU: " + gpuName : "");
-    } catch (error) {
-      return "WebGPU device परीक्षण विफल; इंजन WASM fallback आज़मा सकता है। " +
-        (error.message || String(error));
+    if (info.message) {
+      setStatus(String(info.message));
     }
   }
 
-  async function loadVoice() {
-    if (voice) return voice;
+  function preferredBackend() {
+    const isMobile =
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
+      (
+        navigator.maxTouchPoints > 1 &&
+        matchMedia('(max-width: 820px)').matches
+      );
 
-    setStatus("WebGPU उपलब्धता जाँची जा रही है…");
-    progress.value = 2;
+    return isMobile || !navigator.gpu ? 'wasm' : 'onnx';
+  }
 
-    const gpuResult = await checkWebGPU();
-    setStatus(gpuResult + "\nब्राउज़र inference module लोड किया जा रहा है…");
+  async function loadEngineModule() {
+    if (engineModule) return engineModule;
 
-    // This is a browser module, not a remote AI inference API.
-    const module = await import(UPSTREAM_MODULE);
-    const createVoice = module.default || module.sanskritTts;
+    importLog = [];
 
-    if (typeof createVoice !== "function") {
-      throw new Error("स्रोत मॉड्यूल में sanskritTts function नहीं मिला।");
+    for (const url of ENGINE_MODULE_URLS) {
+      try {
+        setStatus(`इंजन मॉड्यूल लोड हो रहा है: ${new URL(url).hostname} …`);
+
+        const mod = await import(url);
+
+        if (typeof mod.VagdhenuWebEngine !== 'function') {
+          throw new Error(
+            'इस मॉड्यूल में VagdhenuWebEngine export उपलब्ध नहीं है।'
+          );
+        }
+
+        engineModule = mod;
+        importLog.push(`सफल मॉड्यूल स्रोत: ${url}`);
+        setDiagnostic(importLog.join('\n'));
+
+        return engineModule;
+      } catch (error) {
+        const message = error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error);
+
+        importLog.push(`विफल स्रोत: ${url}\n${message}`);
+      }
     }
 
-    setStatus(
-      "मॉडल प्रारम्भ हो रहा है। पहली बार लगभग 237 MB मॉडल सामग्री " +
-      "डाउनलोड हो सकती है; कृपया पेज बंद न करें।"
+    const detail =
+      'चारों स्रोतों से इंजन मॉड्यूल लोड नहीं हो पाया। संभावित कारण: ' +
+      'नेटवर्क/CDN अवरोध, CORS नीति या upstream मॉड्यूल की अनुपलब्ध निर्भरता।\n\n' +
+      importLog.join('\n\n');
+
+    setDiagnostic(detail);
+
+    throw new Error(
+      'इंजन मॉड्यूल लोड नहीं हुआ। तकनीकी विवरण खोलकर देखें; इस प्रयास में मॉडल या ऑडियो उत्पन्न नहीं हुआ।'
     );
-
-    voice = await createVoice({
-      backend: "onnx",
-      nfe: Number($("steps").value),
-      speed: Number(speed.value),
-      onProgress: updateProgress
-    });
-
-    providerText.textContent =
-      "Inference engine: " + getProvider().toUpperCase();
-
-    setStatus("मॉडल प्रारम्भ हो गया है। अब संस्कृत ऑडियो उत्पन्न किया जा सकता है।");
-    progress.value = 100;
-
-    return voice;
   }
 
-  async function generate() {
-    const myGeneration = ++generationId;
-    const text = $("verse").value.trim();
+  async function getEngine(backend) {
+    const mod = await loadEngineModule();
+
+    if (!engine) {
+      engine = new mod.VagdhenuWebEngine(null, backend);
+      activeBackend = backend;
+    } else if (activeBackend !== backend) {
+      setStatus(
+        `इंजन को ${backend === 'onnx' ? 'ONNX WebGPU' : 'WASM SIMD'} पर बदला जा रहा है…`
+      );
+
+      await engine.setBackendMode(backend);
+      activeBackend = backend;
+    }
+
+    return engine;
+  }
+
+  function outputUrlFromResult(result) {
+    if (result && typeof result.url === 'string' && result.url) {
+      return result.url;
+    }
+
+    if (
+      result &&
+      result.audio &&
+      engineModule &&
+      typeof engineModule.encodeWavBlob === 'function'
+    ) {
+      const blob = engineModule.encodeWavBlob(
+        result.audio,
+        Number(result.sampleRate) || 24000
+      );
+
+      return URL.createObjectURL(blob);
+    }
+
+    throw new Error(
+      'इंजन ने synthesis पूरा किया, लेकिन परिणाम में playback URL या WAV audio नहीं मिला।'
+    );
+  }
+
+  async function generateAudio() {
+    const text = $('verse').value.trim();
+    const backend = $('backend').value;
+    const nfe = Number($('steps').value);
+    const speed = Number($('speed').value);
 
     if (!text) {
-      setStatus("पहले संस्कृत श्लोक दर्ज करें।");
+      setStatus('पहले संस्कृत पाठ दर्ज करें।', 'error');
+      $('verse').focus();
       return;
     }
 
-    if (text.length > 500) {
-      setStatus(
-        "इस प्रारम्भिक परीक्षण में 500 अक्षरों से छोटा पाठ रखें। " +
-        "पहले एक श्लोक की सफल inference की पुष्टि करें।"
-      );
+    if (!Number.isFinite(speed) || speed < 0.6 || speed > 1.3) {
+      setStatus('गति 0.60 से 1.30 के बीच रखें।', 'error');
+      $('speed').focus();
       return;
     }
 
-    button.disabled = true;
-    button.textContent = "मॉडल चल रहा है…";
-    progress.value = 0;
-    audio.hidden = true;
-    download.hidden = true;
-    audioInfo.textContent = "ऑडियो बनने की प्रतीक्षा करें…";
+    generateBtn.disabled = true;
+    resultActions.hidden = true;
+    audioEl.hidden = true;
+    setProgress(0);
+    setDiagnostic('');
+    setStatus('तैयारी शुरू हो रही है…');
 
     try {
-      const tts = await loadVoice();
-      if (myGeneration !== generationId) return;
+      const activeEngine = await getEngine(backend);
 
-      setStatus("संस्कृत पाठ का विश्लेषण और वास्तविक neural inference चल रहा है…");
-      progress.value = 98;
+      setStatus(
+        'मॉडल वज़न लोड/तैयार किए जा रहे हैं। पहली बार इसमें समय लग सकता है…'
+      );
 
-      const result = await tts.chant(text, {
-        nfe: Number($("steps").value),
-        speed: Number(speed.value)
-      });
+      const result = await activeEngine.synthesizeInBrowser(
+        text,
+        {
+          meter: 'auto',
+          nfe,
+          speed,
+          noSandhi: false,
 
-      if (myGeneration !== generationId) return;
+          onChunk: async (chunk) => {
+            if (chunk && Number.isFinite(Number(chunk.totalChunks))) {
+              setStatus(
+                `ऑडियो भाग तैयार हो रहे हैं: ${Number(chunk.chunkIndex) + 1}/${chunk.totalChunks}…`
+              );
+            }
+          }
+        },
+        progressCallback
+      );
 
-      if (!result || !result.url) {
-        throw new Error(
-          "मॉडल ने परिणाम लौटाया, लेकिन playback URL उपलब्ध नहीं हुआ।"
+      const url = outputUrlFromResult(result);
+
+      if (currentAudioUrl && currentAudioUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(currentAudioUrl);
+        } catch (_) {
+          // पहले के ऑडियो URL की सफ़ाई असफल होने पर भी नया परिणाम दिखाएँ।
+        }
+      }
+
+      currentAudioUrl = url;
+      audioEl.src = url;
+      audioEl.hidden = false;
+      downloadEl.href = url;
+      downloadEl.download = 'sanskrit-chant.wav';
+      resultActions.hidden = false;
+      audioEl.load();
+
+      setProgress(100);
+
+      const meter = result && result.meter
+        ? ` छंद: ${result.meter}.`
+        : '';
+
+      const duration =
+        result && Number.isFinite(Number(result.durationSec))
+          ? ` अवधि: ${Number(result.durationSec).toFixed(1)} सेकंड.`
+          : '';
+
+      const provider = activeEngine.provider
+        ? ` इंजन: ${activeEngine.provider}.`
+        : '';
+
+      setStatus(
+        `सफल: वास्तविक संस्कृत ऑडियो उत्पन्न हुआ।${meter}${duration}${provider} सुनने के लिए नीचे Play दबाएँ।`,
+        'success'
+      );
+
+      setDiagnostic([
+        'Engine module loaded successfully.',
+        `Backend selected: ${backend}`,
+        `NFE: ${nfe}`,
+        `Speed: ${speed}`,
+        `Meter: ${result?.meter ?? 'not reported'}`,
+        `Duration seconds: ${result?.durationSec ?? 'not reported'}`,
+        `Audio URL type: ${url.startsWith('blob:') ? 'local Blob URL' : 'engine-returned URL'}`
+      ].join('\n'));
+
+    } catch (error) {
+      setProgress(0);
+
+      const message = error instanceof Error
+        ? error.message
+        : String(error);
+
+      setStatus(`विफल: ${message}`, 'error');
+
+      if (!diagnosticsText.textContent) {
+        setDiagnostic([
+          `Error: ${message}`,
+          error instanceof Error && error.stack ? error.stack : ''
+        ].filter(Boolean).join('\n\n'));
+      } else {
+        setDiagnostic(
+          diagnosticsText.textContent +
+          '\n\nSynthesis error:\n' +
+          message +
+          (error instanceof Error && error.stack ? '\n' + error.stack : '')
         );
       }
-
-      if (currentObjectUrl) {
-        URL.revokeObjectURL(currentObjectUrl);
-        currentObjectUrl = null;
-      }
-
-      // Most versions return an object URL produced by the browser runtime.
-      // Do not revoke it until the next generation or page unload.
-      currentObjectUrl = result.url;
-
-      audio.src = result.url;
-      audio.hidden = false;
-      download.href = result.url;
-      download.hidden = false;
-
-      const meter = result.meter || result.scansion?.meter?.name || "स्वतः पहचाना गया";
-
-      audioInfo.textContent =
-        "ऑडियो सफलतापूर्वक उत्पन्न हुआ। छन्द: " + meter +
-        ". प्लेयर दबाकर वास्तविक परिणाम सुनें।";
-
-      providerText.textContent =
-        "सक्रिय inference provider: " + getProvider().toUpperCase();
-
-      setStatus(
-        "सफल: मॉडल ने संस्कृत पाठ से ऑडियो उत्पन्न किया।\n" +
-        "यह स्थानीय browser inference का प्रमाण है, अंतिम स्त्री-स्वर AI गायन का नहीं।"
-      );
-
-      progress.value = 100;
-    } catch (error) {
-      voice = null;
-
-      setStatus(
-        "ऑडियो उत्पन्न नहीं हो सका।\n\n" +
-        "त्रुटि: " + (error?.name || "Error") + "\n" +
-        "विवरण: " + (error?.message || String(error)) +
-        "\n\n" +
-        "संभावित कारण: नेटवर्क से मॉडल डाउनलोड न होना, CDN/मॉड्यूल लोड न होना, " +
-        "WebGPU session विफल होना या डिवाइस की मेमोरी सीमा।"
-      );
-
-      progress.value = 0;
-      providerText.textContent = "Inference engine: असफल — त्रुटि रिपोर्ट देखें";
     } finally {
-      button.disabled = false;
-      button.textContent = "दोबारा संस्कृत ऑडियो उत्पन्न करें";
+      generateBtn.disabled = false;
     }
   }
 
-  speed.addEventListener("input", () => {
-    $("speedText").textContent = Number(speed.value).toFixed(2) + "×";
+  $('generate').addEventListener('click', generateAudio);
+
+  $('reset').addEventListener('click', () => {
+    $('verse').value = originalVerse;
+    $('steps').value = '4';
+    $('speed').value = '0.90';
+    $('backend').value = preferredBackend();
+
+    setStatus('मूल परीक्षण-पाठ और शुरुआती सेटिंग बहाल कर दी गई हैं।');
   });
 
-  button.addEventListener("click", generate);
+  $('backend').value = preferredBackend();
 
-  window.addEventListener("beforeunload", () => {
-    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-  });
+  $('secure-chip').textContent =
+    `Secure context: ${window.isSecureContext ? 'हाँ' : 'नहीं'}`;
+
+  $('gpu-chip').textContent =
+    `WebGPU API: ${navigator.gpu ? 'उपलब्ध' : 'उपलब्ध नहीं'}`;
+
+  if (!window.isSecureContext) {
+    setStatus(
+      'चेतावनी: Secure context उपलब्ध नहीं है; GitHub Pages का HTTPS URL उपयोग करें।',
+      'error'
+    );
+  }
 </script>
 </body>
 </html>
