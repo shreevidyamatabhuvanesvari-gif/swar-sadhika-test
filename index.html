@@ -5,131 +5,634 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17152b">
-  <title>Swar Sadhika AI — Device Feasibility</title>
+  <title>Swar Sadhika AI — Singing Preview Studio</title>
   <style>
     :root {
       color-scheme: dark;
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, "Noto Sans Devanagari", sans-serif;
       background: #17152b;
       color: #f7f4ff;
+      --panel: #211e39;
+      --border: #51476d;
+      --accent: #d8b4fe;
+      --muted: #cbc3df;
     }
-    body { max-width: 760px; margin: auto; padding: 22px 16px 40px; }
-    .panel { background: #211e39; border: 1px solid #51476d;
-      border-radius: 14px; padding: 16px; margin: 14px 0; }
-    button { width: 100%; padding: 14px; border: 0; border-radius: 10px;
-      background: #d8b4fe; color: #21152e; font-weight: 700; font-size: 1rem; }
-    pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
-    .note { color: #d0c9e2; line-height: 1.6; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0 auto;
+      padding: 20px 14px 36px;
+      width: 100%;
+      max-width: 760px;
+    }
+
+    h1 { font-size: 1.55rem; margin: 0 0 5px; }
+    h2 { font-size: 1.08rem; margin: 0 0 12px; }
+    p { line-height: 1.6; }
+
+    .subtitle, .muted { color: var(--muted); line-height: 1.55; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px;
+      margin: 16px 0;
+    }
+
+    .stage-wrap {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      margin: 16px 0;
+    }
+
+    .stage {
+      width: min(100%, 370px);
+      aspect-ratio: 9 / 16;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(ellipse at 50% 35%, #403565 0%, #201b37 48%, #090912 100%);
+      border: 1px solid #675786;
+      border-radius: 14px;
+      isolation: isolate;
+    }
+
+    .stage video {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      object-fit: cover;
+      background: #090912;
+      z-index: -1;
+    }
+
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgb(0 0 0 / 15%),
+        transparent 26%,
+        rgb(0 0 0 / 25%) 65%,
+        rgb(0 0 0 / 48%)
+      );
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      padding: 24px;
+      color: #e6ddff;
+      line-height: 1.7;
+      z-index: -1;
+    }
+
+    .caption {
+      width: 92%;
+      max-height: 65%;
+      overflow: hidden;
+      text-align: center;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.7;
+      font-size: clamp(20px, 5.5vw, 30px);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      text-shadow:
+        0 2px 3px #000,
+        0 0 8px #000,
+        1px 1px 2px #000;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgb(0 0 0 / 18%);
+      pointer-events: none;
+    }
+
+    .caption .word { display: inline; margin-inline-end: 0.22em; }
+
+    .field { margin: 13px 0; }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    input[type="file"], textarea, input[type="range"] { width: 100%; }
+
+    input[type="file"] {
+      background: #17152b;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px;
+      color: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      background: #17152b;
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px;
+      font: inherit;
+      line-height: 1.7;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      min-height: 44px;
+      padding: 11px 14px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .primary { background: var(--accent); color: #241633; }
+    .secondary {
+      background: #34304e;
+      color: #fff;
+      border: 1px solid #686083;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .controls button { padding-inline: 6px; }
+
+    .seek-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .status {
+      min-height: 2.6em;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.6;
+      color: #eee6ff;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #35304e;
+      color: #e8d9ff;
+      font-size: 0.82rem;
+    }
+
+    .footnote { font-size: 0.9rem; color: var(--muted); }
+    .duration { font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 380px) {
+      body { padding-inline: 10px; }
+      .panel { padding: 12px; }
+      .controls { gap: 5px; }
+      .controls button { font-size: 0.9rem; }
+    }
   </style>
 </head>
+
 <body>
-  <h1>स्वर साधिका AI</h1>
-  <p class="note">Android और WebGPU संसाधन-जाँच</p>
+  <header>
+    <h1>स्वर साधिका AI</h1>
+    <p class="subtitle">वीडियो, संस्कृत कैप्शन और गायन परीक्षण स्टूडियो</p>
+    <span class="tag">9:16 Preview</span>
+    <span class="tag">स्थानीय मीडिया</span>
+  </header>
 
-  <section class="panel">
-    <h2>परीक्षण रिपोर्ट</h2>
-    <pre id="report">परीक्षण शुरू करने के लिए बटन दबाएँ।</pre>
-  </section>
+  <main>
+    <section class="stage-wrap" aria-label="वीडियो पूर्वावलोकन">
+      <div class="stage" id="stage">
+        <div class="placeholder" id="placeholder">
+          <strong>आपका वीडियो यहाँ दिखाई देगा</strong>
+          <span>पहले नीचे वीडियो चुनें।</span>
+        </div>
+        <video id="video" playsinline preload="metadata" hidden></video>
+        <div class="caption" id="caption" aria-live="polite">
+          <span style="color:#f9d66b">ॐ</span>
+          <span style="color:#ff94d4">नमः</span>
+          <span style="color:#82e8ff">शिवाय</span>
+        </div>
+      </div>
+    </section>
 
-  <button id="run">डिवाइस की जाँच करें</button>
+    <section class="panel">
+      <h2>1. वीडियो और गायन ऑडियो</h2>
 
-  <section class="panel">
-    <h2>सीमा</h2>
-    <p class="note">
-      यह जाँच ब्राउज़र और GPU की रिपोर्ट देती है।
-      यह उपलब्ध RAM का सटीक माप नहीं करती और न ही AI गायन मॉडल
-      की अनुकूलता या गायन की गुणवत्ता प्रमाणित करती है।
-    </p>
-  </section>
+      <div class="field">
+        <label for="videoFile">वीडियो क्लिप चुनें</label>
+        <input id="videoFile" type="file" accept="video/*">
+        <p class="footnote" id="videoInfo">वीडियो अभी नहीं चुना गया है।</p>
+      </div>
+
+      <div class="field">
+        <label for="audioFile">अलग गायन ऑडियो (वैकल्पिक)</label>
+        <input id="audioFile" type="file" accept="audio/*">
+        <p class="footnote" id="audioInfo">
+          यदि वीडियो में पहले से गायन है, तो अलग ऑडियो देना आवश्यक नहीं है।
+        </p>
+      </div>
+
+      <p class="footnote">
+        अलग ऑडियो चुनने पर उसी की आवाज़ चलेगी और वीडियो म्यूट रहेगा।
+        दोनों की अवधि अलग होने पर वीडियो को ऑडियो के साथ अनुपात में सिंक करने
+        का प्रयास किया जाएगा।
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>2. संस्कृत पाठ और बहुरंगी कैप्शन</h2>
+
+      <div class="field">
+        <label for="scriptText">पाठ — हर नई पंक्ति अलग कैप्शन बनेगी</label>
+        <textarea id="scriptText" spellcheck="false">ॐ नमः शिवाय
+शिवाय नमः ॐ</textarea>
+      </div>
+
+      <div class="field">
+        <label for="fontSize">कैप्शन का आकार</label>
+        <input id="fontSize" type="range" min="16" max="40" value="28">
+        <span id="fontSizeValue" class="footnote">28 px</span>
+      </div>
+
+      <button id="refreshCaptions" class="secondary" type="button">
+        कैप्शन पूर्वावलोकन अपडेट करें
+      </button>
+
+      <p class="footnote">
+        रंग अलग-अलग शब्दों पर लागू होंगे। पंक्तियाँ उपलब्ध ऑडियो/वीडियो की
+        कुल अवधि में बराबर अंतराल से दिखाई जाएँगी। वास्तविक शब्द-स्तरीय
+        गायन-सिंक या स्वचालित संस्कृत उच्चारण पहचान अभी शामिल नहीं है।
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>3. प्लेबैक परीक्षण</h2>
+
+      <div class="controls">
+        <button id="play" class="primary" type="button">▶ चलाएँ</button>
+        <button id="pause" class="secondary" type="button">Ⅱ रोकें</button>
+        <button id="stop" class="secondary" type="button">■ रीसेट</button>
+      </div>
+
+      <div class="seek-row">
+        <input id="seek" type="range" min="0" max="1000" value="0"
+               aria-label="प्लेबैक स्थिति">
+        <span id="clock" class="duration">00:00 / 00:00</span>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite">
+        परीक्षण के लिए वीडियो चुनें। वीडियो में मौजूद गायन या अलग ऑडियो सुना
+        जा सकेगा; यह पृष्ठ अभी AI से नया गायन उत्पन्न नहीं करता।
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>इस संस्करण की स्पष्ट सीमाएँ</h2>
+      <p class="footnote">
+        यह संस्करण वीडियो और पहले से उपलब्ध गायन ऑडियो की जाँच के लिए है।
+        यह MP4 निर्यात नहीं करता, न ही AI गायन मॉडल चलाता है।
+        कैप्शन केवल पूर्वावलोकन में दिखते हैं। आपकी मीडिया फ़ाइलें किसी API
+        को अपलोड नहीं की जातीं; वे इसी ब्राउज़र सत्र में स्थानीय रूप से पढ़ी जाती हैं।
+      </p>
+    </section>
+  </main>
 
 <script>
-const report = document.getElementById("report");
-const button = document.getElementById("run");
+(() => {
+  "use strict";
 
-async function runCheck() {
-  button.disabled = true;
-  report.textContent = "जाँच चल रही है…";
+  const $ = (id) => document.getElementById(id);
 
-  const lines = [];
-  const add = (label, value) => lines.push(label + ": " + value);
+  const video = $("video");
+  const videoFile = $("videoFile");
+  const audioFile = $("audioFile");
+  const scriptText = $("scriptText");
+  const caption = $("caption");
+  const placeholder = $("placeholder");
+  const status = $("status");
+  const seek = $("seek");
+  const clock = $("clock");
+  const fontSize = $("fontSize");
 
-  try {
-    add("ब्राउज़र", navigator.userAgent);
-    add("ऑनलाइन स्थिति", navigator.onLine ? "ऑनलाइन" : "ऑफलाइन");
-    add("हार्डवेयर concurrency", navigator.hardwareConcurrency ?? "उपलब्ध नहीं");
-    add("deviceMemory अनुमान (GB)", navigator.deviceMemory ?? "ब्राउज़र ने उपलब्ध नहीं कराया");
-    add("WebAssembly", typeof WebAssembly !== "undefined" ? "उपलब्ध" : "अनुपलब्ध");
-    add("WebGPU API", navigator.gpu ? "उपलब्ध" : "अनुपलब्ध");
+  const palette = [
+    "#ffe66d", "#ff91c8", "#8be9fd", "#a9ffb0",
+    "#c9a5ff", "#ffad7a", "#ffffff"
+  ];
 
-    if (navigator.storage?.estimate) {
-      try {
-        const storage = await navigator.storage.estimate();
-        add("वेबसाइट के लिए अनुमानित उपयोग", storage.usage == null
-          ? "उपलब्ध नहीं" : (storage.usage / 1e9).toFixed(2) + " GB");
-        add("वेबसाइट के लिए अनुमानित quota", storage.quota == null
-          ? "उपलब्ध नहीं" : (storage.quota / 1e9).toFixed(2) + " GB");
-      } catch (e) {
-        add("Storage estimate", "नहीं मिल सका: " + e.message);
-      }
-    } else {
-      add("Storage estimate", "ब्राउज़र API उपलब्ध नहीं");
+  let videoURL = null;
+  let audioURL = null;
+  let cues = [];
+  let isSeeking = false;
+
+  const singerAudio = new Audio();
+  singerAudio.preload = "metadata";
+
+  const hasSeparateAudio = () => Boolean(audioURL);
+  const master = () => hasSeparateAudio() ? singerAudio : video;
+
+  function formatTime(value) {
+    if (!Number.isFinite(value) || value < 0) return "00:00";
+    const seconds = Math.floor(value);
+    const minutes = Math.floor(seconds / 60);
+    return String(minutes).padStart(2, "0") + ":" +
+      String(seconds % 60).padStart(2, "0");
+  }
+
+  function durationOf(media) {
+    return Number.isFinite(media.duration) && media.duration > 0
+      ? media.duration : 0;
+  }
+
+  function currentTime() {
+    return Number.isFinite(master().currentTime) ? master().currentTime : 0;
+  }
+
+  function currentDuration() {
+    return durationOf(master());
+  }
+
+  function setStatus(message) {
+    status.textContent = message;
+  }
+
+  function linesFromText() {
+    return scriptText.value
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+  }
+
+  function buildCues() {
+    const lines = linesFromText();
+    const duration = currentDuration();
+
+    cues = lines.map((text, index) => ({
+      text,
+      start: duration > 0 ? (duration * index / lines.length) : 0,
+      end: duration > 0 ? (duration * (index + 1) / lines.length) : Infinity
+    }));
+
+    renderCaption(0);
+  }
+
+  function renderCaption(time) {
+    caption.replaceChildren();
+
+    if (!cues.length) {
+      caption.textContent = "यहाँ आपका संस्कृत पाठ दिखाई देगा";
+      return;
     }
 
-    if (navigator.gpu) {
-      try {
-        const adapter = await navigator.gpu.requestAdapter();
+    let cue = cues.find(item => time >= item.start && time < item.end);
 
-        if (!adapter) {
-          add("GPU adapter", "नहीं मिला");
-        } else {
-          add("GPU adapter", "मिला");
+    if (!cue) {
+      cue = time <= 0 ? cues[0] : cues[cues.length - 1];
+      if (currentDuration() > 0 && time >= currentDuration()) {
+        cue = cues[cues.length - 1];
+      }
+    }
 
-          try {
-            const info = adapter.info;
-            if (info) {
-              add("GPU vendor", info.vendor || "अज्ञात");
-              add("GPU architecture", info.architecture || "अज्ञात");
-              add("GPU device", info.device || "अज्ञात");
-              add("GPU description", info.description || "अज्ञात");
-            }
-          } catch (_) {
-            add("GPU जानकारी", "ब्राउज़र ने छिपाई है");
-          }
+    const words = cue.text.split(/\s+/);
+    words.forEach((word, index) => {
+      const span = document.createElement("span");
+      span.className = "word";
+      span.style.color = palette[index % palette.length];
+      span.textContent = word;
+      caption.appendChild(span);
+    });
+  }
 
-          const limits = adapter.limits;
-          add("maxBufferSize", limits.maxBufferSize ?? "उपलब्ध नहीं");
-          add("maxStorageBufferBindingSize",
-            limits.maxStorageBufferBindingSize ?? "उपलब्ध नहीं");
-          add("maxComputeWorkgroupStorageSize",
-            limits.maxComputeWorkgroupStorageSize ?? "उपलब्ध नहीं");
+  function updateClock() {
+    const time = currentTime();
+    const duration = currentDuration();
+    clock.textContent = formatTime(time) + " / " + formatTime(duration);
 
-          try {
-            const device = await adapter.requestDevice();
-            add("GPU device creation", "सफल");
-            add("Device maxBufferSize", device.limits.maxBufferSize);
-            add("Device maxStorageBufferBindingSize",
-              device.limits.maxStorageBufferBindingSize);
-            device.destroy();
-          } catch (e) {
-            add("GPU device creation", "विफल: " + e.message);
+    if (!isSeeking && duration > 0) {
+      seek.value = String(Math.round((time / duration) * 1000));
+    } else if (!duration) {
+      seek.value = "0";
+    }
+
+    renderCaption(time);
+  }
+
+  function updateMetadata() {
+    buildCues();
+    updateClock();
+
+    if (hasSeparateAudio()) {
+      $("audioInfo").textContent =
+        "चयनित ऑडियो: " + (singerAudio.duration
+          ? formatTime(singerAudio.duration) : "अवधि पढ़ी जा रही है");
+    } else {
+      $("audioInfo").textContent =
+        "अलग ऑडियो नहीं चुना गया है। वीडियो का अपना ऑडियो चल सकता है।";
+    }
+  }
+
+  function syncVideoToAudio() {
+    if (!hasSeparateAudio()) return;
+
+    const audioDuration = durationOf(singerAudio);
+    const videoDuration = durationOf(video);
+
+    if (!videoURL || !audioDuration || !videoDuration || isSeeking) return;
+
+    const ratio = singerAudio.currentTime / audioDuration;
+    const target = Math.min(videoDuration, Math.max(0, ratio * videoDuration));
+
+    if (Math.abs(video.currentTime - target) > 0.45) {
+      try { video.currentTime = target; } catch (_) {}
+    }
+  }
+
+  videoFile.addEventListener("change", () => {
+    const file = videoFile.files && videoFile.files[0];
+    if (!file) return;
+
+    if (videoURL) URL.revokeObjectURL(videoURL);
+    videoURL = URL.createObjectURL(file);
+
+    video.src = videoURL;
+    video.hidden = false;
+    placeholder.hidden = true;
+    video.load();
+
+    $("videoInfo").textContent =
+      "चयनित वीडियो: " + file.name + " (" +
+      (file.size / (1024 * 1024)).toFixed(1) + " MB)";
+
+    setStatus("वीडियो चुना गया। मेटाडेटा पढ़ने और प्लेबैक के लिए तैयार हो रहे हैं…");
+  });
+
+  audioFile.addEventListener("change", () => {
+    const file = audioFile.files && audioFile.files[0];
+    if (!file) return;
+
+    if (audioURL) URL.revokeObjectURL(audioURL);
+    audioURL = URL.createObjectURL(file);
+
+    singerAudio.src = audioURL;
+    video.muted = true;
+    singerAudio.load();
+
+    $("audioInfo").textContent =
+      "चयनित गायन ऑडियो: " + file.name + " (" +
+      (file.size / (1024 * 1024)).toFixed(1) + " MB)। ऑडियो लोड हो रहा है…";
+
+    setStatus("अलग गायन ऑडियो चुना गया। वीडियो की आवाज़ म्यूट रहेगी।");
+  });
+
+  video.addEventListener("loadedmetadata", () => {
+    if (!hasSeparateAudio()) video.muted = false;
+
+    $("videoInfo").textContent =
+      "वीडियो अवधि: " + formatTime(video.duration) +
+      "। वीडियो का आकार: " + video.videoWidth + " × " + video.videoHeight;
+
+    updateMetadata();
+  });
+
+  singerAudio.addEventListener("loadedmetadata", updateMetadata);
+
+  video.addEventListener("timeupdate", () => {
+    if (!hasSeparateAudio()) updateClock();
+  });
+
+  singerAudio.addEventListener("timeupdate", () => {
+    syncVideoToAudio();
+    updateClock();
+  });
+
+  video.addEventListener("ended", () => {
+    if (!hasSeparateAudio()) setStatus("वीडियो प्लेबैक समाप्त हुआ।");
+  });
+
+  singerAudio.addEventListener("ended", () => {
+    video.pause();
+    setStatus("गायन ऑडियो प्लेबैक समाप्त हुआ।");
+  });
+
+  video.addEventListener("error", () => {
+    setStatus("वीडियो लोड नहीं हो सका। कृपया MP4 या ब्राउज़र-संगत वीडियो फ़ाइल आज़माएँ।");
+  });
+
+  singerAudio.addEventListener("error", () => {
+    setStatus("ऑडियो लोड नहीं हो सका। कृपया ब्राउज़र-संगत audio फ़ाइल चुनें।");
+  });
+
+  $("refreshCaptions").addEventListener("click", () => {
+    buildCues();
+    updateClock();
+    setStatus("कैप्शन अपडेट हो गए। समय उपलब्ध मीडिया की अवधि के बराबर अंतरालों में बाँटा गया है।");
+  });
+
+  fontSize.addEventListener("input", () => {
+    caption.style.fontSize = fontSize.value + "px";
+    $("fontSizeValue").textContent = fontSize.value + " px";
+  });
+
+  $("play").addEventListener("click", async () => {
+    try {
+      buildCues();
+
+      if (hasSeparateAudio()) {
+        video.muted = true;
+        await singerAudio.play();
+
+        if (videoURL) {
+          try { await video.play(); } catch (_) {
+            setStatus("गायन ऑडियो चल रहा है, लेकिन वीडियो प्ले नहीं हुआ।");
+            return;
           }
         }
-      } catch (e) {
-        add("WebGPU परीक्षण", "विफल: " + e.message);
+        setStatus("चयनित गायन ऑडियो चल रहा है। कैप्शन ऑडियो की अवधि के अनुसार दिखेंगे।");
+      } else if (videoURL) {
+        video.muted = false;
+        await video.play();
+        setStatus("वीडियो और उसमें मौजूद ऑडियो चल रहे हैं।");
+      } else {
+        setStatus("पहले वीडियो या गायन ऑडियो चुनें।");
       }
+      updateClock();
+    } catch (error) {
+      setStatus("प्लेबैक शुरू नहीं हो सका: " +
+        (error && error.message ? error.message : String(error)) +
+        "। फ़ाइल का प्रारूप जाँचें और फिर प्रयास करें।");
     }
+  });
 
-    add("अंतिम निष्कर्ष",
-      "यह संसाधन रिपोर्ट है, AI singing model का परीक्षण नहीं।");
-    report.textContent = lines.join("\n");
-  } catch (e) {
-    report.textContent = lines.join("\n") + "\nत्रुटि: " + e.message;
-  } finally {
-    button.disabled = false;
-  }
-}
+  $("pause").addEventListener("click", () => {
+    video.pause();
+    singerAudio.pause();
+    setStatus("प्लेबैक रोक दिया गया है।");
+    updateClock();
+  });
 
-button.addEventListener("click", runCheck);
+  $("stop").addEventListener("click", () => {
+    video.pause();
+    singerAudio.pause();
+
+    try { video.currentTime = 0; } catch (_) {}
+    try { singerAudio.currentTime = 0; } catch (_) {}
+
+    updateClock();
+    setStatus("प्लेबैक शुरुआत पर लौट आया है।");
+  });
+
+  seek.addEventListener("input", () => {
+    isSeeking = true;
+    const duration = currentDuration();
+    if (duration > 0) {
+      const position = (Number(seek.value) / 1000) * duration;
+      try { master().currentTime = position; } catch (_) {}
+
+      if (hasSeparateAudio()) syncVideoToAudio();
+      renderCaption(position);
+      clock.textContent = formatTime(position) + " / " + formatTime(duration);
+    }
+  });
+
+  seek.addEventListener("change", () => {
+    isSeeking = false;
+    updateClock();
+  });
+
+  scriptText.addEventListener("input", () => {
+    buildCues();
+    updateClock();
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (videoURL) URL.revokeObjectURL(videoURL);
+    if (audioURL) URL.revokeObjectURL(audioURL);
+  });
+
+  buildCues();
+  caption.style.fontSize = fontSize.value + "px";
+})();
 </script>
 </body>
 </html>
