@@ -1,0 +1,573 @@
+
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17152b">
+  <title>Swar Sadhika AI — Model Audit</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #17152b;
+      color: #f7f4ff;
+      --panel: #211e39;
+      --border: #51476d;
+      --accent: #d8b4fe;
+      --muted: #d0c9e2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 22px 15px 45px;
+    }
+
+    h1 { font-size: 1.6rem; margin-bottom: 5px; }
+    h2 { font-size: 1.1rem; margin-top: 0; }
+    p, li { line-height: 1.65; }
+
+    .muted { color: var(--muted); }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      padding: 16px;
+      margin: 15px 0;
+    }
+
+    .result {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.7;
+      font-size: 0.96rem;
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 9px;
+      background: #302941;
+      border: 1px solid #695981;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
+    .status.good { border-color: #5d9978; }
+    .status.warn { border-color: #b18b52; }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 13px;
+      margin: 5px 0;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.55; }
+    .primary { background: var(--accent); color: #21152e; }
+    .secondary {
+      background: #35304e;
+      color: #fff;
+      border: 1px solid #686083;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #17152b;
+      color: #fff;
+    }
+
+    code { overflow-wrap: anywhere; }
+    .small { font-size: 0.89rem; }
+
+    a { color: #d8b4fe; overflow-wrap: anywhere; }
+
+    ul { padding-left: 22px; }
+    .file-list { padding-left: 20px; }
+
+    .footer {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>स्वर साधिका AI</h1>
+    <p class="muted">गायन मॉडल और स्थानीय WebGPU अनुकूलता ऑडिट</p>
+  </header>
+
+  <section class="panel">
+    <h2>1. आधिकारिक मॉडल की जानकारी</h2>
+
+    <p>
+      <strong>परीक्षण उम्मीदवार:</strong> SoulX-Singer
+      (singing voice synthesis / SVS)
+    </p>
+
+    <div class="status warn">
+      <strong>प्रारम्भिक निष्कर्ष:</strong>
+      आधिकारिक PyTorch मॉडल को सीधे GitHub Pages के JavaScript
+      पेज पर चलाने का सत्यापित तरीका उपलब्ध नहीं है। WebGPU के लिए
+      उपयुक्त परिवर्तित मॉडल और inference implementation की जाँच
+      आवश्यक है।
+    </div>
+
+    <ul>
+      <li>
+        मुख्य गायन checkpoint:
+        <strong>model.pt — लगभग 2.82 GB</strong>
+      </li>
+      <li>
+        पूरा SoulX-Singer पैकेज:
+        <strong>लगभग 5.61 GB</strong>;
+        इसमें SVS और SVC दोनों checkpoints शामिल हैं।
+      </li>
+      <li>
+        अलग preprocessing model repository:
+        <strong>लगभग 6.92 GB</strong>
+      </li>
+      <li>
+        आधिकारिक निर्देश Python वातावरण, निर्भरताएँ और अलग से
+        डाउनलोड किए गए pretrained models बताते हैं।
+      </li>
+      <li>
+        प्रकाशित model metadata में अंग्रेज़ी और चीनी सूचीबद्ध हैं।
+        संस्कृत समर्थन का आधिकारिक प्रमाण अभी नहीं मिला है।
+      </li>
+    </ul>
+
+    <p class="small">
+      आधिकारिक स्रोत:
+      <a href="https://github.com/Soul-AILab/SoulX-Singer"
+         target="_blank" rel="noopener">SoulX-Singer GitHub</a>
+      ·
+      <a href="https://huggingface.co/Soul-AILab/SoulX-Singer/tree/main"
+         target="_blank" rel="noopener">SVS model files</a>
+      ·
+      <a href="https://huggingface.co/Soul-AILab/SoulX-Singer-Preprocess/tree/main"
+         target="_blank" rel="noopener">Preprocessing models</a>
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>2. Android ब्राउज़र और GPU की जाँच</h2>
+    <p class="muted small">
+      यह रिपोर्ट अभी उपलब्ध browser APIs को जाँचती है। यह खाली RAM
+      का सटीक माप नहीं कर सकती।
+    </p>
+
+    <button id="runAudit" class="primary" type="button">
+      डिवाइस और मॉडल अनुकूलता जाँचें
+    </button>
+
+    <div id="deviceStatus" class="status">
+      जाँच अभी नहीं चलाई गई है।
+    </div>
+
+    <pre id="deviceReport" class="result"></pre>
+  </section>
+
+  <section class="panel">
+    <h2>3. अपने पास मौजूद मॉडल फ़ाइलों का आकार जाँचें</h2>
+
+    <p class="muted small">
+      यह वैकल्पिक है। केवल तभी फ़ाइलें चुनें जब आपने कोई model
+      checkpoint या converted model डाउनलोड किया हो। फ़ाइलें
+      ब्राउज़र में ही पढ़ी जाएँगी; कोई अपलोड नहीं होगा।
+    </p>
+
+    <label for="modelFiles"><strong>स्थानीय मॉडल फ़ाइलें चुनें</strong></label>
+    <input
+      id="modelFiles"
+      type="file"
+      multiple
+      accept=".pt,.pth,.onnx,.safetensors,.bin,.gguf,.json,.yaml,.yml,.txt,.py"
+    >
+
+    <button id="inspectFiles" class="secondary" type="button">
+      चुनी गई फ़ाइलों का आकार जाँचें
+    </button>
+
+    <div id="fileStatus" class="status">
+      कोई स्थानीय फ़ाइल जाँची नहीं गई।
+    </div>
+
+    <pre id="fileReport" class="result"></pre>
+  </section>
+
+  <section class="panel">
+    <h2>4. अभी कौन-सी बाधाएँ हैं?</h2>
+
+    <ul>
+      <li>
+        <strong>मॉडल प्रारूप:</strong>
+        आधिकारिक checkpoint .pt है। यह फ़ाइल WebGPU को सीधे
+        executable neural network के रूप में उपलब्ध नहीं कराती।
+      </li>
+      <li>
+        <strong>बड़े tensors:</strong>
+        आपके पिछले परीक्षण में यदि
+        <code>maxStorageBufferBindingSize = 134217728</code>
+        आया था, तो यह 128 MiB है, 1.34 GB नहीं। पूरे 2.82 GB
+        checkpoint को एक ही storage buffer में रखने की सीमा इससे
+        बहुत कम है। मॉडल को बदलने, shards में रखने या अलग runtime
+        तकनीक की जरूरत पड़ सकती है।
+      </li>
+      <li>
+        <strong>संस्कृत:</strong>
+        checkpoint का आकार या GPU का सफल होना यह सिद्ध नहीं करता
+        कि मॉडल संस्कृत शब्दों का सही उच्चारण या गायन कर सकेगा।
+      </li>
+      <li>
+        <strong>Preprocessing:</strong>
+        आधिकारिक inference प्रक्रिया metadata और अतिरिक्त
+        preprocessing का उपयोग करती है। ब्राउज़र में उसकी
+        निर्भरताओं का विकल्प अभी सत्यापित नहीं है।
+      </li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>5. रिपोर्ट सेव करें</h2>
+
+    <button id="downloadReport" class="primary" type="button">
+      ऑडिट रिपोर्ट डाउनलोड करें (.txt)
+    </button>
+
+    <button id="copyReport" class="secondary" type="button">
+      रिपोर्ट कॉपी करें
+    </button>
+
+    <p class="footer">
+      यह फ़ाइल केवल ऑडिट करती है। यह AI गायन नहीं बनाती,
+      किसी checkpoint को execute नहीं करती और model compatibility
+      की गारंटी नहीं देती।
+    </p>
+  </section>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+
+  const deviceStatus = $("deviceStatus");
+  const deviceReport = $("deviceReport");
+  const fileStatus = $("fileStatus");
+  const fileReport = $("fileReport");
+
+  let deviceLines = [
+    "आधिकारिक मॉडल निष्कर्ष: browser inference अभी सत्यापित नहीं।",
+    "मुख्य checkpoint model.pt: लगभग 2.82 GB।",
+    "पूरा SoulX-Singer पैकेज: लगभग 5.61 GB।",
+    "Preprocessing repository: लगभग 6.92 GB।",
+    "संस्कृत समर्थन: आधिकारिक प्रमाण अभी उपलब्ध नहीं।"
+  ];
+
+  let fileLines = [];
+  let auditFinished = false;
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return "अज्ञात";
+
+    const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let value = bytes;
+    let index = 0;
+
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index++;
+    }
+
+    return value.toFixed(index === 0 ? 0 : 2) + " " + units[index];
+  }
+
+  function addLine(label, value) {
+    deviceLines.push(label + ": " + value);
+  }
+
+  function isNumber(value) {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  async function runAudit() {
+    deviceLines = [
+      "Swar Sadhika AI — स्थानीय मॉडल ऑडिट",
+      "मॉडल उम्मीदवार: SoulX-Singer",
+      "तारीख: " + new Date().toISOString(),
+      ""
+    ];
+
+    deviceStatus.textContent = "जाँच चल रही है…";
+    deviceStatus.className = "status";
+    deviceReport.textContent = "";
+
+    try {
+      addLine("ब्राउज़र", navigator.userAgent);
+      addLine("सुरक्षित संदर्भ", window.isSecureContext ? "हाँ" : "नहीं");
+      addLine("WebAssembly", typeof WebAssembly !== "undefined"
+        ? "उपलब्ध" : "अनुपलब्ध");
+      addLine("WebGPU API", navigator.gpu ? "उपलब्ध" : "अनुपलब्ध");
+      addLine("Hardware concurrency", navigator.hardwareConcurrency ?? "उपलब्ध नहीं");
+      addLine("Device memory estimate", navigator.deviceMemory == null
+        ? "ब्राउज़र ने उपलब्ध नहीं कराया"
+        : navigator.deviceMemory + " GB अनुमान");
+
+      if (navigator.storage && navigator.storage.estimate) {
+        try {
+          const storage = await navigator.storage.estimate();
+          addLine("Storage usage estimate",
+            storage.usage == null ? "उपलब्ध नहीं" : formatBytes(storage.usage));
+          addLine("Storage quota estimate",
+            storage.quota == null ? "उपलब्ध नहीं" : formatBytes(storage.quota));
+        } catch (error) {
+          addLine("Storage estimate", "विफल: " + error.message);
+        }
+      }
+
+      if (!navigator.gpu) {
+        addLine("GPU adapter", "उपलब्ध नहीं");
+        addLine("परिणाम",
+          "WebGPU API उपलब्ध नहीं है। इस ब्राउज़र में स्थानीय WebGPU inference का परीक्षण नहीं हो सका।");
+      } else {
+        try {
+          const adapter = await navigator.gpu.requestAdapter();
+
+          if (!adapter) {
+            addLine("GPU adapter", "नहीं मिला");
+            addLine("परिणाम", "कोई WebGPU adapter उपलब्ध नहीं हुआ।");
+          } else {
+            addLine("GPU adapter", "मिला");
+
+            try {
+              if (adapter.info) {
+                const info = adapter.info;
+                addLine("GPU vendor", info.vendor || "अज्ञात");
+                addLine("GPU architecture", info.architecture || "अज्ञात");
+                addLine("GPU device", info.device || "अज्ञात");
+                addLine("GPU description", info.description || "अज्ञात");
+              }
+            } catch (_) {
+              addLine("GPU information", "ब्राउज़र ने अतिरिक्त जानकारी उपलब्ध नहीं कराई");
+            }
+
+            const limits = adapter.limits || {};
+
+            addLine("Adapter maxBufferSize",
+              isNumber(limits.maxBufferSize)
+                ? formatBytes(limits.maxBufferSize) : "उपलब्ध नहीं");
+
+            addLine("Adapter maxStorageBufferBindingSize",
+              isNumber(limits.maxStorageBufferBindingSize)
+                ? formatBytes(limits.maxStorageBufferBindingSize) : "उपलब्ध नहीं");
+
+            addLine("Adapter maxComputeWorkgroupStorageSize",
+              isNumber(limits.maxComputeWorkgroupStorageSize)
+                ? formatBytes(limits.maxComputeWorkgroupStorageSize) : "उपलब्ध नहीं");
+
+            try {
+              const device = await adapter.requestDevice();
+              const actual = device.limits || {};
+
+              addLine("GPU device creation", "सफल");
+
+              addLine("Device maxBufferSize",
+                isNumber(actual.maxBufferSize)
+                  ? formatBytes(actual.maxBufferSize) : "उपलब्ध नहीं");
+
+              addLine("Device maxStorageBufferBindingSize",
+                isNumber(actual.maxStorageBufferBindingSize)
+                  ? formatBytes(actual.maxStorageBufferBindingSize) : "उपलब्ध नहीं");
+
+              addLine("GPU परीक्षण", "प्रारम्भिक device creation सफल");
+
+              device.destroy();
+            } catch (error) {
+              addLine("GPU device creation", "विफल: " + error.message);
+            }
+          }
+        } catch (error) {
+          addLine("WebGPU परीक्षण", "विफल: " + error.message);
+        }
+      }
+
+      deviceLines.push("");
+      deviceLines.push("महत्त्वपूर्ण सीमा:");
+      deviceLines.push(
+        "यह जाँच browser API और GPU limits बताती है। " +
+        "यह free RAM, मॉडल की गति, संस्कृत की सटीकता या गायन की गुणवत्ता नहीं मापती।"
+      );
+      deviceLines.push(
+        "SoulX-Singer का आधिकारिक PyTorch checkpoint सीधे WebGPU model format नहीं है।"
+      );
+
+      deviceReport.textContent = deviceLines.join("\n");
+      auditFinished = true;
+
+      deviceStatus.textContent =
+        "डिवाइस रिपोर्ट तैयार है। यह मॉडल के सफल चलने की पुष्टि नहीं है।";
+      deviceStatus.className = "status warn";
+    } catch (error) {
+      deviceLines.push("ऑडिट त्रुटि: " + (error.message || String(error)));
+      deviceReport.textContent = deviceLines.join("\n");
+      deviceStatus.textContent = "जाँच पूरी नहीं हो सकी। रिपोर्ट में त्रुटि देखें।";
+      deviceStatus.className = "status warn";
+    }
+  }
+
+  function inspectFiles() {
+    const files = Array.from($("modelFiles").files || []);
+    fileLines = [
+      "स्थानीय फ़ाइल निरीक्षण",
+      "तारीख: " + new Date().toISOString(),
+      ""
+    ];
+
+    if (!files.length) {
+      fileStatus.textContent = "पहले एक या अधिक स्थानीय फ़ाइलें चुनें।";
+      fileStatus.className = "status";
+      fileReport.textContent = "";
+      return;
+    }
+
+    let totalBytes = 0;
+    let largestWeight = 0;
+    let hasOnnx = false;
+    let hasTorchCheckpoint = false;
+    let hasConfig = false;
+
+    fileLines.push("चुनी गई फ़ाइलें: " + files.length);
+    fileLines.push("");
+
+    for (const file of files) {
+      const size = file.size;
+      totalBytes += size;
+
+      const name = file.name.toLowerCase();
+      const weight = /\.(pt|pth|onnx|safetensors|bin|gguf)$/i.test(name);
+
+      if (weight) largestWeight = Math.max(largestWeight, size);
+      if (/\.onnx$/i.test(name)) hasOnnx = true;
+      if (/\.(pt|pth)$/i.test(name)) hasTorchCheckpoint = true;
+      if (/\.(json|yaml|yml)$/i.test(name)) hasConfig = true;
+
+      fileLines.push(file.name);
+      fileLines.push("  आकार: " + formatBytes(size));
+      fileLines.push("  प्रकार: " +
+        (weight ? "वज़न/मॉडल-संबंधी फ़ाइल" :
+          /\.(json|yaml|yml)$/i.test(name) ? "कॉन्फ़िगरेशन-संबंधी फ़ाइल" :
+          /\.(py|txt)$/i.test(name) ? "कोड/टेक्स्ट फ़ाइल" :
+          "अन्य फ़ाइल"));
+      fileLines.push("");
+    }
+
+    fileLines.push("कुल चयनित आकार: " + formatBytes(totalBytes));
+    fileLines.push("सबसे बड़ी मॉडल-संबंधी फ़ाइल: " +
+      (largestWeight ? formatBytes(largestWeight) : "कोई पहचानी नहीं गई"));
+
+    fileLines.push("ONNX फ़ाइल चुनी गई: " + (hasOnnx ? "हाँ" : "नहीं"));
+    fileLines.push("PyTorch checkpoint (.pt/.pth) चुना गया: " +
+      (hasTorchCheckpoint ? "हाँ" : "नहीं"));
+    fileLines.push("Config फ़ाइल चुनी गई: " + (hasConfig ? "हाँ" : "नहीं"));
+
+    fileLines.push("");
+    fileLines.push("व्याख्या:");
+
+    if (hasTorchCheckpoint && !hasOnnx) {
+      fileLines.push(
+        "केवल .pt/.pth मिलने पर मॉडल WebGPU के लिए तैयार नहीं माना जा सकता। " +
+        "उपयुक्त conversion और compatible inference implementation चाहिए।"
+      );
+    } else if (hasOnnx) {
+      fileLines.push(
+        "ONNX फ़ाइल मिलने से WebGPU compatibility सिद्ध नहीं होती। " +
+        "ऑपरेटर समर्थन, dynamic shapes, memory requirements और वास्तविक inference का परीक्षण बाकी है।"
+      );
+    } else {
+      fileLines.push(
+        "केवल फ़ाइल नाम और आकार से मॉडल प्रारूप या executable compatibility प्रमाणित नहीं होती।"
+      );
+    }
+
+    fileLines.push(
+      "फ़ाइल निरीक्षण केवल नाम और आकार पढ़ता है; फ़ाइल की आंतरिक संरचना execute नहीं की जाती।"
+    );
+
+    fileReport.textContent = fileLines.join("\n");
+    fileStatus.textContent =
+      "चयनित फ़ाइलों की सूची और आकार स्थानीय रूप से जाँचे गए। कोई फ़ाइल अपलोड नहीं हुई।";
+    fileStatus.className = "status good";
+  }
+
+  function fullReport() {
+    return [
+      "SWAR SADHIKA AI — MODEL AUDIT REPORT",
+      "====================================",
+      "",
+      deviceLines.join("\n"),
+      "",
+      "------------------------------------",
+      fileLines.length ? fileLines.join("\n") : "अभी कोई स्थानीय मॉडल फ़ाइल नहीं जाँची गई।",
+      "",
+      "FINAL STATUS:",
+      "SoulX-Singer के सीधे Android/WebGPU inference की व्यवहार्यता अभी प्रमाणित नहीं है।",
+      "किसी भी सफल singing output से पहले compatible runtime और वास्तविक मॉडल परीक्षण आवश्यक है."
+    ].join("\n");
+  }
+
+  $("runAudit").addEventListener("click", runAudit);
+  $("inspectFiles").addEventListener("click", inspectFiles);
+
+  $("downloadReport").addEventListener("click", () => {
+    const blob = new Blob([fullReport()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "swar-sadhika-model-audit.txt";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  $("copyReport").addEventListener("click", async () => {
+    const text = fullReport();
+
+    try {
+      await navigator.clipboard.writeText(text);
+      $("copyReport").textContent = "रिपोर्ट कॉपी हो गई";
+    } catch (_) {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+
+      const copied = document.execCommand("copy");
+      area.remove();
+
+      $("copyReport").textContent = copied
+        ? "रिपोर्ट कॉपी हो गई"
+        : "कॉपी नहीं हो सकी — रिपोर्ट डाउनलोड करें";
+    }
+  });
+
+  // पहले ऑडिट बटन दबाने पर वास्तविक डिवाइस जाँच चलेगी।
+})();
+</script>
+</body>
+</html>
