@@ -100,6 +100,7 @@
     .status.warn { background: var(--warn-bg); border-color: #efd18b; color: var(--warn); }
     .status.bad { background: var(--bad-bg); border-color: #efc2c2; color: var(--bad); }
     .status-line { display: flex; gap: 8px; align-items: flex-start; }
+    .status-line span:first-child { flex: 0 0 auto; }
     .progress-track { width: 100%; height: 10px; background: #e7edf5; border-radius: 999px; overflow: hidden; border: 1px solid #d8e1ee; }
     .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg,#286ac3,#58a5f6); transition: width .15s linear; }
     .progress-meta { display: flex; justify-content: space-between; gap: 12px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
@@ -282,7 +283,7 @@
             <label class="check-row" for="video-loop" style="margin-top:12px"><input type="checkbox" id="video-loop"> वर्तमान क्लिप को Loop करें</label>
             <div id="video-status" class="status" role="status" style="margin-top:12px">कोई वीडियो क्लिप नहीं चुनी गई।</div>
             <ul id="video-list" class="media-list" aria-label="चुनी गई वीडियो क्लिप"></ul>
-            <p class="hint" style="margin:10px 0 0">एक क्लिप समाप्त होने पर अगली चुनी हुई क्लिप चल सकती है। Codec/autoplay support ब्राउज़र के अनुसार बदलता है। वीडियो चलाने के लिए स्पष्ट Play action आवश्यक है।</p>
+            <p class="hint" style="margin:10px 0 0">एक क्लिप समाप्त होने पर अगली चुनी हुई क्लिप चल सकती है। वीडियो पर पाठ की newline-separated पंक्तियाँ एक समय में केवल एक दिखाई देंगी और क्लिप की अवधि में क्रमशः आगे बढ़ेंगी। बिना line break वाला paragraph एक display line माना जाएगा। Codec/autoplay support ब्राउज़र के अनुसार बदलता है। वीडियो चलाने के लिए स्पष्ट Play action आवश्यक है।</p>
           </div>
         </section>
 
@@ -390,20 +391,71 @@
       if (selected) return selected.text;
       return textInput.value;
     }
+
+    // हर newline-separated पाठ-पंक्ति अलग display unit है। खाली पंक्तियाँ स्क्रीन पर
+    // blank frame बनाने के बजाय छोड़ी जाती हैं; मूल queued text में कोई बदलाव नहीं होता।
+    function getDisplayLines(text = currentDisplayText()) {
+      return safeText(text).split(/\r\n?|\n|\u2028|\u2029/).map(line => line.trim()).filter(Boolean);
+    }
+
+    // वीडियो की वास्तविक currentTime के आधार पर उपलब्ध पंक्तियों को क्लिप की अवधि
+    // में समान हिस्सों में दिखाएँ। वीडियो paused/seeked हो तो उसी समय की पंक्ति रहेगी।
+    function getVideoLineState(text = currentDisplayText()) {
+      const lines = getDisplayLines(text);
+      if (!lines.length) return { lines, index: -1, line: '', duration: 0, currentTime: 0 };
+      const video = $('video-preview');
+      const duration = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+      const currentTime = video && Number.isFinite(video.currentTime) && video.currentTime > 0 ? video.currentTime : 0;
+      let index = 0;
+      if (lines.length > 1 && duration > 0) {
+        const safeTime = Math.min(currentTime, Math.max(0, duration - 0.000001));
+        index = Math.min(lines.length - 1, Math.floor((safeTime / duration) * lines.length));
+      }
+      return { lines, index, line: lines[index] || '', duration, currentTime };
+    }
+
+    function visibleOverlayText(text = currentDisplayText()) {
+      if (activeMediaMode === 'video' && currentVideoIndex >= 0) return getVideoLineState(text).line;
+      return text;
+    }
+
+    // लम्बी संस्कृत पंक्ति को दूसरी दृश्य-पंक्ति में wrap होने से रोकने के लिए
+    // केवल वीडियो-mode में font size को उपलब्ध चौड़ाई के भीतर fit किया जाता है।
+    function fitVideoLineFontSize(text, requestedSize) {
+      if (!text || !renderCtx) return requestedSize;
+      const stageWidth = $('preview-stage').getBoundingClientRect().width || 360;
+      const maxWidth = stageWidth * 0.84;
+      let size = Number(requestedSize) || 28;
+      while (size > 12) {
+        renderCtx.font = `850 ${size}px system-ui, "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif`;
+        if (renderCtx.measureText(text).width <= maxWidth) break;
+        size -= 1;
+      }
+      return Math.max(12, size);
+    }
+
     function refreshPreviewText() {
-      const text = currentDisplayText();
+      const sourceText = currentDisplayText();
+      const text = visibleOverlayText(sourceText);
+      const inVideoMode = activeMediaMode === 'video' && currentVideoIndex >= 0;
+      const lineState = inVideoMode ? getVideoLineState(sourceText) : null;
       renderColoredText($('overlay-text'), text);
-      $('overlay-text').style.fontSize = `${$('text-size').value}px`;
+      $('overlay-text').style.whiteSpace = inVideoMode ? 'pre' : 'pre-wrap';
+      const requestedSize = Number($('text-size').value);
+      $('overlay-text').style.fontSize = `${inVideoMode ? fitVideoLineFontSize(text, requestedSize) : requestedSize}px`;
       $('overlay-text').style.top = $('text-position').value === 'top' ? '18%' : $('text-position').value === 'bottom' ? '82%' : '50%';
       $('text-size-value').textContent = `${$('text-size').value} px`;
       const selected = queueItems.find(item => item.id === selectedQueueId);
       let note = '';
-      if (!queueItems.length && text.trim()) note = 'यह केवल ड्राफ्ट Preview है; कतार में शामिल नहीं है। वाचन के लिए “+ कतार में जोड़ें” दबाएँ।';
+      if (inVideoMode && lineState && lineState.lines.length) {
+        note = `वीडियो पर पंक्ति ${lineState.index + 1}/${lineState.lines.length} दिखाई जा रही है। पंक्तियाँ क्लिप की अवधि में क्रमशः बदलती हैं; अगली पंक्ति के लिए पाठ में newline रखें।`;
+        $('stage-label').textContent = `वीडियो · पंक्ति ${lineState.index + 1}/${lineState.lines.length}`;
+      } else if (!queueItems.length && sourceText.trim()) note = 'यह केवल ड्राफ्ट Preview है; कतार में शामिल नहीं है। वाचन के लिए “+ कतार में जोड़ें” दबाएँ।';
       else if (playback.active && queueItems[playback.index]) note = `वर्तमान कतार पाठ ${playback.index + 1} / ${queueItems.length} का Preview।`;
       else if (selected) note = `Preview कतार के चुने हुए पाठ से जुड़ा है (${queueItems.indexOf(selected) + 1} / ${queueItems.length})।`;
       else if (queueItems.length) note = 'Preview के लिए कतार में किसी पाठ का “Preview” चुनें।';
       else note = 'टेक्स्ट पूर्वावलोकन के लिए पाठ लिखें या कतार में से पाठ चुनें।';
-      setStatus($('preview-text-status'), note, (!queueItems.length && text.trim()) ? 'warn' : '');
+      setStatus($('preview-text-status'), note, (!queueItems.length && sourceText.trim()) ? 'warn' : '');
     }
     function refreshQueue() {
       queueList.replaceChildren();
@@ -441,7 +493,8 @@
       $('video-preview').classList.toggle('active', activeMediaMode === 'video' && currentVideoIndex >= 0);
       $('stage-empty').hidden = activeMediaMode !== 'none';
       $('preview-mode').textContent = activeMediaMode === 'photo' ? 'फोटो' : activeMediaMode === 'video' ? `वीडियो ${currentVideoIndex + 1}/${videos.length}` : 'खाली दृश्य';
-      $('stage-label').textContent = activeMediaMode === 'photo' ? 'फोटो + छह रंगों वाला टेक्स्ट' : activeMediaMode === 'video' ? 'वीडियो + छह रंगों वाला टेक्स्ट' : 'टेक्स्ट-only canvas दृश्य';
+      $('stage-label').textContent = activeMediaMode === 'photo' ? 'फोटो + छह रंगों वाला टेक्स्ट' : activeMediaMode === 'video' ? 'वीडियो · पंक्ति-दर-पंक्ति टेक्स्ट' : 'टेक्स्ट-only canvas दृश्य';
+      refreshPreviewText();
     }
     function pauseOtherMediaForTts() {
       if (!$('pause-media-during-tts').checked) return;
@@ -517,7 +570,6 @@
       if (!queueItems.length) { setStatus($('queue-notice'), 'पहले ‘+ कतार में जोड़ें’ दबाएँ।', 'warn'); updateTtsButtons(); return; }
       if (!voiceReady || !voices.length || !selectedVoice()) { setStatus($('tts-status'), 'वाचन शुरू नहीं हुआ: कोई मान्य voice चयनित नहीं है।', 'warn'); refreshVoices(); return; }
       if (playback.active) return;
-      // Clear earlier browser utterances before creating a new controlled sequence.
       synth.cancel();
       playbackToken += 1;
       playback = { active: true, paused: false, index: 0, completed: 0, currentPercent: 0, utterance: null, token: playbackToken };
@@ -636,7 +688,8 @@
     else if (speechSupported) synth.onvoiceschanged = refreshVoices;
     $('tts-rate').addEventListener('input', () => $('tts-rate-value').textContent = `${Number($('tts-rate').value).toFixed(1)}×`);
     $('tts-volume').addEventListener('input', () => $('tts-volume-value').textContent = `${Math.round(Number($('tts-volume').value) * 100)}%`);
-    $('tts-pitch').addEventListener('input', () => $('tts-pitch-value').textContent = Number($('tts-pitch').value).toFixed(1));
+    $('tts-pitch').addEventListener('input', () => $('tts-pitch-value').textContent = Number($('tts-pitch').value).toFixed(1);
+
     $('text-size').addEventListener('input', refreshPreviewText);
     $('text-position').addEventListener('change', refreshPreviewText);
 
@@ -730,10 +783,15 @@
     $('video-pause-btn').addEventListener('click', () => { $('video-preview').pause(); setStatus($('video-status'), 'वीडियो रुका हुआ है। Resume के लिए Play दबाएँ।', 'warn'); renderVideoList(); });
     $('video-reset-btn').addEventListener('click', () => { const video = $('video-preview'); video.pause(); try { video.currentTime = 0; } catch (_) {} setStatus($('video-status'), 'वर्तमान क्लिप शुरू में reset की गई।'); renderVideoList(); });
     $('video-loop').addEventListener('change', () => { $('video-preview').loop = $('video-loop').checked; setStatus($('video-status'), $('video-loop').checked ? 'वर्तमान क्लिप loop पर चलेगी।' : 'Loop बंद है; समाप्त होने पर अगली क्लिप की कोशिश होगी।'); });
-    $('video-preview').addEventListener('loadedmetadata', () => { if (currentVideoIndex >= 0) setStatus($('video-status'), `वीडियो metadata लोड हुआ: ${Math.round($('video-preview').videoWidth)} × ${Math.round($('video-preview').videoHeight)}, ${Number.isFinite($('video-preview').duration) ? `${$('video-preview').duration.toFixed(1)} सेकंड` : 'अवधि अज्ञात'}।`, 'good'); });
+    $('video-preview').addEventListener('loadedmetadata', () => {
+      if (currentVideoIndex >= 0) setStatus($('video-status'), `वीडियो metadata लोड हुआ: ${Math.round($('video-preview').videoWidth)} × ${Math.round($('video-preview').videoHeight)}, ${Number.isFinite($('video-preview').duration) ? `${$('video-preview').duration.toFixed(1)} सेकंड` : 'अवधि अज्ञात'}।`, 'good');
+      refreshPreviewText();
+    });
+    $('video-preview').addEventListener('timeupdate', refreshPreviewText);
+    $('video-preview').addEventListener('seeked', refreshPreviewText);
     $('video-preview').addEventListener('error', () => { if (currentVideoIndex >= 0) setStatus($('video-status'), `वीडियो लोड/डिकोड नहीं हो सका: ${videos[currentVideoIndex]?.file.name || 'क्लिप'}। यह codec इस browser में समर्थित न हो सकता है।`, 'bad'); });
-    $('video-preview').addEventListener('play', () => { renderVideoList(); });
-    $('video-preview').addEventListener('pause', () => { renderVideoList(); });
+    $('video-preview').addEventListener('play', () => { renderVideoList(); refreshPreviewText(); });
+    $('video-preview').addEventListener('pause', () => { renderVideoList(); refreshPreviewText(); });
     $('video-preview').addEventListener('ended', () => {
       if ($('video-loop').checked || currentVideoIndex < 0) return;
       if (currentVideoIndex + 1 < videos.length) selectVideo(currentVideoIndex + 1, true);
@@ -842,28 +900,44 @@
       ctx.fillStyle = vignette; ctx.fillRect(0, 0, w, h);
     }
     function canvasDrawText(ctx) {
-      const text = currentDisplayText(); if (!text) return;
+      // वीडियो में केवल वर्तमान newline-separated पंक्ति draw होती है; DOM preview
+      // और MediaRecorder canvas दोनों यही time-synced line state उपयोग करते हैं।
+      const sourceText = currentDisplayText();
+      const videoLineMode = activeMediaMode === 'video' && currentVideoIndex >= 0;
+      const text = visibleOverlayText(sourceText);
+      if (!text) return;
       const w = renderCanvas.width, h = renderCanvas.height;
       const stageWidth = $('preview-stage').getBoundingClientRect().width || 360;
       const cssScale = w / stageWidth;
-      const baseSize = Number($('text-size').value) * cssScale;
-      const fontPx = Math.max(25, Math.min(120, baseSize));
+      let fontPx = Math.max(25, Math.min(120, Number($('text-size').value) * cssScale));
       const lineHeight = fontPx * 1.42;
       const marginX = w * .07, maxWidth = w - marginX * 2;
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       ctx.font = `850 ${fontPx}px system-ui, "Noto Sans Devanagari", "Nirmala UI", sans-serif`;
+
+      if (videoLineMode) {
+        // एक logical पंक्ति को एक visual row में फिट करें, ताकि एक साथ कई
+        // संस्कृत पंक्तियाँ overlay पर न आ जाएँ। Canvas पर भी यही नियम लागू है।
+        while (fontPx > 20 && ctx.measureText(text).width > maxWidth) {
+          fontPx -= 1;
+          ctx.font = `850 ${fontPx}px system-ui, "Noto Sans Devanagari", "Nirmala UI", sans-serif`;
+        }
+      }
+
       const lines = [];
-      for (const explicitLine of text.split('\n')) {
+      const sourceLines = videoLineMode ? [text] : text.split('\n');
+      for (const explicitLine of sourceLines) {
         const clusters = splitGraphemes(explicitLine);
         let line = [], lineWidth = 0;
         for (const cluster of clusters) {
           const width = ctx.measureText(cluster).width;
-          if (line.length && lineWidth + width > maxWidth) { lines.push(line); line = []; lineWidth = 0; }
+          if (!videoLineMode && line.length && lineWidth + width > maxWidth) { lines.push(line); line = []; lineWidth = 0; }
           line.push({ text: cluster, width }); lineWidth += width;
         }
         lines.push(line);
       }
-      const blockHeight = Math.max(lineHeight, lines.length * lineHeight);
+      const actualLineHeight = fontPx * 1.42;
+      const blockHeight = Math.max(actualLineHeight, lines.length * actualLineHeight);
       let top;
       if ($('text-position').value === 'top') top = h * .12;
       else if ($('text-position').value === 'bottom') top = h * .78 - blockHeight;
@@ -874,7 +948,7 @@
       lines.forEach((line, i) => {
         const lineWidth = line.reduce((sum, part) => sum + part.width, 0);
         let x = (w - lineWidth) / 2;
-        const y = top + (i + .84) * lineHeight;
+        const y = top + (i + .84) * actualLineHeight;
         for (const part of line) {
           ctx.lineWidth = Math.max(2, fontPx * .09); ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.lineJoin = 'round'; ctx.strokeText(part.text, x, y);
           ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = fontPx * .25; ctx.fillStyle = palette[colorIndex % 6]; ctx.fillText(part.text, x, y); ctx.shadowBlur = 0;
@@ -985,7 +1059,6 @@
       const data = event.data;
       const allowed = new Set(['PASS', 'FAIL', 'BLOCKED', 'NOT TESTED']);
       if (!allowed.has(data.status)) return;
-      // A PASS label requires evidence fields, not a status string alone. The prototype built later must send this contract.
       let reportedStatus = data.status;
       if (reportedStatus === 'PASS') {
         const evidence = data.evidence;
@@ -1001,7 +1074,6 @@
       if (!prototypeFrameLoaded) { $('ai-state-pill').textContent = 'BLOCKED'; setStatus($('ai-status'), 'Prototype frame का load event नहीं आया। फाइल पथ, network और GitHub Pages deployment जाँचें।', 'bad'); }
     }, 8000);
 
-    // Render real frames only while an export is active; preview itself remains CSS/DOM based.
     function renderLoop() {
       if (recording && recording.state === 'recording') drawOutputFrame();
       requestAnimationFrame(renderLoop);
@@ -1016,7 +1088,6 @@
       if (lastRecordingUrl) URL.revokeObjectURL(lastRecordingUrl);
     });
 
-    // Initial UI sync.
     refreshVoices();
     refreshQueue();
     renderVideoList();
