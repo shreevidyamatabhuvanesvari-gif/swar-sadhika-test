@@ -1,176 +1,1212 @@
 <!doctype html>
 <html lang="hi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#171329">
-  <meta name="description" content="Anjali — संस्कृत पाठ, मंत्र और ऑडियो साधना स्टूडियो">
-  <title>Anjali — संस्कृत साधना स्टूडियो</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      font-family: system-ui, "Noto Sans Devanagari", sans-serif;
-      background: #11101b;
-      color: #f7f2ff;
-      --panel: #201d30;
-      --border: #49415f;
-      --accent: #d8b4fe;
-      --muted: #c2b8d2;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; }
-    header {
-      padding: 22px 18px;
-      background: #1a1728;
-      border-bottom: 1px solid var(--border);
-    }
-    header, main { max-width: 850px; margin-inline: auto; }
-    header p { color: var(--muted); margin-bottom: 0; }
-    h1 { margin: 0; font-size: 1.7rem; }
-    main { padding: 18px; }
-    section {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 17px;
-      margin-bottom: 16px;
-    }
-    label { display: block; font-weight: 650; margin-bottom: 8px; }
-    textarea, input[type="file"] {
-      width: 100%;
-      color: inherit;
-      background: #151321;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      font: inherit;
-    }
-    textarea { min-height: 180px; resize: vertical; }
-    button, .download {
-      display: inline-block;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      margin: 7px 5px 0 0;
-      background: #342847;
-      color: white;
-      font: inherit;
-      font-weight: 650;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    button.primary { background: #7046a3; border-color: #a77bd7; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    audio { display: block; width: 100%; margin-top: 12px; }
-    .muted, .status { color: var(--muted); }
-    .status { overflow-wrap: anywhere; }
-    .preview {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      min-height: 60px;
-      padding: 12px;
-      border-radius: 10px;
-      background: #151321;
-      border: 1px solid var(--border);
-    }
-    footer { padding: 10px 18px 28px; text-align: center; color: var(--muted); }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="description" content="Anjali — संस्कृत एवं वैदिक पाठ, बहुरंगी टेक्स्ट, वीडियो क्लिप और स्थानीय ब्राउज़र वाचन स्टूडियो।">
+<title>Anjali — संस्कृत 9:16 वीडियो एवं वाचन स्टूडियो</title>
+<style>
+:root{
+  --bg:#eef2f7;
+  --panel:#ffffff;
+  --panel-soft:#f8fafc;
+  --ink:#111827;
+  --muted:#64748b;
+  --line:#dbe3ee;
+  --primary:#2563eb;
+  --primary-dark:#1d4ed8;
+  --danger:#b42318;
+  --shadow:0 18px 55px rgba(15,23,42,.12);
+  --radius:20px;
+  --display-max:430px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;min-width:320px;min-height:100%;font-family:"Noto Sans Devanagari","Nirmala UI","Mangal",system-ui,-apple-system,"Segoe UI",sans-serif;background:linear-gradient(145deg,#eef2f7,#e7edf5);color:var(--ink)}
+body{min-height:100dvh;padding:18px}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.48}
+.app-shell{width:min(100%,1280px);margin:0 auto}
+.site-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:18px;padding:22px 24px;border:1px solid var(--line);border-radius:var(--radius);background:rgba(255,255,255,.94);box-shadow:var(--shadow)}
+.header-copy{min-width:0}.eyebrow,.section-kicker{margin:0;color:var(--primary);font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.site-header h1{margin:5px 0 7px;font-size:clamp(22px,3vw,34px);line-height:1.18}.subtitle{max-width:850px;margin:0;color:var(--muted);font-size:14px;line-height:1.65}.ratio-badge{flex:0 0 auto;display:grid;place-items:center;width:70px;height:70px;border-radius:18px;background:#eff6ff;border:1px solid #bfdbfe;color:var(--primary);font-weight:900}
+.workspace{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}.control-panel,.preview-panel{border:1px solid var(--line);border-radius:var(--radius);background:rgba(255,255,255,.96);box-shadow:var(--shadow)}.control-panel{overflow:hidden}.panel-section{padding:18px;border-bottom:1px solid var(--line)}.panel-section:last-child{border-bottom:0}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.section-heading>div{min-width:0}.section-heading h2{display:inline;margin:0 0 0 8px;font-size:17px}.section-heading.compact{margin-bottom:12px}.queue-pill{white-space:nowrap;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:var(--muted);font-size:12px}.field-label{display:block;margin-bottom:7px;font-size:12px;font-weight:800;color:#334155}.control-input,textarea{width:100%;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:var(--ink);outline:none}textarea{min-height:110px;padding:12px;resize:vertical;line-height:1.65}textarea:focus,.control-input:focus,.range:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.12)}.control-input{height:42px;padding:0 10px}.field-help,.tts-note{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.55}.button-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.button{min-height:42px;padding:9px 13px;border:1px solid transparent;border-radius:11px;font-weight:800;font-size:13px;transition:transform .12s ease,box-shadow .12s ease}.button:not(:disabled):active{transform:translateY(1px)}.button.primary{background:linear-gradient(180deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 7px 16px rgba(37,99,235,.18)}.button.secondary{background:#f8fafc;border-color:#cbd5e1;color:#1e293b}.button.danger-outline{margin-top:10px;background:#fff;border-color:#fecaca;color:var(--danger)}.playback-row .button{flex:1;min-width:0}.upload-box{display:flex;flex-direction:column;gap:3px;min-height:68px;padding:13px;border:1px dashed #93c5fd;border-radius:13px;background:#f8fbff;color:#1e3a8a;cursor:pointer}.upload-title{font-weight:800;font-size:13px}.upload-help{font-size:11px;color:#64748b}.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.inline-status{min-height:19px;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.5}.range-row{display:flex;justify-content:space-between;align-items:center;margin-top:14px}.range-row .field-label{margin:0}.rate-value{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;color:#334155;font-size:12px;font-weight:800}.range{width:100%;accent-color:var(--primary)}.queue-section{max-height:360px;overflow:auto}.quote-queue{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}.queue-item{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:start;padding:10px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc}.queue-item.active{border-color:#93c5fd;background:#eff6ff;box-shadow:inset 3px 0 0 var(--primary)}.queue-number{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#e2e8f0;color:#334155;font-size:11px;font-weight:900}.queue-item.active .queue-number{background:var(--primary);color:#fff}.queue-text{min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.55}.queue-empty{padding:14px;border:1px dashed #cbd5e1;border-radius:11px;color:var(--muted);font-size:12px;text-align:center}
+.preview-panel{min-width:0;padding:18px}.preview-header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:15px}.preview-header h2{margin:4px 0 0;font-size:20px}.live-state{max-width:48%;padding:6px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:800;text-align:center}.display-wrap{display:flex;justify-content:center}.display-stage{position:relative;width:min(100%,var(--display-max));min-width:0;aspect-ratio:9 / 16;overflow:hidden;border-radius:22px;background:#111827;isolation:isolate;box-shadow:0 18px 45px rgba(15,23,42,.2)}.stage-video,.stage-photo,.display-scrim,.photo-frame,.display-content,.video-placeholder{position:absolute;inset:0}.stage-video{z-index:0;width:100%;height:100%;object-fit:cover;background:#111827}.video-placeholder{z-index:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;padding:28px;text-align:center;color:#cbd5e1;background:radial-gradient(circle at 50% 35%,#334155,#111827 65%);font-size:13px;line-height:1.55}.placeholder-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff}.display-scrim{z-index:2;background:linear-gradient(180deg,rgba(2,6,23,.15),rgba(2,6,23,.48) 56%,rgba(2,6,23,.78))}.photo-frame{z-index:3;inset:auto 7% 13%;height:27%;display:flex;justify-content:center;align-items:center;overflow:hidden;border-radius:18px;border:2px solid rgba(255,255,255,.75);background:rgba(255,255,255,.1);box-shadow:0 12px 30px rgba(0,0,0,.25)}.stage-photo{position:static;width:100%;height:100%;object-fit:contain}.display-content{z-index:4;display:flex;flex-direction:column;justify-content:space-between;padding:8% 7% 5%;color:#fff}.display-label{align-self:flex-start;padding:5px 9px;border:1px solid rgba(255,255,255,.32);border-radius:999px;background:rgba(0,0,0,.18);font-size:10px;font-weight:900;letter-spacing:.08em}.quote-stage{display:flex;align-items:center;justify-content:center;min-height:0;padding:12px 3px;text-align:center;overflow:auto}.quote-stage-placeholder{max-width:90%;color:rgba(255,255,255,.75);font-size:clamp(15px,3.2vw,23px);line-height:1.6}.quote-text{max-width:100%;font-size:clamp(18px,4vw,31px);line-height:1.55;font-weight:900;overflow-wrap:anywhere;text-wrap:pretty;text-shadow:0 2px 12px rgba(0,0,0,.45)}.quote-word.c1{color:#fde047}.quote-word.c2{color:#67e8f9}.quote-word.c3{color:#f9a8d4}.quote-word.c4{color:#86efac}.quote-word.c5{color:#c4b5fd}.quote-word.c6{color:#fdba74}.display-footer{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;color:rgba(255,255,255,.82)}.current-readout{margin-top:13px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#f8fafc}.readout-title,.status-label{font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.07em}.readout-text{margin-top:4px;line-height:1.55;font-size:12px;overflow-wrap:anywhere}.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.status-card{min-width:0;padding:11px;border:1px solid var(--line);border-radius:13px;background:#fff}.status-value{margin-top:4px;min-height:34px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}.progress-card{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff}.progress-head{display:flex;justify-content:space-between;gap:10px;font-size:11px;font-weight:800}.progress-card progress{display:block;width:100%;height:9px;margin-top:9px}.progress-caption{margin-top:6px;color:var(--muted);font-size:10px}.system-footer{margin-top:18px;padding:13px 16px;border:1px solid var(--line);border-radius:var(--radius);background:rgba(255,255,255,.9);box-shadow:var(--shadow)}.system-status{font-size:12px;font-weight:800}.system-rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.system-rules span{padding:4px 7px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:10px}
+@media (max-width:980px){body{padding:12px}.workspace{grid-template-columns:1fr}.control-panel{order:2}.preview-panel{order:1}.queue-section{max-height:280px}.display-stage{width:min(100%,420px)}}
+@media (max-width:620px){body{padding:8px}.site-header{padding:16px;gap:12px}.site-header h1{font-size:21px}.subtitle{font-size:12px}.ratio-badge{width:54px;height:54px;font-size:12px}.preview-panel,.panel-section{padding:14px}.preview-header{align-items:flex-start}.live-state{max-width:55%;font-size:10px}.status-grid{grid-template-columns:1fr}.display-stage{border-radius:17px}.quote-text{font-size:clamp(17px,6vw,27px)}.button{min-height:44px}.system-footer{margin-top:10px}}
+@media (max-width:380px){body{padding:5px}.site-header{padding:12px}.site-header h1{font-size:19px}.eyebrow{font-size:9px}.subtitle{font-size:11px}.ratio-badge{display:none}.button-row{flex-direction:column}.playback-row{display:grid;grid-template-columns:1fr 1fr}.playback-row .button:last-child{grid-column:1/-1}.display-content{padding:7% 6% 5%}.quote-text{font-size:17px;line-height:1.48}.photo-frame{inset:auto 7% 12%;height:25%}}
+
+
+/* Optional Sanskrit/Vedic knowledge panel; isolated from the TTS surface. */
+.sanskrit-panel summary { cursor: pointer; font-weight: 800; font-size: 13px; color: #1e3a8a; }
+.sanskrit-panel[open] summary { margin-bottom: 12px; }
+.sanskrit-panel [data-status="ready"] { color: #166534; }
+.sanskrit-panel [data-status="error"] { color: #b42318; }
+.sanskrit-analysis-output { max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 11px; margin: 10px 0 0; border: 1px solid var(--line); border-radius: 11px; background: #f8fafc; color: #334155; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Anjali additions: accessible voice volume, clip queue, audio track and integrated engine panel. */
+.quote-text{font-size:var(--multicolor-size,clamp(18px,4vw,31px))}
+.settings-inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.setting-card{padding:11px;border:1px solid var(--line);border-radius:13px;background:#f8fafc}
+.setting-card .field-label{margin-bottom:8px}
+.media-list{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.media-list li{padding:7px 9px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.media-list li.active{border-color:#60a5fa;background:#eff6ff;font-weight:800}
+.audio-player{display:block;width:100%;height:42px;margin-top:9px}
+.engine-section{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden}
+.engine-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.engine-head h2{margin:0;font-size:19px}.engine-head p{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+.engine-badge{flex:0 0 auto;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:900}
+.engine-frame{display:block;width:100%;height:1040px;border:0;background:#f8fafc}
+.engine-disclaimer{margin:0;padding:11px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.6}
+@media(max-width:620px){.settings-inline{grid-template-columns:1fr}.engine-head{padding:14px;flex-direction:column}.engine-frame{height:1060px}}
+
+</style>
 </head>
 <body>
-  <header>
-    <h1>ॐ Anjali</h1>
-    <p>संस्कृत पाठ एवं मंत्र-साधना स्टूडियो</p>
+<div class="app-shell">
+  <header class="site-header">
+    <div class="header-copy">
+      <p class="eyebrow">ANJALI · SWAR-SADHIKA</p>
+      <h1>अंजली — संस्कृत एवं वैदिक वाचन स्टूडियो</h1>
+      <p class="subtitle">9:16 वीडियो-प्रीव्यू, वीडियो क्लिप, फोटो-फ्रेम, बहुरंगी संस्कृत टेक्स्ट और ब्राउज़र-वाचन एक ही कार्यक्षेत्र में। AI गायन इंजन अलग खंड में उपलब्ध प्रोटोटाइप के माध्यम से जाँचा जाता है।</p>
+    </div>
+    <div class="ratio-badge" aria-label="9 by 16 portrait ratio">9:16</div>
   </header>
 
-  <main>
-    <section>
-      <h2>संस्कृत पाठ</h2>
-      <label for="sanskritText">अपना मंत्र, श्लोक या स्तोत्र लिखें</label>
-      <textarea id="sanskritText" lang="sa" placeholder="यहाँ संस्कृत पाठ लिखें…">ॐ नमः शिवाय।</textarea>
-      <button class="primary" id="previewButton" type="button">पाठ देखें</button>
-      <div class="preview" id="textPreview" aria-live="polite">ॐ नमः शिवाय।</div>
-      <p class="muted">यह सुविधा पाठ दिखाती है; अपने-आप AI गायन उत्पन्न नहीं करती।</p>
+  <div class="workspace">
+    <aside class="control-panel" aria-label="स्टूडियो नियंत्रण">
+      <section class="panel-section">
+        <div class="section-heading">
+          <div><p class="section-kicker">TEXT QUEUE</p><h2>सुविचार / श्लोक जोड़ें</h2></div>
+          <span class="queue-pill"><span id="queueCount">0</span> पाठ</span>
+        </div>
+        <label class="field-label" for="quoteInput">प्रत्येक सुविचार या श्लोक यहाँ लिखें</label>
+        <textarea id="quoteInput" spellcheck="false" lang="sa" placeholder="उदाहरण: वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।&#10;जगतः पितरौ वन्दे पार्वतीपरमेश्वरौ ॥"></textarea>
+        <p class="field-help">नई पंक्ति को वाचन में विराम की तरह उपयोग किया जाएगा। पाठ को बदलकर जोड़ें; खाली पाठ कतार में नहीं जाएगा।</p>
+        <div class="button-row">
+          <button id="addQuoteButton" class="button primary" type="button">＋ कतार में जोड़ें</button>
+          <button id="clearQuotesButton" class="button secondary" type="button">कतार साफ़ करें</button>
+        </div>
+        <div class="queue-section" style="margin-top:12px">
+          <ol id="quoteQueue" class="quote-queue" aria-label="वाचन कतार"></ol>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading compact">
+          <div><p class="section-kicker">BROWSER VOICE</p><h2>वाचन नियंत्रण</h2></div>
+        </div>
+        <label class="field-label" for="voiceSelect">उपलब्ध ब्राउज़र आवाज़</label>
+        <select id="voiceSelect" class="control-input"><option value="">आवाज़ें लोड हो रही हैं…</option></select>
+        <p id="ttsVoiceStatus" class="inline-status" aria-live="polite">ब्राउज़र की आवाज़ सूची की जाँच हो रही है…</p>
+        <div class="range-row"><label class="field-label" for="ttsRate">वाचन गति</label><output id="ttsRateValue" class="rate-value" for="ttsRate">0.90</output></div>
+        <input id="ttsRate" class="range" type="range" min="0.6" max="1.2" step="0.05" value="0.90">
+        <div class="range-row"><label class="field-label" for="ttsVolume">वाचन की आवाज़</label><output id="ttsVolumeValue" class="rate-value" for="ttsVolume">100%</output></div>
+        <input id="ttsVolume" class="range" type="range" min="0" max="1" step="0.05" value="1">
+        <div class="range-row"><label class="field-label" for="textSize">बहुरंगी टेक्स्ट का आकार</label><output id="textSizeValue" class="rate-value" for="textSize">31 px</output></div>
+        <input id="textSize" class="range" type="range" min="18" max="42" step="1" value="31">
+        <div class="button-row playback-row">
+          <button id="playButton" class="button primary" type="button">▶ वाचन शुरू</button>
+          <button id="pauseButton" class="button secondary" type="button" disabled>Ⅱ रोकें</button>
+          <button id="resumeButton" class="button secondary" type="button" disabled>▶ जारी</button>
+          <button id="stopButton" class="button danger-outline" type="button" disabled>■ बंद</button>
+        </div>
+        <p id="ttsStatus" class="inline-status" aria-live="polite">वाचन शुरू नहीं हुआ है।</p>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading compact">
+          <div><p class="section-kicker">PHOTO OVERLAY</p><h2>फोटो जोड़ें</h2></div>
+        </div>
+        <label class="upload-box" for="photoUpload">
+          <span class="upload-title">＋ फोटो चुनें</span>
+          <span class="upload-help">JPG, PNG, WebP आदि — फोटो crop किए बिना फ्रेम में दिखाई जाएगी।</span>
+        </label>
+        <input id="photoUpload" class="visually-hidden" type="file" accept="image/*">
+        <p id="photoStatus" class="inline-status" aria-live="polite">कोई फोटो चयनित नहीं है।</p>
+        <button id="removePhotoButton" class="button danger-outline" type="button" disabled>फोटो हटाएँ</button>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading compact">
+          <div><p class="section-kicker">VIDEO CLIPS</p><h2>वीडियो क्लिप जोड़ें</h2></div>
+        </div>
+        <label class="upload-box" for="videoUpload">
+          <span class="upload-title">＋ एक या अनेक वीडियो क्लिप चुनें</span>
+          <span class="upload-help">वीडियो क्लिप को 9:16 प्रीव्यू में चलाने के लिए। एक से अधिक चुनने पर क्लिप क्रम से चलाने का प्रयास होगा।</span>
+        </label>
+        <input id="videoUpload" class="visually-hidden" type="file" accept="video/*" multiple>
+        <p id="videoUploadStatus" class="inline-status" aria-live="polite">कोई वीडियो चयनित नहीं है।</p>
+        <ol id="videoClipList" class="media-list" aria-label="वीडियो क्लिप सूची"><li>अभी कोई क्लिप नहीं।</li></ol>
+        <p id="videoStatus" class="inline-status" aria-live="polite">वीडियो तैयार नहीं है।</p>
+        <button id="removeVideoButton" class="button danger-outline" type="button" disabled>वीडियो सूची हटाएँ</button>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-heading compact">
+          <div><p class="section-kicker">AUDIO TRACK</p><h2>संगत ऑडियो ट्रैक</h2></div>
+        </div>
+        <label class="upload-box" for="audioTrackUpload">
+          <span class="upload-title">＋ ऑडियो फ़ाइल चुनें</span>
+          <span class="upload-help">MP3, WAV, M4A या ब्राउज़र द्वारा समर्थित स्थानीय ऑडियो। यह वैकल्पिक पृष्ठभूमि ट्रैक है।</span>
+        </label>
+        <input id="audioTrackUpload" class="visually-hidden" type="file" accept="audio/*">
+        <p id="audioTrackStatus" class="inline-status" aria-live="polite">कोई ऑडियो ट्रैक चयनित नहीं है।</p>
+        <audio id="audioTrack" class="audio-player" controls preload="metadata" hidden></audio>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#334155"><input id="audioLoop" type="checkbox" checked> पाठ/वीडियो चलने के दौरान ऑडियो दोहराएँ</label>
+      </section>
+    </aside>
+
+    <section class="preview-panel" aria-label="9:16 लाइव प्रीव्यू">
+      <div class="preview-header">
+        <div><p class="section-kicker">LIVE PREVIEW</p><h2>9:16 टेक्स्ट और वीडियो डिस्प्ले</h2></div>
+        <span id="completionGate" class="live-state">वाचन के लिए तैयार</span>
+      </div>
+      <div class="display-wrap">
+        <div class="display-stage" id="displayStage">
+          <video id="videoPlayer" class="stage-video" playsinline muted preload="metadata" aria-label="चयनित वीडियो क्लिप"></video>
+          <div id="videoPlaceholder" class="video-placeholder">
+            <div class="placeholder-icon" aria-hidden="true">▶</div>
+            <strong>आपका 9:16 वीडियो यहाँ दिखाई देगा</strong>
+            <span>पहले बाईं ओर से वीडियो क्लिप चुनें। बिना वीडियो के भी बहुरंगी टेक्स्ट प्रीव्यू उपलब्ध रहेगा।</span>
+          </div>
+          <div class="display-scrim" aria-hidden="true"></div>
+          <div id="photoFrame" class="photo-frame" hidden><img id="stagePhoto" class="stage-photo" alt="चयनित फोटो फ्रेम"></div>
+          <div class="display-content">
+            <div class="display-label">ANJALI · संस्कृत साधना</div>
+            <div id="quoteStage" class="quote-stage" aria-live="polite"><div class="quote-stage-placeholder">वाचन शुरू होने पर सुविचार यहाँ छह उज्ज्वल रंगों में प्रदर्शित होगा।</div></div>
+            <div class="display-footer"><span id="stageIndex">0 / 0</span><span>संस्कृत · हिंदी · वैदिक पाठ</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="current-readout">
+        <div class="readout-title">वर्तमान पाठ</div>
+        <div id="stageNow" class="readout-text">कोई सुविचार प्रदर्शित नहीं हो रहा है।</div>
+      </div>
+      <div class="status-grid">
+        <div class="status-card"><div class="status-label">ब्राउज़र वाचन</div><div id="ttsStatusSummary" class="status-value">तैयार</div></div>
+        <div class="status-card"><div class="status-label">वीडियो स्थिति</div><div id="videoSummary" class="status-value">वीडियो तैयार नहीं है।</div></div>
+      </div>
+      <div class="progress-card">
+        <div class="progress-head"><span>वाचन प्रगति</span><span id="ttsProgressValue">0%</span></div>
+        <progress id="ttsProgress" max="100" value="0">0%</progress>
+        <div id="quoteCompletion" class="progress-caption">कतार: 0 / 0</div>
+      </div>
+      <p class="tts-note">महत्वपूर्ण: Web Speech API से चलने वाला वाचन सामान्य ब्राउज़र TTS है; यह अपने-आप AI गायन नहीं है। वास्तविक मॉडल-आधारित संस्कृत chant का परीक्षण नीचे अलग इंजन पैनल में है।</p>
     </section>
+  </div>
 
-    <section>
-      <h2>ऑडियो सुनें</h2>
-      <label for="audioFile">अपने फ़ोन से ऑडियो फ़ाइल चुनें</label>
-      <input id="audioFile" type="file" accept="audio/*">
-      <audio id="audioPlayer" controls preload="metadata"></audio>
-      <p id="audioStatus" class="status" aria-live="polite">अभी कोई ऑडियो चुना नहीं गया है।</p>
-      <a id="downloadAudio" class="download" hidden>ऑडियो डाउनलोड करें</a>
-    </section>
+  <section class="engine-section" aria-labelledby="engine-heading">
+    <div class="engine-head">
+      <div><p class="section-kicker">LOCAL MODEL TEST</p><h2 id="engine-heading">Anjali — AI संस्कृत गायन इंजन</h2><p>मौजूदा गायन-प्रोटोटाइप को यहीं जोड़ा गया है। यह स्थानीय इंजन-मॉड्यूल की उपलब्धता जाँचता है, फिर WASM SIMD या प्रयोगात्मक ONNX WebGPU पर ऑडियो बनाने का प्रयास करता है।</p></div>
+      <span class="engine-badge">इंजन सत्यापन आवश्यक</span>
+    </div>
+    <iframe class="engine-frame" src="./singing-engine-prototype.html" title="Anjali AI संस्कृत गायन इंजन परीक्षण" loading="lazy" referrerpolicy="same-origin"></iframe>
+    <p class="engine-disclaimer">ईमानदार सीमा: iframe में सफल पृष्ठ-लोड का अर्थ सफल AI गायन नहीं है। यदि स्थानीय `vagdhenu-onnx.js` या `vagdhenu-text.js` उपलब्ध न हों, या मॉडल-सत्र विफल हो, तो प्रोटोटाइप कारण दिखाएगा। उसे वास्तविक ऑडियो सफलता नहीं माना जाएगा।</p>
+  </section>
 
-    <section>
-      <h2>इंजन की स्थिति</h2>
-      <p id="engineStatus" class="status" aria-live="polite">
-        गायन इंजन अभी इस स्क्रीन से जुड़ा नहीं है।
-      </p>
-    </section>
-  </main>
+  <footer class="system-footer">
+    <div class="system-status" id="systemStatus" role="status" aria-live="polite">स्टूडियो तैयार हो रहा है…</div>
+    <div class="system-rules"><span>9:16 preview</span><span>छह-रंग टेक्स्ट</span><span>स्थानीय फ़ाइलें</span><span>ब्राउज़र TTS</span><span>AI इंजन अलग से सत्यापित</span></div>
+  </footer>
+</div>
 
-  <footer>Anjali · संस्कृत एवं वैदिक पाठ के लिए स्थानीय स्टूडियो</footer>
+<script>
+'use strict';
 
-  <script>
-    (() => {
-      "use strict";
+const targetVoiceProfile = Object.freeze({
+  timbre: 9.5,
+  pitch: 8.5,
+  prosody: 9.5,
+  pronunciationArticulation: 9.0,
+  speakingRateTempo: 8.5,
+  pitchVariationResonance: 9.5
+});
 
-      const textInput = document.getElementById("sanskritText");
-      const preview = document.getElementById("textPreview");
-      const previewButton = document.getElementById("previewButton");
-      const audioInput = document.getElementById("audioFile");
-      const player = document.getElementById("audioPlayer");
-      const audioStatus = document.getElementById("audioStatus");
-      const download = document.getElementById("downloadAudio");
+const state = {
+  initialized: false,
+  quotes: [],
+  index: 0,
+  playback: 'idle',
+  voice: null,
+  voices: [],
+  speechToken: 0,
+  videoObjectUrl: '',
+  photoObjectUrl: '',
+  videoReady: false,
+  photoReady: false,
+  ttsSupported: false,
+  voiceLoadTimer: null,
+  voiceLoadAttempts: 0,
+  photoToken: 0,
+  videoToken: 0
+};
 
-      let currentObjectUrl = null;
+const PLAYBACK = Object.freeze({
+  IDLE: 'idle',
+  PLAYING: 'playing',
+  PAUSED: 'paused',
+  COMPLETED: 'completed'
+});
 
-      previewButton.addEventListener("click", () => {
-        preview.textContent = textInput.value.trim() ||
-          "कृपया पहले संस्कृत पाठ लिखें।";
+const $ = id => document.getElementById(id);
+
+const quoteInput = $('quoteInput');
+const addQuoteButton = $('addQuoteButton');
+const clearQuotesButton = $('clearQuotesButton');
+const quoteQueue = $('quoteQueue');
+const queueCount = $('queueCount');
+const photoUpload = $('photoUpload');
+const photoStatus = $('photoStatus');
+const photoFrame = $('photoFrame');
+const stagePhoto = $('stagePhoto');
+const removePhotoButton = $('removePhotoButton');
+const videoUpload = $('videoUpload');
+const videoUploadStatus = $('videoUploadStatus');
+const removeVideoButton = $('removeVideoButton');
+const videoPlayer = $('videoPlayer');
+const videoPlaceholder = $('videoPlaceholder');
+const videoStatus = $('videoStatus');
+const voiceSelect = $('voiceSelect');
+const ttsVoiceStatus = $('ttsVoiceStatus');
+const ttsRate = $('ttsRate');
+const ttsRateValue = $('ttsRateValue');
+const playButton = $('playButton');
+const pauseButton = $('pauseButton');
+const resumeButton = $('resumeButton');
+const stopButton = $('stopButton');
+const ttsStatus = $('ttsStatus');
+const ttsProgress = $('ttsProgress');
+const ttsProgressValue = $('ttsProgressValue');
+const quoteCompletion = $('quoteCompletion');
+const quoteStage = $('quoteStage');
+const stageNow = $('stageNow');
+const stageIndex = $('stageIndex');
+const completionGate = $('completionGate');
+const systemStatus = $('systemStatus');
+
+function synth() {
+  return 'speechSynthesis' in window ? window.speechSynthesis : null;
+}
+
+function clampRate(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0.9;
+  return Math.min(1.2, Math.max(0.6, number));
+}
+
+function profileRate() {
+  return clampRate(0.90 + ((targetVoiceProfile.speakingRateTempo - 5) / 5) * 0.03);
+}
+
+function profilePitch(index) {
+  let pitch = 1 + ((targetVoiceProfile.pitch - 5) / 5) * 0.06;
+  const prosody = 0.006 + (targetVoiceProfile.prosody / 10) * 0.010;
+  const resonance = 0.006 + (targetVoiceProfile.pitchVariationResonance / 10) * 0.012;
+  const cycle = [0, 1, -0.55, 0.65, -0.30];
+  pitch += cycle[index % cycle.length] * (prosody + resonance);
+  return Math.min(2, Math.max(0.5, pitch));
+}
+
+function selectedRate() {
+  const control = clampRate(ttsRate?.value || 0.9);
+  return clampRate(profileRate() + (control - 0.9));
+}
+
+function normalizeQuote(value) {
+  return String(value ?? '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(line => line.trim().replace(/[ \t]+/g, ' '))
+    .join('\n')
+    .trim();
+}
+
+function speechText(text) {
+  return normalizeQuote(text).replace(/\n+/g, '। ');
+}
+
+function msg(text) {
+  if (systemStatus) systemStatus.textContent = text;
+}
+
+function updateRateLabel() {
+  if (ttsRateValue) ttsRateValue.textContent = Number(ttsRate?.value || 0.9).toFixed(2);
+}
+
+function isSanskritVoice(voice) {
+  const lang = String(voice?.lang || '').toLowerCase();
+  const descriptor = `${voice?.name || ''} ${voice?.voiceURI || ''}`;
+  return lang === 'sa' || lang.startsWith('sa-') || /sanskrit|संस्कृत|vedic|वेद/i.test(descriptor);
+}
+
+function isIndianVoice(voice) {
+  const lang = String(voice?.lang || '').toLowerCase();
+  return /^(hi|mr|bn|gu|pa|ta|te|kn|ml|or|ne)(-|$)/i.test(lang);
+}
+
+function scheduleVoiceRetry() {
+  if (state.voiceLoadTimer || state.voices.length || !state.ttsSupported) return;
+  if (state.voiceLoadAttempts >= 20) {
+    if (ttsVoiceStatus) {
+      ttsVoiceStatus.textContent = 'Browser voice अभी उपलब्ध नहीं हुई। Voice सूची रीफ़्रेश करें या Android/Text-to-Speech settings में voice engine जाँचें।';
+    }
+    updateControls();
+    return;
+  }
+
+  state.voiceLoadTimer = window.setTimeout(() => {
+    state.voiceLoadTimer = null;
+    state.voiceLoadAttempts += 1;
+    refreshVoices();
+  }, 400);
+}
+
+function refreshVoices() {
+  const api = synth();
+  state.ttsSupported = Boolean(api && typeof window.SpeechSynthesisUtterance === 'function');
+
+  if (!api || !state.ttsSupported) {
+    state.voices = [];
+    state.voice = null;
+    if (voiceSelect) {
+      voiceSelect.replaceChildren();
+      voiceSelect.append(new Option('Speech Synthesis उपलब्ध नहीं है', ''));
+      voiceSelect.disabled = true;
+    }
+    if (ttsVoiceStatus) ttsVoiceStatus.textContent = 'इस browser में Speech Synthesis उपलब्ध नहीं है।';
+    if (state.voiceLoadTimer) window.clearTimeout(state.voiceLoadTimer);
+    state.voiceLoadTimer = null;
+    updateControls();
+    return;
+  }
+
+  const previousUri = state.voice?.voiceURI || '';
+  let discovered = [];
+  try {
+    discovered = api.getVoices().filter(Boolean);
+  } catch (error) {
+    discovered = [];
+  }
+
+  const ordered = [
+    ...discovered.filter(isSanskritVoice),
+    ...discovered.filter(v => !isSanskritVoice(v) && isIndianVoice(v)),
+    ...discovered.filter(v => !isSanskritVoice(v) && !isIndianVoice(v))
+  ];
+  state.voices = ordered;
+
+  if (ordered.length) {
+    if (state.voiceLoadTimer) window.clearTimeout(state.voiceLoadTimer);
+    state.voiceLoadTimer = null;
+    state.voiceLoadAttempts = 0;
+    state.voice = ordered.find(v => previousUri && v.voiceURI === previousUri) || state.voice && ordered.find(v => v.voiceURI === state.voice.voiceURI) || ordered[0];
+  } else {
+    // Keep an already selected voice during a transient empty list instead of discarding it.
+    if (!state.voice) state.voice = null;
+  }
+
+  if (voiceSelect) {
+    voiceSelect.replaceChildren();
+    if (!ordered.length) {
+      voiceSelect.append(new Option('Browser voices लोड हो रही हैं…', ''));
+      voiceSelect.disabled = true;
+    } else {
+      ordered.forEach((voice, index) => {
+        const label = `${voice.name || 'Unnamed voice'} — ${voice.lang || 'भाषा अज्ञात'}${voice.default ? ' — default' : ''}`;
+        voiceSelect.append(new Option(label, String(index)));
       });
+      const selectedIndex = ordered.findIndex(v => state.voice && v.voiceURI === state.voice.voiceURI);
+      voiceSelect.value = selectedIndex >= 0 ? String(selectedIndex) : '';
+      voiceSelect.disabled = false;
+    }
+  }
 
-      audioInput.addEventListener("change", () => {
-        const file = audioInput.files && audioInput.files[0];
+  if (ttsVoiceStatus) {
+    if (state.voice) {
+      const kind = isSanskritVoice(state.voice) ? 'संस्कृत metadata match' : 'Browser/Indian voice';
+      ttsVoiceStatus.textContent = `${kind}: ${state.voice.name || 'Unnamed voice'} (${state.voice.lang || 'भाषा अज्ञात'})`;
+    } else {
+      ttsVoiceStatus.textContent = ordered.length
+        ? 'Voice उपलब्ध है; सूची से चयन करें।'
+        : 'Browser voice सूची की प्रतीक्षा है…';
+    }
+  }
 
-        if (currentObjectUrl) {
-          URL.revokeObjectURL(currentObjectUrl);
-          currentObjectUrl = null;
-        }
+  if (!ordered.length) scheduleVoiceRetry();
+  updateControls();
+}
+function selectVoice() {
+  const index = Number(voiceSelect?.value);
+  state.voice = Number.isInteger(index) && index >= 0 ? state.voices[index] || null : null;
+  if (ttsVoiceStatus) {
+    ttsVoiceStatus.textContent = state.voice
+      ? `${state.voice.name} (${state.voice.lang}) चयनित है।`
+      : 'कोई voice चयनित नहीं है।';
+  }
+  updateControls();
+}
 
-        player.removeAttribute("src");
-        player.load();
-        download.hidden = true;
-        download.removeAttribute("href");
+function renderQueue() {
+  if (!quoteQueue) return;
+  quoteQueue.replaceChildren();
 
-        if (!file) {
-          audioStatus.textContent = "कोई ऑडियो फ़ाइल नहीं चुनी गई।";
-          return;
-        }
+  if (!state.quotes.length) {
+    const empty = document.createElement('li');
+    empty.className = 'queue-empty';
+    empty.textContent = 'अभी कोई सुविचार कतार में नहीं है।';
+    quoteQueue.append(empty);
+  } else {
+    state.quotes.forEach((quote, index) => {
+      const item = document.createElement('li');
+      item.className = `queue-item${index === state.index && (state.playback === PLAYBACK.PLAYING || state.playback === PLAYBACK.PAUSED) ? ' active' : ''}`;
+      item.dataset.index = String(index);
 
-        if (!file.type.startsWith("audio/")) {
-          audioStatus.textContent = "चुनी गई फ़ाइल ऑडियो फ़ाइल नहीं है।";
-          audioInput.value = "";
-          return;
-        }
+      const number = document.createElement('span');
+      number.className = 'queue-number';
+      number.textContent = String(index + 1);
 
-        currentObjectUrl = URL.createObjectURL(file);
-        player.src = currentObjectUrl;
-        player.load();
+      const text = document.createElement('div');
+      text.className = 'queue-text';
+      text.textContent = quote;
 
-        download.href = currentObjectUrl;
-        download.download = file.name || "anjali-audio";
-        download.hidden = false;
+      item.append(number, text);
+      quoteQueue.append(item);
+    });
+  }
 
-        audioStatus.textContent =
-          "ऑडियो लोड हुआ: " + file.name +
-          " (" + (file.size / (1024 * 1024)).toFixed(2) + " MB)";
-      });
+  if (queueCount) queueCount.textContent = String(state.quotes.length);
+}
 
-      window.addEventListener("pagehide", () => {
-        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-      });
-    })();
-  </script>
+function addQuote() {
+  const quote = normalizeQuote(quoteInput?.value);
+  if (!quote) {
+    msg('खाली सुविचार queue में नहीं जोड़ा गया।');
+    quoteInput?.focus();
+    return;
+  }
+
+  state.quotes.push(quote);
+  if (quoteInput) quoteInput.value = '';
+  if (state.playback === PLAYBACK.COMPLETED) {
+    state.playback = PLAYBACK.IDLE;
+    state.index = 0;
+    updateProgress();
+    clearDisplay();
+  }
+  renderQueue();
+  updateControls();
+  msg(`सुविचार ${state.quotes.length} queue में जोड़ा गया।`);
+}
+
+function clearQuotes() {
+  stopPlayback(true);
+  state.quotes = [];
+  state.index = 0;
+  state.playback = PLAYBACK.IDLE;
+  renderQueue();
+  updateProgress();
+  clearDisplay();
+  updateControls();
+  msg('सभी सुविचार साफ़ कर दिए गए।');
+}
+
+function createMulticolorQuote(text) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'quote-text';
+  const parts = normalizeQuote(text).split(/(\s+)/);
+  let colorIndex = 0;
+
+  parts.forEach(part => {
+    if (/^\s+$/.test(part)) {
+      wrapper.append(document.createTextNode(part));
+      return;
+    }
+    const span = document.createElement('span');
+    span.className = `quote-word c${(colorIndex % 6) + 1}`;
+    span.textContent = part;
+    wrapper.append(span);
+    colorIndex += 1;
+  });
+
+  return wrapper;
+}
+
+function showQuote(index) {
+  if (!quoteStage || !state.quotes[index]) return;
+  quoteStage.replaceChildren(createMulticolorQuote(state.quotes[index]));
+  if (stageNow) stageNow.textContent = state.quotes[index];
+  if (stageIndex) stageIndex.textContent = `${index + 1} / ${state.quotes.length}`;
+  updateQueueHighlight();
+}
+
+function clearDisplay() {
+  if (quoteStage) {
+    quoteStage.replaceChildren();
+    const placeholder = document.createElement('div');
+    placeholder.className = 'quote-stage-placeholder';
+    placeholder.textContent = 'वाचन शुरू होने पर सुविचार यहाँ प्रदर्शित होगा।';
+    quoteStage.append(placeholder);
+  }
+  if (stageNow) stageNow.textContent = 'कोई सुविचार प्रदर्शित नहीं हो रहा है।';
+  if (stageIndex) stageIndex.textContent = `0 / ${state.quotes.length}`;
+  if (completionGate) completionGate.textContent = 'वाचन के लिए तैयार';
+}
+
+function updateQueueHighlight() {
+  if (!quoteQueue) return;
+  quoteQueue.querySelectorAll('.queue-item').forEach(item => {
+    const active = Number(item.dataset.index) === state.index && (state.playback === PLAYBACK.PLAYING || state.playback === PLAYBACK.PAUSED);
+    item.classList.toggle('active', active);
+  });
+}
+
+function updateProgress() {
+  const total = state.quotes.length;
+  const completed = Math.min(Math.max(state.index, 0), total);
+  const value = total ? Math.round((completed * 100) / total) : 0;
+  if (ttsProgress) ttsProgress.value = value;
+  if (ttsProgressValue) ttsProgressValue.textContent = `${value}%`;
+  if (quoteCompletion) quoteCompletion.textContent = `कतार: ${completed} / ${total}`;
+}
+
+function updateControls() {
+  const active = state.playback === PLAYBACK.PLAYING;
+  const paused = state.playback === PLAYBACK.PAUSED;
+  const hasVoice = Boolean(state.voice);
+  const canPlay = state.quotes.length > 0 && state.ttsSupported && hasVoice && !active && !paused;
+
+  if (playButton) playButton.disabled = !canPlay;
+  if (pauseButton) pauseButton.disabled = !active;
+  if (resumeButton) resumeButton.disabled = !paused;
+  if (stopButton) stopButton.disabled = !(active || paused);
+  if (clearQuotesButton) clearQuotesButton.disabled = state.quotes.length === 0;
+  if (addQuoteButton) addQuoteButton.disabled = false;
+  if (removePhotoButton) removePhotoButton.disabled = !state.photoReady;
+  if (removeVideoButton) removeVideoButton.disabled = !state.videoReady;
+}
+
+function clearPhotoObjectUrl() {
+  if (state.photoObjectUrl) {
+    URL.revokeObjectURL(state.photoObjectUrl);
+    state.photoObjectUrl = '';
+  }
+}
+
+function removePhoto() {
+  state.photoToken += 1;
+  clearPhotoObjectUrl();
+  state.photoReady = false;
+  if (stagePhoto) stagePhoto.removeAttribute('src');
+  if (photoFrame) photoFrame.hidden = true;
+  if (photoUpload) photoUpload.value = '';
+  if (photoStatus) photoStatus.textContent = 'कोई फोटो चयनित नहीं है।';
+  updateControls();
+  msg('फोटो हटा दी गई।');
+}
+
+function photoSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    if (photoStatus) photoStatus.textContent = 'मान्य image file चुनें।';
+    event.target.value = '';
+    msg('अमान्य photo file अस्वीकार कर दी गई।');
+    return;
+  }
+
+  const token = ++state.photoToken;
+  clearPhotoObjectUrl();
+  state.photoReady = false;
+  const url = URL.createObjectURL(file);
+  state.photoObjectUrl = url;
+
+  if (stagePhoto) {
+    stagePhoto.onload = () => {
+      if (token !== state.photoToken || state.photoObjectUrl !== url) return;
+      state.photoReady = true;
+      if (photoFrame) photoFrame.hidden = false;
+      updateControls();
+    };
+    stagePhoto.onerror = () => {
+      if (token !== state.photoToken || state.photoObjectUrl !== url) return;
+      clearPhotoObjectUrl();
+      state.photoReady = false;
+      if (stagePhoto) stagePhoto.removeAttribute('src');
+      if (photoFrame) photoFrame.hidden = true;
+      if (photoStatus) photoStatus.textContent = 'फोटो load नहीं हो सकी।';
+      updateControls();
+      msg('फोटो load नहीं हो सकी।');
+    };
+    stagePhoto.src = url;
+  }
+
+  if (photoStatus) photoStatus.textContent = `चयनित: ${file.name}`;
+  msg('फोटो display में जोड़ी जा रही है।');
+}
+
+function clearVideoObjectUrl() {
+  if (state.videoObjectUrl) {
+    URL.revokeObjectURL(state.videoObjectUrl);
+    state.videoObjectUrl = '';
+  }
+}
+
+function removeVideo(clearInput = true) {
+  state.videoToken += 1;
+  if (videoPlayer) {
+    videoPlayer.pause();
+    videoPlayer.removeAttribute('src');
+    videoPlayer.load();
+  }
+  clearVideoObjectUrl();
+  state.videoReady = false;
+  if (videoPlaceholder) videoPlaceholder.hidden = false;
+  if (videoUploadStatus) videoUploadStatus.textContent = 'कोई वीडियो चयनित नहीं है।';
+  if (clearInput && videoUpload) videoUpload.value = '';
+  if (videoPlayer) videoPlayer.onloadedmetadata = null;
+  if (videoPlayer) videoPlayer.oncanplay = null;
+  if (videoPlayer) videoPlayer.onerror = null;
+  updateControls();
+  if (videoStatus) videoStatus.textContent = 'वीडियो तैयार नहीं है।';
+}
+
+function videoSelected(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('video/')) {
+    if (videoUploadStatus) videoUploadStatus.textContent = 'मान्य video file चुनें।';
+    event.target.value = '';
+    msg('अमान्य video file अस्वीकार कर दी गई।');
+    return;
+  }
+
+  removeVideo(false);
+  const token = ++state.videoToken;
+  const url = URL.createObjectURL(file);
+  state.videoObjectUrl = url;
+
+  if (videoPlayer) {
+    videoPlayer.muted = true;
+    videoPlayer.playsInline = true;
+    videoPlayer.loop = true;
+    videoPlayer.preload = 'metadata';
+    videoPlayer.onloadedmetadata = () => {
+      if (token !== state.videoToken || state.videoObjectUrl !== url) return;
+      if (videoStatus) videoStatus.textContent = `Metadata मिला — ${Math.round(videoPlayer.videoWidth)}×${Math.round(videoPlayer.videoHeight)} px; playable frame की प्रतीक्षा है।`;
+    };
+    videoPlayer.oncanplay = () => {
+      if (token !== state.videoToken || state.videoObjectUrl !== url) return;
+      state.videoReady = true;
+      if (videoPlaceholder) videoPlaceholder.hidden = true;
+      if (videoUploadStatus) videoUploadStatus.textContent = `चयनित: ${file.name}`;
+      if (videoStatus) videoStatus.textContent = 'वीडियो तैयार है; Play पर चलेगी और repeat होगी।';
+      updateControls();
+      if (state.playback === PLAYBACK.PLAYING) startVideoPlayback();
+    };
+    videoPlayer.onerror = () => {
+      if (token !== state.videoToken || state.videoObjectUrl !== url) return;
+      state.videoReady = false;
+      clearVideoObjectUrl();
+      videoPlayer.removeAttribute('src');
+      videoPlayer.onloadedmetadata = null;
+      videoPlayer.oncanplay = null;
+      videoPlayer.onerror = null;
+      videoPlayer.load();
+      if (videoPlaceholder) videoPlaceholder.hidden = false;
+      if (videoUploadStatus) videoUploadStatus.textContent = 'वीडियो load नहीं हो सकी।';
+      if (videoStatus) videoStatus.textContent = 'वीडियो load error।';
+      updateControls();
+      msg('वीडियो load नहीं हो सकी।');
+    };
+    videoPlayer.src = url;
+    videoPlayer.load();
+  }
+
+  if (videoUploadStatus) videoUploadStatus.textContent = `लोड हो रहा है: ${file.name}`;
+  if (videoStatus) videoStatus.textContent = 'वीडियो metadata लोड हो रहा है…';
+}
+
+function setPlayingStatus() {
+  if (completionGate) completionGate.textContent = 'वाचन चल रहा है';
+  if (ttsStatus) ttsStatus.textContent = `सुविचार ${state.index + 1} / ${state.quotes.length} पढ़ा जा रहा है।`;
+}
+
+function setPausedStatus(message = 'वाचन विराम पर है। Resume दबाएँ।') {
+  if (completionGate) completionGate.textContent = 'वाचन विराम पर है';
+  if (ttsStatus) ttsStatus.textContent = message;
+}
+
+function makeUtterance(text, token, index) {
+  const utterance = new SpeechSynthesisUtterance(speechText(text));
+  utterance.voice = state.voice;
+  utterance.lang = state.voice?.lang || 'hi-IN';
+  utterance.rate = selectedRate();
+  utterance.pitch = profilePitch(index);
+  utterance.volume = Math.max(0, Math.min(1, Number($('ttsVolume')?.value ?? 1)));
+
+  utterance.onstart = () => {
+    if (token !== state.speechToken) return;
+    state.playback = PLAYBACK.PLAYING;
+    showQuote(index);
+    setPlayingStatus();
+    updateControls();
+  };
+
+  utterance.onend = () => {
+    if (token !== state.speechToken) return;
+    if (state.playback !== PLAYBACK.PLAYING) return;
+
+    state.index = index + 1;
+    updateProgress();
+
+    if (state.index >= state.quotes.length) {
+      state.playback = PLAYBACK.COMPLETED;
+      if (videoPlayer) videoPlayer.pause();
+      if (completionGate) completionGate.textContent = 'सभी सुविचार पूर्ण';
+      if (ttsStatus) ttsStatus.textContent = 'पूरी सुविचार कतार का वाचन पूर्ण हुआ।';
+      updateQueueHighlight();
+      updateControls();
+      msg('सभी सुविचार पूर्ण हो गए।');
+      return;
+    }
+
+    if (state.playback === PLAYBACK.PLAYING) {
+      speakQuote(state.index);
+    }
+  };
+
+  utterance.onerror = event => {
+    if (token !== state.speechToken) return;
+    state.playback = PLAYBACK.PAUSED;
+    if (videoPlayer) videoPlayer.pause();
+    setPausedStatus(`TTS त्रुटि: ${event?.error || 'अज्ञात त्रुटि'} — Resume दबाएँ।`);
+    updateControls();
+    msg('TTS त्रुटि के कारण वाचन paused है।');
+  };
+
+  return utterance;
+}
+
+function speakQuote(index) {
+  const api = synth();
+  if (!api || !state.ttsSupported || state.playback !== PLAYBACK.PLAYING || !state.quotes[index] || !state.voice) return false;
+
+  const token = ++state.speechToken;
+  if (api.speaking || api.pending) {
+    try { api.cancel(); } catch (error) { /* non-fatal cancellation failure */ }
+  }
+  const utterance = makeUtterance(state.quotes[index], token, index);
+
+  try {
+    api.speak(utterance);
+    return true;
+  } catch (error) {
+    if (token !== state.speechToken) return false;
+    state.playback = PLAYBACK.PAUSED;
+    if (videoPlayer) videoPlayer.pause();
+    setPausedStatus(`TTS प्रारंभ नहीं हो सका: ${error?.message || 'अज्ञात त्रुटि'}`);
+    updateControls();
+    msg('TTS प्रारंभ नहीं हो सका।');
+    return false;
+  }
+}
+
+function startVideoPlayback() {
+  if (!videoPlayer || !state.videoReady) return;
+  videoPlayer.loop = true;
+  videoPlayer.muted = true;
+  videoPlayer.playsInline = true;
+
+  let result;
+  try {
+    result = videoPlayer.play();
+  } catch (error) {
+    if (videoStatus) videoStatus.textContent = 'वीडियो शुरू नहीं हो सकी; TTS स्वतंत्र रूप से जारी है।';
+    return;
+  }
+
+  if (result && typeof result.then === 'function') {
+    result.then(() => {
+      if (state.playback === PLAYBACK.PLAYING && videoStatus) {
+        videoStatus.textContent = 'वीडियो चल रही है और repeat होगी।';
+      }
+    }).catch(() => {
+      if (videoStatus) videoStatus.textContent = 'Browser ने video playback रोकी; TTS जारी रहेगा।';
+      msg('वीडियो autoplay अस्वीकार हुई; TTS को नहीं रोका गया।');
+    });
+  }
+}
+
+function startPlayback() {
+  const api = synth();
+  if (!api || !state.ttsSupported) {
+    msg('इस browser में Speech Synthesis उपलब्ध नहीं है।');
+    return false;
+  }
+  if (!state.quotes.length) {
+    msg('पहले कम-से-कम एक सुविचार queue में जोड़ें।');
+    quoteInput?.focus();
+    return false;
+  }
+  if (!state.voice) {
+    msg('कोई TTS voice उपलब्ध/चयनित नहीं है। Voice सूची की प्रतीक्षा करें या उसे रीफ़्रेश करें।');
+    return false;
+  }
+  if (state.playback === PLAYBACK.PLAYING || state.playback === PLAYBACK.PAUSED) return false;
+
+  state.speechToken += 1;
+  try { api.cancel(); } catch (error) { /* non-fatal cancellation failure */ }
+  state.index = 0;
+  state.playback = PLAYBACK.PLAYING;
+  updateProgress();
+  updateQueueHighlight();
+
+  // Start TTS synchronously in the actual button click path. A stalled video.play()
+  // Promise must never prevent the selected voice from starting.
+  const started = speakQuote(0);
+  if (!started) {
+    state.playback = PLAYBACK.PAUSED;
+    if (videoPlayer) videoPlayer.pause();
+    updateControls();
+    return false;
+  }
+
+  if (state.videoReady) {
+    startVideoPlayback();
+  } else if (state.videoObjectUrl && videoStatus) {
+    videoStatus.textContent = 'वीडियो अभी तैयार नहीं; TTS शुरू है। playable frame मिलते ही वीडियो शुरू करने का प्रयास होगा।';
+  }
+
+  if (videoStatus && state.videoReady) videoStatus.textContent = 'वीडियो + TTS सक्रिय हैं।';
+  msg('वाचन प्रारंभ हो गया।');
+  return true;
+}
+function pausePlayback() {
+  const api = synth();
+  if (state.playback !== PLAYBACK.PLAYING) return;
+
+  try {
+    api?.pause();
+  } catch (error) {
+    msg('TTS pause नहीं हो सका।');
+  }
+  if (videoPlayer) videoPlayer.pause();
+  state.playback = PLAYBACK.PAUSED;
+  setPausedStatus();
+  updateQueueHighlight();
+  updateControls();
+  msg('वाचन और वीडियो विराम पर हैं।');
+}
+
+function resumePlayback() {
+  const api = synth();
+  if (!api || !state.ttsSupported || state.playback !== PLAYBACK.PAUSED || !state.voice) return false;
+
+  state.playback = PLAYBACK.PLAYING;
+  try {
+    if (api.paused) {
+      api.resume();
+    } else if (!api.speaking && !api.pending) {
+      if (!speakQuote(state.index)) {
+        state.playback = PLAYBACK.PAUSED;
+        updateControls();
+        return false;
+      }
+    }
+  } catch (error) {
+    state.playback = PLAYBACK.PAUSED;
+    if (videoPlayer) videoPlayer.pause();
+    setPausedStatus(`Resume विफल: ${error?.message || 'अज्ञात त्रुटि'}`);
+    updateControls();
+    return false;
+  }
+
+  // Resume video independently: a video failure must not pause successful TTS.
+  if (state.videoReady) startVideoPlayback();
+  setPlayingStatus();
+  updateQueueHighlight();
+  updateControls();
+  msg('वाचन पुनः जारी है; वीडियो अलग से resume की जा रही है।');
+  return true;
+}
+function stopPlayback(silent = false) {
+  state.speechToken += 1;
+  const api = synth();
+  try { api?.cancel(); } catch (error) { /* cancellation failure is non-fatal */ }
+  if (videoPlayer) videoPlayer.pause();
+
+  state.playback = PLAYBACK.IDLE;
+  state.index = 0;
+  updateProgress();
+  renderQueue();
+  clearDisplay();
+  if (ttsStatus) ttsStatus.textContent = 'वाचन प्रारंभ नहीं हुआ है।';
+  if (videoStatus) videoStatus.textContent = state.videoReady ? 'वीडियो तैयार है; Play की प्रतीक्षा है।' : 'वीडियो तैयार नहीं है।';
+  updateControls();
+  if (!silent) msg('वाचन और वीडियो रोक दिए गए; स्थिति reset है।');
+}
+
+function bindEvents() {
+  addQuoteButton?.addEventListener('click', addQuote);
+  clearQuotesButton?.addEventListener('click', clearQuotes);
+  playButton?.addEventListener('click', startPlayback);
+  pauseButton?.addEventListener('click', pausePlayback);
+  resumeButton?.addEventListener('click', resumePlayback);
+  stopButton?.addEventListener('click', () => stopPlayback(false));
+  removePhotoButton?.addEventListener('click', removePhoto);
+  removeVideoButton?.addEventListener('click', removeVideo);
+  photoUpload?.addEventListener('change', photoSelected);
+  videoUpload?.addEventListener('change', videoSelected);
+  voiceSelect?.addEventListener('change', selectVoice);
+  ttsRate?.addEventListener('input', () => {
+    updateRateLabel();
+    if (state.playback === PLAYBACK.PLAYING || state.playback === PLAYBACK.PAUSED) {
+      msg('नई वाचन गति अगले utterance पर लागू होगी।');
+    }
+  });
+  quoteInput?.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      addQuote();
+    }
+  });
+
+  const api = synth();
+  if (api) {
+    if (typeof api.addEventListener === 'function') {
+      api.addEventListener('voiceschanged', refreshVoices);
+    } else {
+      api.onvoiceschanged = refreshVoices;
+    }
+  }
+
+  videoPlayer?.addEventListener('play', () => {
+    if (state.playback === PLAYBACK.PLAYING && videoStatus) videoStatus.textContent = 'वीडियो चल रही है और repeat होगी।';
+  });
+  videoPlayer?.addEventListener('pause', () => {
+    if (state.playback === PLAYBACK.PAUSED && videoStatus) videoStatus.textContent = 'वीडियो paused है।';
+  });
+}
+
+function browserCheck() {
+  state.ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
+  if (!state.ttsSupported) {
+    if (ttsVoiceStatus) ttsVoiceStatus.textContent = 'Speech Synthesis API उपलब्ध नहीं है। TTS प्रारंभ नहीं किया जा सकता।';
+    if (ttsStatus) ttsStatus.textContent = 'TTS उपलब्ध नहीं है।';
+    msg('Browser में Speech Synthesis उपलब्ध नहीं है।');
+  }
+}
+
+function init() {
+  if (state.initialized) return;
+  state.initialized = true;
+  browserCheck();
+  updateRateLabel();
+  renderQueue();
+  updateProgress();
+  clearDisplay();
+  bindEvents();
+  refreshVoices();
+  updateControls();
+
+  if (state.ttsSupported && !state.voices.length) scheduleVoiceRetry();
+
+  if (videoPlayer) {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+    videoPlayer.playsInline = true;
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  state.speechToken += 1;
+  state.photoToken += 1;
+  state.videoToken += 1;
+  try { synth()?.cancel(); } catch (error) { /* no-op during unload */ }
+  if (state.voiceLoadTimer) window.clearTimeout(state.voiceLoadTimer);
+  clearPhotoObjectUrl();
+  clearVideoObjectUrl();
+});
+
+document.addEventListener('DOMContentLoaded', init, { once: true });
+</script>
+<script>
+(() => {
+  'use strict';
+  const el = id => document.getElementById(id);
+  const audioInput = el('audioTrackUpload');
+  const audioPlayer = el('audioTrack');
+  const audioStatus = el('audioTrackStatus');
+  const audioLoop = el('audioLoop');
+  const ttsVolume = el('ttsVolume');
+  const ttsVolumeValue = el('ttsVolumeValue');
+  const textSize = el('textSize');
+  const textSizeValue = el('textSizeValue');
+  const clipInput = el('videoUpload');
+  const clipList = el('videoClipList');
+  const video = el('videoPlayer');
+  const systemStatus = el('systemStatus');
+  let audioUrl = '';
+  let clips = [];
+  let clipIndex = 0;
+  let loadingNextClip = false;
+  let clipSequenceActive = false;
+
+  function setAudioMessage(message) { if (audioStatus) audioStatus.textContent = message; }
+  function revokeAudioUrl() { if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = ''; } }
+
+  audioInput?.addEventListener('change', () => {
+    const file = audioInput.files && audioInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/')) {
+      audioInput.value = '';
+      setAudioMessage('मान्य ऑडियो फ़ाइल चुनें।');
+      return;
+    }
+    revokeAudioUrl();
+    audioUrl = URL.createObjectURL(file);
+    audioPlayer.src = audioUrl;
+    audioPlayer.loop = Boolean(audioLoop?.checked);
+    audioPlayer.hidden = false;
+    audioPlayer.load();
+    setAudioMessage(`चयनित: ${file.name}`);
+  });
+
+  audioLoop?.addEventListener('change', () => { audioPlayer.loop = Boolean(audioLoop.checked); });
+  ttsVolume?.addEventListener('input', () => {
+    if (ttsVolumeValue) ttsVolumeValue.textContent = `${Math.round(Number(ttsVolume.value) * 100)}%`;
+  });
+  textSize?.addEventListener('input', () => {
+    const size = Math.max(18, Math.min(42, Number(textSize.value) || 31));
+    const stage = el('quoteStage');
+    stage?.style.setProperty('--multicolor-size', `${size}px`);
+    if (textSizeValue) textSizeValue.textContent = `${size} px`;
+  });
+
+  function renderClipList() {
+    if (!clipList) return;
+    clipList.replaceChildren();
+    if (!clips.length) {
+      const li = document.createElement('li');
+      li.textContent = 'अभी कोई क्लिप नहीं।';
+      clipList.append(li);
+      return;
+    }
+    clips.forEach((file, index) => {
+      const li = document.createElement('li');
+      li.classList.toggle('active', index === clipIndex);
+      li.textContent = `${index + 1}. ${file.name}`;
+      clipList.append(li);
+    });
+  }
+
+  clipInput?.addEventListener('change', () => {
+    if (loadingNextClip) return;
+    clips = Array.from(clipInput.files || []).filter(file => file.type.startsWith('video/'));
+    clipIndex = 0;
+    clipSequenceActive = false;
+    renderClipList();
+    if (clips.length > 1) {
+      const suffix = `${clips.length} वीडियो क्लिप चुनी गईं।`; 
+      if (el('videoUploadStatus')) el('videoUploadStatus').textContent = suffix;
+    }
+  });
+
+  function chooseClip(index) {
+    if (!clips[index] || !clipInput) return;
+    clipIndex = index;
+    renderClipList();
+    try {
+      const transfer = new DataTransfer();
+      transfer.items.add(clips[index]);
+      loadingNextClip = true;
+      clipInput.files = transfer.files;
+      clipInput.dispatchEvent(new Event('change', { bubbles: true }));
+      loadingNextClip = false;
+    } catch (error) {
+      loadingNextClip = false;
+      if (el('videoStatus')) el('videoStatus').textContent = 'इस ब्राउज़र में स्वचालित क्लिप-बदलाव उपलब्ध नहीं; क्लिप को अलग से चुनें।';
+    }
+  }
+
+  // Existing studio code requests looping. Change that setting after a play event
+  // so the selected playlist can advance on ended without changing the TTS queue.
+  video?.addEventListener('play', () => {
+    if (clips.length > 1 && clipSequenceActive) video.loop = false;
+    if (audioUrl && audioPlayer && audioPlayer.paused) {
+      audioPlayer.loop = Boolean(audioLoop?.checked);
+      const playResult = audioPlayer.play();
+      if (playResult && typeof playResult.catch === 'function') playResult.catch(() => setAudioMessage('ब्राउज़र ने ऑडियो autoplay रोकी; audio controls से Play दबाएँ।'));
+    }
+    renderClipList();
+  });
+
+  video?.addEventListener('ended', () => {
+    if (!clipSequenceActive || clips.length < 2) return;
+    const next = clipIndex + 1;
+    if (next < clips.length) chooseClip(next);
+    else {
+      clipSequenceActive = false;
+      clipIndex = clips.length - 1;
+      renderClipList();
+      if (el('videoStatus')) el('videoStatus').textContent = 'सभी वीडियो क्लिप क्रम से चल चुकी हैं।';
+    }
+  });
+
+  el('playButton')?.addEventListener('click', () => {
+    if (clips.length > 1) {
+      clipSequenceActive = true;
+      // A selected playlist begins at the first clip on each new TTS session.
+      if (clipIndex !== 0) chooseClip(0);
+      else if (video) video.loop = false;
+    }
+    if (audioUrl && audioPlayer) {
+      audioPlayer.loop = Boolean(audioLoop?.checked);
+      const result = audioPlayer.play();
+      if (result && typeof result.catch === 'function') result.catch(() => setAudioMessage('ऑडियो शुरू नहीं हो सकी; audio controls से Play दबाएँ।'));
+    }
+  });
+  el('pauseButton')?.addEventListener('click', () => audioPlayer?.pause());
+  el('resumeButton')?.addEventListener('click', () => {
+    if (audioUrl && audioPlayer) {
+      const result = audioPlayer.play();
+      if (result && typeof result.catch === 'function') result.catch(() => setAudioMessage('ऑडियो फिर से शुरू नहीं हो सकी।'));
+    }
+  });
+  el('stopButton')?.addEventListener('click', () => {
+    clipSequenceActive = false;
+    if (audioPlayer) { audioPlayer.pause(); try { audioPlayer.currentTime = 0; } catch (_) { } }
+  });
+  el('removeVideoButton')?.addEventListener('click', () => {
+    clips = [];
+    clipIndex = 0;
+    clipSequenceActive = false;
+    renderClipList();
+  });
+
+  // The app script updates this status; mirror it in the preview summary without
+  // overwriting the original app's system status messages.
+  const ttsSource = el('ttsStatus');
+  const videoSource = el('videoStatus');
+  const ttsSummary = el('ttsStatusSummary');
+  const videoSummary = el('videoSummary');
+  if (ttsSource && ttsSummary && 'MutationObserver' in window) {
+    new MutationObserver(() => { ttsSummary.textContent = ttsSource.textContent || '—'; }).observe(ttsSource, { childList: true, subtree: true, characterData: true });
+  }
+  if (videoSource && videoSummary && 'MutationObserver' in window) {
+    new MutationObserver(() => { videoSummary.textContent = videoSource.textContent || '—'; }).observe(videoSource, { childList: true, subtree: true, characterData: true });
+  }
+
+  window.addEventListener('beforeunload', () => {
+    revokeAudioUrl();
+    if (audioPlayer) { audioPlayer.pause(); audioPlayer.removeAttribute('src'); }
+  });
+  renderClipList();
+})();
+</script>
 </body>
 </html>
