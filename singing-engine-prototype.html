@@ -1,0 +1,422 @@
+
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17152b">
+  <title>Swar Sadhika AI — Sanskrit Engine Test</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+      background: #17152b;
+      color: #f7f4ff;
+      --panel: #211e39;
+      --border: #51476d;
+      --accent: #d8b4fe;
+      --muted: #d0c9e2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      max-width: 760px;
+      margin: auto;
+      padding: 22px 15px 44px;
+    }
+
+    h1 { font-size: 1.55rem; margin-bottom: 6px; }
+    h2 { font-size: 1.08rem; margin-top: 0; }
+
+    .muted { color: var(--muted); line-height: 1.65; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 15px 0;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 14px 0 7px;
+    }
+
+    textarea, select, input[type="range"] {
+      width: 100%;
+    }
+
+    textarea, select {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #17152b;
+      color: #fff;
+      padding: 12px;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 145px;
+      resize: vertical;
+      line-height: 1.8;
+    }
+
+    button {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 10px;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .primary { background: var(--accent); color: #241633; }
+    .secondary {
+      background: #35304e;
+      color: white;
+      border: 1px solid #686083;
+    }
+
+    .status {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.65;
+      padding: 12px;
+      border: 1px solid #66567f;
+      border-radius: 9px;
+      background: #181529;
+    }
+
+    progress { width: 100%; height: 13px; }
+
+    audio { width: 100%; margin-top: 10px; }
+
+    .small { font-size: .9rem; }
+
+    .tag {
+      display: inline-block;
+      background: #35304e;
+      padding: 4px 8px;
+      border-radius: 7px;
+      margin: 3px 4px 3px 0;
+      font-size: .82rem;
+    }
+
+    a { color: #e1c9ff; overflow-wrap: anywhere; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>स्वर साधिका AI</h1>
+    <p class="muted">
+      वास्तविक ब्राउज़र-आधारित संस्कृत चैंट मॉडल का परीक्षण
+    </p>
+    <span class="tag">GitHub Pages</span>
+    <span class="tag">WebGPU / WASM</span>
+    <span class="tag">स्थानीय inference</span>
+  </header>
+
+  <section class="panel">
+    <h2>1. परीक्षण की जानकारी</h2>
+    <p class="muted small">
+      यह Vāgdhenu के browser inference implementation का प्रारम्भिक
+      एकीकरण है। मॉडल संस्कृत श्लोक की मीटर-आधारित चैंटिंग के लिए बनाया
+      गया है। यह अभी सामान्य स्त्री-स्वर वाली AI गायिका का विकल्प नहीं है।
+    </p>
+
+    <p class="small">
+      पहली बार मॉडल लोड करने के लिए इंटरनेट आवश्यक है। मॉडल सामग्री
+      Hugging Face से और JavaScript runtime CDN से लोड होती है।
+      पाठ inference के लिए किसी AI API को नहीं भेजा जाता।
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>2. संस्कृत पाठ</h2>
+
+    <label for="verse">एक श्लोक दर्ज करें</label>
+    <textarea id="verse" spellcheck="false">वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।
+जगतः पितरौ वन्दे पार्वतीपरमेश्वरौ ॥</textarea>
+
+    <p class="muted small">
+      प्रारम्भ में एक छोटा, गैर-वैदिक संस्कृत श्लोक आज़माएँ।
+      यह परीक्षण अभी लंबे पाठ, सभी वैदिक ऋचाओं या हर प्रकार के मंत्र
+      की शुद्धता प्रमाणित नहीं करता।
+    </p>
+
+    <label for="steps">गायन/चैंट जनरेशन के चरण (NFE)</label>
+    <select id="steps">
+      <option value="4">4 — प्रारम्भिक, कम समय</option>
+      <option value="7" selected>7 — अनुशंसित प्रारम्भिक परीक्षण</option>
+      <option value="10">10 — अधिक चरण</option>
+    </select>
+
+    <label for="speed">पाठ की गति: <span id="speedText">0.90×</span></label>
+    <input id="speed" type="range" min="0.65" max="1.15"
+      value="0.9" step="0.05">
+
+    <button id="generate" class="primary" type="button">
+      वास्तविक संस्कृत ऑडियो उत्पन्न करें
+    </button>
+  </section>
+
+  <section class="panel">
+    <h2>3. मॉडल और inference की स्थिति</h2>
+
+    <div id="status" class="status" role="status" aria-live="polite">
+      अभी मॉडल लोड नहीं हुआ है। परीक्षण शुरू करने पर मॉडल डाउनलोड और
+      प्रारम्भ होगा।
+    </div>
+
+    <progress id="progress" value="0" max="100"></progress>
+    <p id="provider" class="muted small">Inference engine: अभी अज्ञात</p>
+  </section>
+
+  <section class="panel">
+    <h2>4. उत्पन्न ऑडियो</h2>
+
+    <audio id="audio" controls hidden></audio>
+
+    <a id="download" hidden download="swar-sadhika-chant.wav">
+      उत्पन्न WAV ऑडियो डाउनलोड करें
+    </a>
+
+    <p id="audioInfo" class="muted small">
+      ऑडियो उत्पन्न होने पर यहाँ प्लेयर दिखाई देगा।
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>5. परीक्षण की सीमा</h2>
+
+    <p class="muted small">
+      वास्तविक ऑडियो सफलतापूर्वक बनना यह सिद्ध करेगा कि यह संस्कृत
+      चैंट मॉडल इस ब्राउज़र में चला। इससे यह सिद्ध नहीं होगा कि मॉडल
+      स्वाभाविक स्त्री-स्वर में स्वतंत्र धुन वाला गायन कर सकता है।
+      उस लक्ष्य के लिए अलग singing-synthesis मॉडल आवश्यक है।
+    </p>
+
+    <p class="muted small">
+      स्रोत: 
+      <a href="https://github.com/hemanth/sanskrit-tts-web"
+         target="_blank" rel="noopener">Browser inference implementation</a>
+      ·
+      <a href="https://huggingface.co/gnumanth/sanskrit-tts-onnx"
+         target="_blank" rel="noopener">ONNX model files</a>
+    </p>
+  </section>
+
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+
+  const button = $("generate");
+  const status = $("status");
+  const progress = $("progress");
+  const providerText = $("provider");
+  const audio = $("audio");
+  const download = $("download");
+  const audioInfo = $("audioInfo");
+  const speed = $("speed");
+
+  const UPSTREAM_MODULE =
+    "https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/index.js";
+
+  let voice = null;
+  let currentObjectUrl = null;
+  let generationId = 0;
+
+  function setStatus(message) {
+    status.textContent = message;
+  }
+
+  function updateProgress(info) {
+    if (!info || typeof info !== "object") return;
+
+    if (typeof info.message === "string") {
+      setStatus(info.message);
+    }
+
+    if (Number.isFinite(info.progress)) {
+      progress.value = Math.min(100, Math.max(0, info.progress));
+    }
+  }
+
+  function getProvider() {
+    return voice?.engine?.provider || "अभी उपलब्ध नहीं";
+  }
+
+  async function checkWebGPU() {
+    if (!navigator.gpu) {
+      return "WebGPU API अनुपलब्ध; मॉडल WASM fallback का उपयोग कर सकता है।";
+    }
+
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) return "WebGPU API उपलब्ध है, लेकिन adapter नहीं मिला।";
+
+      const device = await adapter.requestDevice();
+      device.destroy();
+
+      const info = adapter.info || {};
+      const gpuName = [info.vendor, info.architecture, info.device]
+        .filter(Boolean).join(" ");
+
+      return "WebGPU device बनाने का परीक्षण सफल।" +
+        (gpuName ? " GPU: " + gpuName : "");
+    } catch (error) {
+      return "WebGPU device परीक्षण विफल; इंजन WASM fallback आज़मा सकता है। " +
+        (error.message || String(error));
+    }
+  }
+
+  async function loadVoice() {
+    if (voice) return voice;
+
+    setStatus("WebGPU उपलब्धता जाँची जा रही है…");
+    progress.value = 2;
+
+    const gpuResult = await checkWebGPU();
+    setStatus(gpuResult + "\nब्राउज़र inference module लोड किया जा रहा है…");
+
+    // This is a browser module, not a remote AI inference API.
+    const module = await import(UPSTREAM_MODULE);
+    const createVoice = module.default || module.sanskritTts;
+
+    if (typeof createVoice !== "function") {
+      throw new Error("स्रोत मॉड्यूल में sanskritTts function नहीं मिला।");
+    }
+
+    setStatus(
+      "मॉडल प्रारम्भ हो रहा है। पहली बार लगभग 237 MB मॉडल सामग्री " +
+      "डाउनलोड हो सकती है; कृपया पेज बंद न करें।"
+    );
+
+    voice = await createVoice({
+      backend: "onnx",
+      nfe: Number($("steps").value),
+      speed: Number(speed.value),
+      onProgress: updateProgress
+    });
+
+    providerText.textContent =
+      "Inference engine: " + getProvider().toUpperCase();
+
+    setStatus("मॉडल प्रारम्भ हो गया है। अब संस्कृत ऑडियो उत्पन्न किया जा सकता है।");
+    progress.value = 100;
+
+    return voice;
+  }
+
+  async function generate() {
+    const myGeneration = ++generationId;
+    const text = $("verse").value.trim();
+
+    if (!text) {
+      setStatus("पहले संस्कृत श्लोक दर्ज करें।");
+      return;
+    }
+
+    if (text.length > 500) {
+      setStatus(
+        "इस प्रारम्भिक परीक्षण में 500 अक्षरों से छोटा पाठ रखें। " +
+        "पहले एक श्लोक की सफल inference की पुष्टि करें।"
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "मॉडल चल रहा है…";
+    progress.value = 0;
+    audio.hidden = true;
+    download.hidden = true;
+    audioInfo.textContent = "ऑडियो बनने की प्रतीक्षा करें…";
+
+    try {
+      const tts = await loadVoice();
+      if (myGeneration !== generationId) return;
+
+      setStatus("संस्कृत पाठ का विश्लेषण और वास्तविक neural inference चल रहा है…");
+      progress.value = 98;
+
+      const result = await tts.chant(text, {
+        nfe: Number($("steps").value),
+        speed: Number(speed.value)
+      });
+
+      if (myGeneration !== generationId) return;
+
+      if (!result || !result.url) {
+        throw new Error(
+          "मॉडल ने परिणाम लौटाया, लेकिन playback URL उपलब्ध नहीं हुआ।"
+        );
+      }
+
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+
+      // Most versions return an object URL produced by the browser runtime.
+      // Do not revoke it until the next generation or page unload.
+      currentObjectUrl = result.url;
+
+      audio.src = result.url;
+      audio.hidden = false;
+      download.href = result.url;
+      download.hidden = false;
+
+      const meter = result.meter || result.scansion?.meter?.name || "स्वतः पहचाना गया";
+
+      audioInfo.textContent =
+        "ऑडियो सफलतापूर्वक उत्पन्न हुआ। छन्द: " + meter +
+        ". प्लेयर दबाकर वास्तविक परिणाम सुनें।";
+
+      providerText.textContent =
+        "सक्रिय inference provider: " + getProvider().toUpperCase();
+
+      setStatus(
+        "सफल: मॉडल ने संस्कृत पाठ से ऑडियो उत्पन्न किया।\n" +
+        "यह स्थानीय browser inference का प्रमाण है, अंतिम स्त्री-स्वर AI गायन का नहीं।"
+      );
+
+      progress.value = 100;
+    } catch (error) {
+      voice = null;
+
+      setStatus(
+        "ऑडियो उत्पन्न नहीं हो सका।\n\n" +
+        "त्रुटि: " + (error?.name || "Error") + "\n" +
+        "विवरण: " + (error?.message || String(error)) +
+        "\n\n" +
+        "संभावित कारण: नेटवर्क से मॉडल डाउनलोड न होना, CDN/मॉड्यूल लोड न होना, " +
+        "WebGPU session विफल होना या डिवाइस की मेमोरी सीमा।"
+      );
+
+      progress.value = 0;
+      providerText.textContent = "Inference engine: असफल — त्रुटि रिपोर्ट देखें";
+    } finally {
+      button.disabled = false;
+      button.textContent = "दोबारा संस्कृत ऑडियो उत्पन्न करें";
+    }
+  }
+
+  speed.addEventListener("input", () => {
+    $("speedText").textContent = Number(speed.value).toFixed(2) + "×";
+  });
+
+  button.addEventListener("click", generate);
+
+  window.addEventListener("beforeunload", () => {
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+  });
+</script>
+</body>
+</html>
