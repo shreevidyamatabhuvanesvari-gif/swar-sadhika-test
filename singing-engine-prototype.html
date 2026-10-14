@@ -7,273 +7,43 @@
   <meta name="description" content="GitHub Pages पर Vāgdhenu browser-based Sanskrit chant engine का वास्तविक परीक्षण।">
   <title>स्वर-साधिका — संस्कृत गायन इंजन परीक्षण</title>
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #11101d;
-      --panel: #1c1a2d;
-      --line: #3a3655;
-      --text: #f5f1ff;
-      --muted: #c0bad5;
-      --accent: #e6ba71;
-      --good: #8fe0b7;
-      --bad: #ffaaa9;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: radial-gradient(ellipse at top, #292344 0%, var(--bg) 60%);
-      color: var(--text);
-      font-family: system-ui, -apple-system, "Noto Sans Devanagari", sans-serif;
-      line-height: 1.55;
-    }
-
-    main {
-      width: min(820px, 100%);
-      margin: auto;
-      padding: clamp(14px, 4vw, 30px);
-      padding-bottom: 48px;
-    }
-
-    .top {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .mark {
-      width: 54px;
-      height: 54px;
-      display: grid;
-      place-items: center;
-      flex: 0 0 auto;
-      border: 1px solid #70628f;
-      border-radius: 18px;
-      background: linear-gradient(145deg, #4b3c73, #25213b);
-      font-size: 28px;
-      color: var(--accent);
-    }
-
-    h1 {
-      font-size: clamp(1.35rem, 5vw, 2rem);
-      line-height: 1.2;
-      margin: 0 0 5px;
-    }
-
-    .subtitle {
-      margin: 0;
-      color: var(--muted);
-      font-size: .94rem;
-    }
-
-    .panel {
-      background: rgba(28, 26, 45, .94);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: clamp(15px, 3vw, 22px);
-      margin: 14px 0;
-      box-shadow: 0 10px 30px #0002;
-    }
-
-    h2 {
-      font-size: 1.05rem;
-      margin: 0 0 12px;
-      color: #f6d9a5;
-    }
-
-    label {
-      display: block;
-      font-weight: 650;
-      margin: 13px 0 6px;
-    }
-
-    textarea,
-    select,
-    input[type="number"] {
-      width: 100%;
-      background: #12111e;
-      color: var(--text);
-      border: 1px solid #514a72;
-      border-radius: 11px;
-      padding: 12px;
-      font: inherit;
-    }
-
-    textarea {
-      min-height: 145px;
-      resize: vertical;
-      font-size: 1.1rem;
-      line-height: 1.9;
-    }
-
-    select:focus,
-    textarea:focus,
-    input:focus,
-    button:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: .88rem;
-      margin: 7px 0 0;
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    button,
-    .download {
-      appearance: none;
-      border: 0;
-      border-radius: 12px;
-      padding: 12px 17px;
-      font: inherit;
-      font-weight: 750;
-      text-decoration: none;
-      cursor: pointer;
-      text-align: center;
-    }
-
-    button.primary {
-      background: var(--accent);
-      color: #20192b;
-      flex: 1;
-      min-width: 180px;
-    }
-
-    button.secondary,
-    .download {
-      background: #302b49;
-      color: var(--text);
-      border: 1px solid #514a72;
-    }
-
-    button:disabled {
-      opacity: .55;
-      cursor: wait;
-    }
-
-    .status {
-      background: #12111e;
-      border: 1px solid #3d3858;
-      border-radius: 12px;
-      padding: 13px;
-      overflow-wrap: anywhere;
-      min-height: 52px;
-    }
-
-    .status[data-kind="success"] {
-      border-color: #437b60;
-      color: var(--good);
-    }
-
-    .status[data-kind="error"] {
-      border-color: #8b4848;
-      color: var(--bad);
-    }
-
-    .progress-track {
-      height: 8px;
-      background: #0e0d17;
-      border-radius: 999px;
-      overflow: hidden;
-      margin-top: 12px;
-    }
-
-    .progress {
-      height: 100%;
-      width: 0;
-      background: linear-gradient(90deg, #ae8ee8, var(--accent));
-      transition: width .2s ease;
-    }
-
-    audio {
-      width: 100%;
-      margin-top: 14px;
-    }
-
-    .note {
-      font-size: .88rem;
-      color: var(--muted);
-      margin: 10px 0 0;
-    }
-
-    .checks {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .chip {
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: #302b49;
-      border: 1px solid #514a72;
-      font-size: .8rem;
-      color: #d6cfe9;
-    }
-
-    details {
-      margin-top: 12px;
-      color: var(--muted);
-      font-size: .88rem;
-    }
-
-    pre {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      background: #0d0c15;
-      border-radius: 9px;
-      padding: 10px;
-      color: #ffc4c2;
-      font-size: .8rem;
-    }
-
-    footer {
-      color: var(--muted);
-      font-size: .82rem;
-      padding: 4px 3px;
-    }
-
-    @media (max-width: 560px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      .top {
-        align-items: flex-start;
-      }
-
-      .mark {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-      }
-
-      .actions > * {
-        width: 100%;
-      }
-    }
+    :root{color-scheme:dark;--bg:#11101d;--panel:#1c1a2d;--line:#3a3655;--text:#f5f1ff;--muted:#c0bad5;--accent:#e6ba71;--good:#8fe0b7;--bad:#ffaaa9}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(ellipse at top,#292344 0%,var(--bg) 60%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif;line-height:1.55}
+    main{width:min(820px,100%);margin:auto;padding:clamp(14px,4vw,30px);padding-bottom:48px}
+    .top{display:flex;gap:14px;align-items:center;margin-bottom:20px}
+    .mark{width:54px;height:54px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #70628f;border-radius:18px;background:linear-gradient(145deg,#4b3c73,#25213b);font-size:28px;color:var(--accent)}
+    h1{font-size:clamp(1.35rem,5vw,2rem);line-height:1.2;margin:0 0 5px}
+    .subtitle{margin:0;color:var(--muted);font-size:.94rem}
+    .panel{background:rgba(28,26,45,.94);border:1px solid var(--line);border-radius:18px;padding:clamp(15px,3vw,22px);margin:14px 0;box-shadow:0 10px 30px #0002}
+    h2{font-size:1.05rem;margin:0 0 12px;color:#f6d9a5}
+    label{display:block;font-weight:650;margin:13px 0 6px}
+    textarea,select,input[type=number]{width:100%;background:#12111e;color:var(--text);border:1px solid #514a72;border-radius:11px;padding:12px;font:inherit}
+    textarea{min-height:145px;resize:vertical;font-size:1.1rem;line-height:1.9}
+    select:focus,textarea:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .hint{color:var(--muted);font-size:.88rem;margin:7px 0 0}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    button,.download{appearance:none;border:0;border-radius:12px;padding:12px 17px;font:inherit;font-weight:750;text-decoration:none;cursor:pointer;text-align:center}
+    button.primary{background:var(--accent);color:#20192b;flex:1;min-width:180px}
+    button.secondary,.download{background:#302b49;color:var(--text);border:1px solid #514a72}
+    button:disabled{opacity:.55;cursor:wait}
+    .status{background:#12111e;border:1px solid #3d3858;border-radius:12px;padding:13px;overflow-wrap:anywhere;min-height:52px}
+    .status[data-kind=success]{border-color:#437b60;color:var(--good)}
+    .status[data-kind=error]{border-color:#8b4848;color:var(--bad)}
+    .status[data-kind=warning]{border-color:#8a6c35;color:#ffe0a1}
+    .progress-track{height:8px;background:#0e0d17;border-radius:999px;overflow:hidden;margin-top:12px}
+    .progress{height:100%;width:0;background:linear-gradient(90deg,#ae8ee8,var(--accent));transition:width .2s ease}
+    audio{width:100%;margin-top:14px}
+    .note{font-size:.88rem;color:var(--muted);margin:10px 0 0}
+    .checks{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .chip{padding:5px 9px;border-radius:999px;background:#302b49;border:1px solid #514a72;font-size:.8rem;color:#d6cfe9}
+    details{margin-top:12px;color:var(--muted);font-size:.88rem}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0d0c15;border-radius:9px;padding:10px;color:#ffc4c2;font-size:.8rem}
+    footer{color:var(--muted);font-size:.82rem;padding:4px 3px}
+    @media(max-width:560px){.grid{grid-template-columns:1fr}.top{align-items:flex-start}.mark{width:46px;height:46px;border-radius:14px}.actions>*{width:100%}}
   </style>
 </head>
-
 <body>
 <main>
   <header class="top">
@@ -286,38 +56,25 @@
 
   <section class="panel" aria-labelledby="input-title">
     <h2 id="input-title">१. संस्कृत पाठ</h2>
-
     <label for="verse">श्लोक / मंत्र / स्तोत्रांश</label>
-
     <textarea id="verse" spellcheck="false" lang="sa">वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।
 जगतः पितरौ वन्दे पार्वतीपरमेश्वरौ ॥</textarea>
-
-    <p class="hint">
-      पहले परीक्षण में एक छोटा, स्पष्ट संस्कृत श्लोक उपयोग करें।
-      बहुत लंबा पाठ मॉडल और फ़ोन की मेमोरी पर अधिक भार डाल सकता है।
-    </p>
+    <p class="hint">पहले परीक्षण में एक छोटा, स्पष्ट संस्कृत श्लोक उपयोग करें। बहुत लंबा पाठ मॉडल और फ़ोन की मेमोरी पर अधिक भार डाल सकता है।</p>
   </section>
 
   <section class="panel" aria-labelledby="settings-title">
     <h2 id="settings-title">२. इंजन सेटिंग</h2>
-
     <div class="grid">
       <div>
         <label for="backend">गणना इंजन</label>
-
         <select id="backend">
-          <option value="wasm">WASM SIMD — Android के लिए अनुशंसित</option>
+          <option value="wasm" selected>WASM SIMD — Android के लिए अनुशंसित</option>
           <option value="onnx">ONNX WebGPU — प्रयोगात्मक परीक्षण</option>
         </select>
-
-        <p class="hint">
-          WebGPU API उपलब्ध होना अपने-आप मॉडल के सफलतापूर्वक चलने की गारंटी नहीं है।
-        </p>
+        <p class="hint">मोबाइल पर पहले WASM SIMD आज़माएँ। WebGPU API उपलब्ध होना अपने-आप मॉडल के सफल चलने की गारंटी नहीं है।</p>
       </div>
-
       <div>
         <label for="steps">गायन-निर्माण चरण (NFE)</label>
-
         <select id="steps">
           <option value="3">3 — तेज़ प्रारम्भिक परीक्षण</option>
           <option value="4" selected>4 — मोबाइल परीक्षण</option>
@@ -326,25 +83,20 @@
           <option value="12">12 — धीमा परीक्षण</option>
         </select>
       </div>
-
       <div>
         <label for="speed">गायन की गति</label>
         <input id="speed" type="number" min="0.6" max="1.3" step="0.05" value="0.90">
         <p class="hint">0.90 सामान्य प्रारम्भिक मान है।</p>
       </div>
-
       <div>
         <label>डिवाइस की जाँच</label>
         <div class="checks">
           <span class="chip" id="secure-chip">Secure context: जाँच…</span>
           <span class="chip" id="gpu-chip">WebGPU: जाँच…</span>
         </div>
-        <p class="hint">
-          ये ब्राउज़र क्षमताओं के संकेत हैं, इंजन परीक्षण का परिणाम नहीं।
-        </p>
+        <p class="hint">ये ब्राउज़र क्षमताओं के संकेत हैं, इंजन परीक्षण का परिणाम नहीं।</p>
       </div>
     </div>
-
     <div class="actions">
       <button class="primary" id="generate">संस्कृत ऑडियो उत्पन्न करें</button>
       <button class="secondary" id="reset">मूल श्लोक रखें</button>
@@ -353,30 +105,19 @@
 
   <section class="panel" aria-labelledby="result-title">
     <h2 id="result-title">३. परीक्षण परिणाम</h2>
-
-    <div class="status" id="status" role="status" aria-live="polite" data-kind="info">
-      अभी इंजन लोड नहीं हुआ है। “संस्कृत ऑडियो उत्पन्न करें” दबाने पर आधिकारिक इंजन लोड होगा।
-    </div>
-
+    <div class="status" id="status" role="status" aria-live="polite" data-kind="info">तैयार। इस परीक्षण के लिए इंजन मॉड्यूल उसी GitHub Pages रिपॉज़िटरी में मौजूद होना चाहिए।</div>
     <div class="progress-track" aria-label="प्रगति">
       <div class="progress" id="progress"></div>
     </div>
-
     <audio id="audio" controls preload="metadata" hidden></audio>
-
     <div class="actions" id="result-actions" hidden>
       <a class="download" id="download" download="sanskrit-chant.wav">WAV डाउनलोड करें</a>
     </div>
-
     <details id="diagnostics" hidden>
       <summary>लोडिंग / त्रुटि का तकनीकी विवरण</summary>
       <pre id="diagnostics-text"></pre>
     </details>
-
-    <p class="note">
-      पहली बार मॉडल के वज़न डाउनलोड होने में समय लग सकता है। मॉडल वज़न Hugging Face
-      से लोड होते हैं; इस फ़ाइल में कोई AI API key या अलग inference server नहीं जोड़ा गया है।
-    </p>
+    <p class="note">पहली बार मॉडल वज़न डाउनलोड होने में समय लग सकता है। inference डिवाइस के ब्राउज़र में होता है; मॉडल वज़न और ONNX Runtime जैसी स्थिर निर्भरताएँ इंटरनेट से डाउनलोड हो सकती हैं। इस पृष्ठ में कोई AI API key या अलग inference server नहीं जोड़ा गया है।</p>
   </section>
 
   <footer>
@@ -397,20 +138,17 @@
   const diagnostics = $('diagnostics');
   const diagnosticsText = $('diagnostics-text');
 
-  // आधिकारिक app.js की तरह VagdhenuWebEngine सीधे लोड करें।
-  // इससे package-level index.js पर निर्भरता हट जाती है।
-  const ENGINE_MODULE_URLS = [
-    'https://h3manth.com/ai/sanskrit-tts/vagdhenu-onnx.js?v=38',
-    'https://hemanth.github.io/sanskrit-tts-web/vagdhenu-onnx.js?v=38',
-    'https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
-    'https://raw.githubusercontent.com/hemanth/sanskrit-tts-web/main/vagdhenu-onnx.js'
-  ];
+  // अब मॉड्यूल उसी रिपॉज़िटरी से लोड होंगे।
+  // आवश्यक फ़ाइलें:
+  // ./vagdhenu-onnx.js
+  // ./vagdhenu-text.js
+  const ENGINE_MODULE_URL = new URL('./vagdhenu-onnx.js?v=38', import.meta.url).href;
+  const REQUIRED_FILES = ['vagdhenu-onnx.js', 'vagdhenu-text.js'];
 
   let engineModule = null;
   let engine = null;
   let activeBackend = null;
   let currentAudioUrl = null;
-  let importLog = [];
 
   function setStatus(message, kind = 'info') {
     statusEl.textContent = message;
@@ -423,75 +161,99 @@
     progressEl.style.width = `${pct}%`;
   }
 
-  function setDiagnostic(text) {
+  function setDiagnostic(text, open = false) {
     diagnosticsText.textContent = text;
     diagnostics.hidden = !text;
+    if (text && open) diagnostics.open = true;
   }
 
   function progressCallback(info) {
     if (!info || typeof info !== 'object') return;
-
-    if (Number.isFinite(Number(info.progress))) {
-      setProgress(info.progress);
-    }
-
-    if (info.message) {
-      setStatus(String(info.message));
-    }
+    if (Number.isFinite(Number(info.progress))) setProgress(info.progress);
+    if (info.message) setStatus(String(info.message));
   }
 
-  function preferredBackend() {
-    const isMobile =
-      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
-      (
-        navigator.maxTouchPoints > 1 &&
-        matchMedia('(max-width: 820px)').matches
-      );
+  async function checkRequiredLocalFiles() {
+    const results = [];
 
-    return isMobile || !navigator.gpu ? 'wasm' : 'onnx';
+    for (const file of REQUIRED_FILES) {
+      const url = new URL(`./${file}`, import.meta.url);
+      let response;
+
+      try {
+        response = await fetch(url.href, {
+          method: 'HEAD',
+          cache: 'no-store'
+        });
+      } catch (error) {
+        throw new Error(
+          `स्थानीय फ़ाइल की जाँच नहीं हो सकी: ${file}. URL: ${url.href}. कारण: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          `आवश्यक फ़ाइल ${file} आपकी GitHub Pages रिपॉज़िटरी में उपलब्ध नहीं है (HTTP ${response.status}). इसे ${new URL('./', import.meta.url).href} के समान root folder में जोड़ना आवश्यक है।`
+        );
+      }
+
+      const type = (response.headers.get('content-type') || '').toLowerCase();
+
+      if (type.includes('text/html')) {
+        throw new Error(
+          `${file} के URL से JavaScript के बजाय HTML मिला। सही फ़ाइल और GitHub Pages deployment की जाँच करें: ${url.href}`
+        );
+      }
+
+      results.push(
+        `${file}: HTTP ${response.status}; Content-Type: ${type || 'not reported'}`
+      );
+    }
+
+    return results.join('\n');
   }
 
   async function loadEngineModule() {
     if (engineModule) return engineModule;
 
-    importLog = [];
+    setStatus('पहले स्थानीय इंजन फ़ाइलों की उपलब्धता जाँची जा रही है…');
+    const fileCheckLog = await checkRequiredLocalFiles();
 
-    for (const url of ENGINE_MODULE_URLS) {
-      try {
-        setStatus(`इंजन मॉड्यूल लोड हो रहा है: ${new URL(url).hostname} …`);
+    setStatus('स्थानीय Vāgdhenu इंजन मॉड्यूल लोड हो रहा है…');
 
-        const mod = await import(url);
+    try {
+      const mod = await import(ENGINE_MODULE_URL);
 
-        if (typeof mod.VagdhenuWebEngine !== 'function') {
-          throw new Error(
-            'इस मॉड्यूल में VagdhenuWebEngine export उपलब्ध नहीं है।'
-          );
-        }
-
-        engineModule = mod;
-        importLog.push(`सफल मॉड्यूल स्रोत: ${url}`);
-        setDiagnostic(importLog.join('\n'));
-
-        return engineModule;
-      } catch (error) {
-        const message = error instanceof Error
-          ? `${error.name}: ${error.message}`
-          : String(error);
-
-        importLog.push(`विफल स्रोत: ${url}\n${message}`);
+      if (typeof mod.VagdhenuWebEngine !== 'function') {
+        throw new Error(
+          'vagdhenu-onnx.js में अपेक्षित VagdhenuWebEngine export नहीं मिला।'
+        );
       }
+
+      engineModule = mod;
+      setDiagnostic(
+        `${fileCheckLog}\n\nEngine module imported: ${ENGINE_MODULE_URL}`
+      );
+
+      return engineModule;
+    } catch (error) {
+      const detail = error instanceof Error
+        ? `${error.name}: ${error.message}\n${error.stack || ''}`
+        : String(error);
+
+      setDiagnostic(
+        `${fileCheckLog}\n\nEngine import failed:\n${detail}`,
+        true
+      );
+
+      throw new Error(
+        `स्थानीय इंजन मॉड्यूल लोड नहीं हुआ। तकनीकी विवरण खोलें। यह प्रयास मॉडल या ऑडियो निर्माण तक नहीं पहुँचा। मूल त्रुटि: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
-
-    const detail =
-      'चारों स्रोतों से इंजन मॉड्यूल लोड नहीं हो पाया। संभावित कारण: ' +
-      'नेटवर्क/CDN अवरोध, CORS नीति या upstream मॉड्यूल की अनुपलब्ध निर्भरता।\n\n' +
-      importLog.join('\n\n');
-
-    setDiagnostic(detail);
-
-    throw new Error(
-      'इंजन मॉड्यूल लोड नहीं हुआ। तकनीकी विवरण खोलकर देखें; इस प्रयास में मॉडल या ऑडियो उत्पन्न नहीं हुआ।'
-    );
   }
 
   async function getEngine(backend) {
@@ -512,30 +274,6 @@
     return engine;
   }
 
-  function outputUrlFromResult(result) {
-    if (result && typeof result.url === 'string' && result.url) {
-      return result.url;
-    }
-
-    if (
-      result &&
-      result.audio &&
-      engineModule &&
-      typeof engineModule.encodeWavBlob === 'function'
-    ) {
-      const blob = engineModule.encodeWavBlob(
-        result.audio,
-        Number(result.sampleRate) || 24000
-      );
-
-      return URL.createObjectURL(blob);
-    }
-
-    throw new Error(
-      'इंजन ने synthesis पूरा किया, लेकिन परिणाम में playback URL या WAV audio नहीं मिला।'
-    );
-  }
-
   async function generateAudio() {
     const text = $('verse').value.trim();
     const backend = $('backend').value;
@@ -554,9 +292,18 @@
       return;
     }
 
+    if (!window.isSecureContext) {
+      setStatus(
+        'HTTPS Secure Context उपलब्ध नहीं है। इस पृष्ठ को GitHub Pages के HTTPS URL से खोलें।',
+        'error'
+      );
+      return;
+    }
+
     generateBtn.disabled = true;
     resultActions.hidden = true;
     audioEl.hidden = true;
+    audioEl.removeAttribute('src');
     setProgress(0);
     setDiagnostic('');
     setStatus('तैयारी शुरू हो रही है…');
@@ -565,7 +312,7 @@
       const activeEngine = await getEngine(backend);
 
       setStatus(
-        'मॉडल वज़न लोड/तैयार किए जा रहे हैं। पहली बार इसमें समय लग सकता है…'
+        'मॉडल और ONNX सत्र तैयार हो रहे हैं। पहली बार डाउनलोड में समय लग सकता है…'
       );
 
       const result = await activeEngine.synthesizeInBrowser(
@@ -577,9 +324,15 @@
           noSandhi: false,
 
           onChunk: async (chunk) => {
-            if (chunk && Number.isFinite(Number(chunk.totalChunks))) {
+            if (
+              chunk &&
+              Number.isFinite(Number(chunk.totalChunks)) &&
+              Number(chunk.totalChunks) > 0
+            ) {
               setStatus(
-                `ऑडियो भाग तैयार हो रहे हैं: ${Number(chunk.chunkIndex) + 1}/${chunk.totalChunks}…`
+                `ऑडियो भाग तैयार हो रहे हैं: ${
+                  Number(chunk.chunkIndex) + 1
+                }/${Number(chunk.totalChunks)}…`
               );
             }
           }
@@ -587,35 +340,33 @@
         progressCallback
       );
 
-      const url = outputUrlFromResult(result);
+      if (!result || typeof result.url !== 'string' || !result.url) {
+        throw new Error(
+          'इंजन ने परिणाम लौटाया, लेकिन उसमें playback URL उपलब्ध नहीं है।'
+        );
+      }
 
       if (currentAudioUrl && currentAudioUrl.startsWith('blob:')) {
         try {
           URL.revokeObjectURL(currentAudioUrl);
         } catch (_) {
-          // पहले के ऑडियो URL की सफ़ाई असफल होने पर भी नया परिणाम दिखाएँ।
+          // पुराने blob URL की सफ़ाई वैकल्पिक है।
         }
       }
 
-      currentAudioUrl = url;
-      audioEl.src = url;
+      currentAudioUrl = result.url;
+      audioEl.src = result.url;
       audioEl.hidden = false;
-      downloadEl.href = url;
+      downloadEl.href = result.url;
       downloadEl.download = 'sanskrit-chant.wav';
       resultActions.hidden = false;
       audioEl.load();
-
       setProgress(100);
 
-      const meter = result && result.meter
-        ? ` छंद: ${result.meter}.`
+      const meter = result.meter ? ` छंद: ${result.meter}.` : '';
+      const duration = Number.isFinite(Number(result.durationSec))
+        ? ` अवधि: ${Number(result.durationSec).toFixed(1)} सेकंड.`
         : '';
-
-      const duration =
-        result && Number.isFinite(Number(result.durationSec))
-          ? ` अवधि: ${Number(result.durationSec).toFixed(1)} सेकंड.`
-          : '';
-
       const provider = activeEngine.provider
         ? ` इंजन: ${activeEngine.provider}.`
         : '';
@@ -626,15 +377,14 @@
       );
 
       setDiagnostic([
-        'Engine module loaded successfully.',
+        'Engine module: imported successfully',
         `Backend selected: ${backend}`,
         `NFE: ${nfe}`,
         `Speed: ${speed}`,
-        `Meter: ${result?.meter ?? 'not reported'}`,
-        `Duration seconds: ${result?.durationSec ?? 'not reported'}`,
-        `Audio URL type: ${url.startsWith('blob:') ? 'local Blob URL' : 'engine-returned URL'}`
+        `Meter: ${result.meter ?? 'not reported'}`,
+        `Duration seconds: ${result.durationSec ?? 'not reported'}`,
+        `Audio URL: ${result.url}`
       ].join('\n'));
-
     } catch (error) {
       setProgress(0);
 
@@ -645,16 +395,18 @@
       setStatus(`विफल: ${message}`, 'error');
 
       if (!diagnosticsText.textContent) {
-        setDiagnostic([
-          `Error: ${message}`,
-          error instanceof Error && error.stack ? error.stack : ''
-        ].filter(Boolean).join('\n\n'));
+        setDiagnostic(
+          error instanceof Error
+            ? `${error.name}: ${message}\n${error.stack || ''}`
+            : message,
+          true
+        );
       } else {
         setDiagnostic(
-          diagnosticsText.textContent +
-          '\n\nSynthesis error:\n' +
-          message +
-          (error instanceof Error && error.stack ? '\n' + error.stack : '')
+          `${diagnosticsText.textContent}\n\nSynthesis error:\n${message}\n${
+            error instanceof Error ? (error.stack || '') : ''
+          }`,
+          true
         );
       }
     } finally {
@@ -668,12 +420,13 @@
     $('verse').value = originalVerse;
     $('steps').value = '4';
     $('speed').value = '0.90';
-    $('backend').value = preferredBackend();
-
+    $('backend').value = 'wasm';
     setStatus('मूल परीक्षण-पाठ और शुरुआती सेटिंग बहाल कर दी गई हैं।');
+    setProgress(0);
   });
 
-  $('backend').value = preferredBackend();
+  // Android पर शुरुआत WASM से होगी; WebGPU अलग से चुना जा सकता है।
+  $('backend').value = 'wasm';
 
   $('secure-chip').textContent =
     `Secure context: ${window.isSecureContext ? 'हाँ' : 'नहीं'}`;
@@ -684,7 +437,7 @@
   if (!window.isSecureContext) {
     setStatus(
       'चेतावनी: Secure context उपलब्ध नहीं है; GitHub Pages का HTTPS URL उपयोग करें।',
-      'error'
+      'warning'
     );
   }
 </script>
