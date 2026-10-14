@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17152b">
-  <title>Swar Sadhika AI — WebGPU Test</title>
+  <title>Swar Sadhika AI — Device Feasibility</title>
   <style>
     :root {
       color-scheme: dark;
@@ -13,133 +13,123 @@
       background: #17152b;
       color: #f7f4ff;
     }
-    body {
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 24px 16px 48px;
-    }
-    h1 { font-size: 1.8rem; }
-    .panel {
-      margin: 16px 0;
-      padding: 18px;
-      border: 1px solid #51476d;
-      border-radius: 14px;
-      background: #211e39;
-    }
-    .status { overflow-wrap: anywhere; line-height: 1.65; }
-    button {
-      width: 100%;
-      padding: 14px;
-      border: 0;
-      border-radius: 10px;
-      background: #d8b4fe;
-      color: #21152e;
-      font-size: 1rem;
-      font-weight: 700;
-    }
+    body { max-width: 760px; margin: auto; padding: 22px 16px 40px; }
+    .panel { background: #211e39; border: 1px solid #51476d;
+      border-radius: 14px; padding: 16px; margin: 14px 0; }
+    button { width: 100%; padding: 14px; border: 0; border-radius: 10px;
+      background: #d8b4fe; color: #21152e; font-weight: 700; font-size: 1rem; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
     .note { color: #d0c9e2; line-height: 1.6; }
-    code { overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
   <h1>स्वर साधिका AI</h1>
-  <p class="note">प्रारम्भिक WebGPU क्षमता परीक्षण</p>
+  <p class="note">Android और WebGPU संसाधन-जाँच</p>
 
   <section class="panel">
-    <h2>परीक्षण की स्थिति</h2>
-    <div id="status" class="status" aria-live="polite">
-      परीक्षण शुरू नहीं हुआ है।
-    </div>
+    <h2>परीक्षण रिपोर्ट</h2>
+    <pre id="report">परीक्षण शुरू करने के लिए बटन दबाएँ।</pre>
   </section>
 
-  <button id="testButton" type="button">WebGPU परीक्षण चलाएँ</button>
+  <button id="run">डिवाइस की जाँच करें</button>
 
   <section class="panel">
-    <h2>इस परीक्षण का अर्थ</h2>
-    <p>यह पृष्ठ जाँचता है कि ब्राउज़र WebGPU API उपलब्ध कराता है या नहीं,
-    GPU adapter मिलता है या नहीं, और GPU device बनाया जा सकता है या नहीं।</p>
-    <p><strong>यह गायन मॉडल का परीक्षण नहीं है।</strong> अभी इस पृष्ठ में
-    कोई AI singing model या मानव-सदृश गायन इंजन शामिल नहीं है।</p>
+    <h2>सीमा</h2>
+    <p class="note">
+      यह जाँच ब्राउज़र और GPU की रिपोर्ट देती है।
+      यह उपलब्ध RAM का सटीक माप नहीं करती और न ही AI गायन मॉडल
+      की अनुकूलता या गायन की गुणवत्ता प्रमाणित करती है।
+    </p>
   </section>
 
-  <script>
-    const statusBox = document.getElementById("status");
-    const testButton = document.getElementById("testButton");
+<script>
+const report = document.getElementById("report");
+const button = document.getElementById("run");
 
-    function show(message) {
-      statusBox.textContent = message;
+async function runCheck() {
+  button.disabled = true;
+  report.textContent = "जाँच चल रही है…";
+
+  const lines = [];
+  const add = (label, value) => lines.push(label + ": " + value);
+
+  try {
+    add("ब्राउज़र", navigator.userAgent);
+    add("ऑनलाइन स्थिति", navigator.onLine ? "ऑनलाइन" : "ऑफलाइन");
+    add("हार्डवेयर concurrency", navigator.hardwareConcurrency ?? "उपलब्ध नहीं");
+    add("deviceMemory अनुमान (GB)", navigator.deviceMemory ?? "ब्राउज़र ने उपलब्ध नहीं कराया");
+    add("WebAssembly", typeof WebAssembly !== "undefined" ? "उपलब्ध" : "अनुपलब्ध");
+    add("WebGPU API", navigator.gpu ? "उपलब्ध" : "अनुपलब्ध");
+
+    if (navigator.storage?.estimate) {
+      try {
+        const storage = await navigator.storage.estimate();
+        add("वेबसाइट के लिए अनुमानित उपयोग", storage.usage == null
+          ? "उपलब्ध नहीं" : (storage.usage / 1e9).toFixed(2) + " GB");
+        add("वेबसाइट के लिए अनुमानित quota", storage.quota == null
+          ? "उपलब्ध नहीं" : (storage.quota / 1e9).toFixed(2) + " GB");
+      } catch (e) {
+        add("Storage estimate", "नहीं मिल सका: " + e.message);
+      }
+    } else {
+      add("Storage estimate", "ब्राउज़र API उपलब्ध नहीं");
     }
 
-    async function runTest() {
-      testButton.disabled = true;
-      testButton.textContent = "परीक्षण चल रहा है…";
-
+    if (navigator.gpu) {
       try {
-        show("1/3 — ब्राउज़र की WebGPU सुविधा जाँची जा रही है…");
-
-        if (!("gpu" in navigator) || !navigator.gpu) {
-          show(
-            "परिणाम: WebGPU API उपलब्ध नहीं है।\n\n" +
-            "संभावित कारण: ब्राउज़र समर्थन, डिवाइस, सेटिंग या सुरक्षा नीति। " +
-            "इस परिणाम से अकेले यह सिद्ध नहीं होता कि फोन का GPU अनुपयोगी है।"
-          );
-          return;
-        }
-
-        show("2/3 — GPU adapter माँगा जा रहा है…");
         const adapter = await navigator.gpu.requestAdapter();
 
         if (!adapter) {
-          show(
-            "परिणाम: WebGPU API मिली, लेकिन कोई GPU adapter उपलब्ध नहीं हुआ। " +
-            "GPU device बनाना संभव नहीं हुआ।"
-          );
-          return;
-        }
+          add("GPU adapter", "नहीं मिला");
+        } else {
+          add("GPU adapter", "मिला");
 
-        let adapterInfo = "अतिरिक्त adapter जानकारी उपलब्ध नहीं है।";
-        try {
-          if (adapter.info) {
+          try {
             const info = adapter.info;
-            adapterInfo = [
-              info.vendor ? "Vendor: " + info.vendor : "",
-              info.architecture ? "Architecture: " + info.architecture : "",
-              info.device ? "Device: " + info.device : "",
-              info.description ? "Description: " + info.description : ""
-            ].filter(Boolean).join("\n") || adapterInfo;
+            if (info) {
+              add("GPU vendor", info.vendor || "अज्ञात");
+              add("GPU architecture", info.architecture || "अज्ञात");
+              add("GPU device", info.device || "अज्ञात");
+              add("GPU description", info.description || "अज्ञात");
+            }
+          } catch (_) {
+            add("GPU जानकारी", "ब्राउज़र ने छिपाई है");
           }
-        } catch (_) {}
 
-        show("3/3 — GPU device बनाया जा रहा है…");
-        const device = await adapter.requestDevice();
+          const limits = adapter.limits;
+          add("maxBufferSize", limits.maxBufferSize ?? "उपलब्ध नहीं");
+          add("maxStorageBufferBindingSize",
+            limits.maxStorageBufferBindingSize ?? "उपलब्ध नहीं");
+          add("maxComputeWorkgroupStorageSize",
+            limits.maxComputeWorkgroupStorageSize ?? "उपलब्ध नहीं");
 
-        device.lost.then((info) => {
-          show(
-            "GPU device बाद में खो गया।\nकारण: " +
-            (info.message || info.reason || "अज्ञात")
-          );
-        });
-
-        show(
-          "परिणाम: WebGPU device सफलतापूर्वक बनाया गया।\n\n" +
-          adapterInfo + "\n\n" +
-          "सीमा: इससे केवल WebGPU की प्रारम्भिक उपलब्धता सिद्ध होती है। " +
-          "AI मॉडल का चलना, उसकी गति, मेमोरी की पर्याप्तता या गायन की गुणवत्ता " +
-          "अभी प्रमाणित नहीं हुई है।"
-        );
-      } catch (error) {
-        show(
-          "परीक्षण विफल हुआ।\n" +
-          "त्रुटि: " + (error?.name || "Error") + "\n" +
-          "विवरण: " + (error?.message || String(error))
-        );
-      } finally {
-        testButton.disabled = false;
-        testButton.textContent = "पुनः WebGPU परीक्षण चलाएँ";
+          try {
+            const device = await adapter.requestDevice();
+            add("GPU device creation", "सफल");
+            add("Device maxBufferSize", device.limits.maxBufferSize);
+            add("Device maxStorageBufferBindingSize",
+              device.limits.maxStorageBufferBindingSize);
+            device.destroy();
+          } catch (e) {
+            add("GPU device creation", "विफल: " + e.message);
+          }
+        }
+      } catch (e) {
+        add("WebGPU परीक्षण", "विफल: " + e.message);
       }
     }
 
-    testButton.addEventListener("click", runTest);
-  </script>
+    add("अंतिम निष्कर्ष",
+      "यह संसाधन रिपोर्ट है, AI singing model का परीक्षण नहीं।");
+    report.textContent = lines.join("\n");
+  } catch (e) {
+    report.textContent = lines.join("\n") + "\nत्रुटि: " + e.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+button.addEventListener("click", runCheck);
+</script>
 </body>
 </html>
