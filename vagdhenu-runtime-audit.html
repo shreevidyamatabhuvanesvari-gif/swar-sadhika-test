@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17152b">
+<meta name="description" content="Swar-Sadhika के लिए Vāgdhenu WASM ONNX मॉडल-सत्रों की Android ब्राउज़र संगतता जाँच।">
+<title>स्वर-साधिका — Vāgdhenu Runtime Audit</title>
+<style>
+:root{color-scheme:dark;--bg:#11101d;--panel:#1c1a2d;--line:#3a3655;--text:#f5f1ff;--muted:#c0bad5;--accent:#e6ba71;--good:#8fe0b7;--bad:#ffaaa9;--warn:#ffe0a1}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#292344 0%,var(--bg) 60%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif;line-height:1.55}
+main{width:min(850px,100%);margin:auto;padding:clamp(14px,4vw,28px);padding-bottom:50px}.top{display:flex;align-items:center;gap:13px;margin-bottom:18px}.mark{width:48px;height:48px;flex:0 0 auto;display:grid;place-items:center;border:1px solid #70628f;border-radius:15px;background:#302849;color:var(--accent);font-size:24px;font-weight:800}h1{font-size:clamp(1.25rem,5vw,1.9rem);line-height:1.25;margin:0 0 4px}.subtitle{margin:0;color:var(--muted);font-size:.9rem}.panel{margin:13px 0;padding:clamp(14px,3vw,21px);background:rgba(28,26,45,.95);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px #0002}h2{font-size:1.05rem;margin:0 0 10px;color:#f6d9a5}.note{font-size:.9rem;color:var(--muted);margin:8px 0}.warning{border-left:3px solid var(--warn);padding:9px 11px;background:#ffe0a10d;color:var(--warn);border-radius:6px}.chips{display:flex;flex-wrap:wrap;gap:7px;margin:11px 0}.chip{border:1px solid #514a72;background:#302b49;color:#e4ddf3;border-radius:999px;padding:5px 9px;font-size:.8rem}.actions{display:flex;gap:9px;flex-wrap:wrap;margin:13px 0}.actions button{flex:1;min-width:150px}button{appearance:none;border:0;border-radius:11px;padding:12px 14px;font:inherit;font-weight:750;background:var(--accent);color:#20192b;cursor:pointer}button.secondary{background:#302b49;color:var(--text);border:1px solid #514a72}button:disabled{opacity:.52;cursor:wait}.status{padding:12px;border:1px solid #3d3858;background:#12111e;border-radius:11px;overflow-wrap:anywhere;white-space:pre-wrap}.status[data-kind=success]{border-color:#437b60;color:var(--good)}.status[data-kind=error]{border-color:#8b4848;color:var(--bad)}.status[data-kind=warning]{border-color:#8a6c35;color:var(--warn)}.progress{height:7px;background:#0e0d17;border-radius:999px;overflow:hidden;margin:10px 0}.bar{width:0;height:100%;background:linear-gradient(90deg,#ae8ee8,var(--accent));transition:width .2s}table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{text-align:left;vertical-align:top;padding:9px 7px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}th{color:#f6d9a5}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0d0c15;border-radius:9px;padding:11px;color:#e6dff7;font-size:.79rem;max-height:520px;overflow:auto}details{margin-top:12px;color:var(--muted)}a{color:#f6d9a5}footer{color:var(--muted);font-size:.82rem;padding:8px 3px}
+</style>
+</head>
+<body>
+<main>
+<header class="top"><div class="mark" aria-hidden="true">स्व</div><div><h1>स्वर-साधिका · Vāgdhenu Runtime Audit</h1><p class="subtitle">Android Chrome में वास्तविक WASM ONNX मॉडल-सत्र जाँच</p></div></header>
+
+<section class="panel">
+<h2>इस परीक्षण का उद्देश्य</h2>
+<p>यह पृष्ठ Vāgdhenu के तीन वास्तविक ONNX मॉडल-सत्रों को <strong>एक-एक करके</strong> खोलने की कोशिश करता है। यह runtime द्वारा मॉडल graph पढ़े जाने, session बनाने और input/output metadata प्राप्त होने का प्रमाण देगा।</p>
+<p class="warning"><strong>सावधानी:</strong> कुल मॉडल लगभग 275 MB हैं। परीक्षण तभी शुरू करें जब इंटरनेट स्थिर हो, बैटरी पर्याप्त हो और फ़ोन गर्म न हो। पृष्ठ अपने-आप मॉडल डाउनलोड नहीं करता; डाउनलोड परीक्षण बटन दबाने पर ही शुरू होगा।</p>
+<div class="chips">
+<span class="chip" id="secure">HTTPS: जाँच…</span>
+<span class="chip" id="wasm">WebAssembly: जाँच…</span>
+<span class="chip" id="gpu">WebGPU: जाँच…</span>
+<span class="chip" id="threads">CPU threads: जाँच…</span>
+</div>
+</section>
+
+<section class="panel">
+<h2>मॉडल सत्र जाँच</h2>
+<p class="note">Android पर पहले WASM SIMD backend जाँचा जाएगा। हर session की जाँच पूरी होने पर उसे release किया जाएगा; तीनों बड़े sessions एकसाथ नहीं रखे जाएँगे। ONNX Runtime और model files इंटरनेट से लोड होते हैं, लेकिन इस पृष्ठ में कोई inference server या AI API उपयोग नहीं होता।</p>
+<div class="actions">
+<button id="run-all">तीनों मॉडल क्रमशः जाँचें</button>
+<button id="stop" class="secondary" disabled>आगे की जाँच रोकें</button>
+</div>
+<div class="status" id="status" role="status" aria-live="polite" data-kind="info">तैयार। अभी कोई मॉडल डाउनलोड या लोड नहीं हुआ है।</div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<table>
+<thead><tr><th>मॉडल</th><th>स्थिति</th><th>समय</th></tr></thead>
+<tbody id="results"><tr><td colspan="3">परीक्षण शुरू होने पर परिणाम यहाँ आएँगे।</td></tr></tbody>
+</table>
+<details><summary>तकनीकी विवरण</summary><pre id="log">Audit initialized. No model loaded.</pre></details>
+</section>
+
+<section class="panel">
+<h2>परिणाम को कैसे समझें</h2>
+<p><strong>तीनों session पास:</strong> यह संकेत है कि इस ब्राउज़र में ONNX Runtime इन मॉडल graphs को लोड कर सका। यह अभी पूर्ण inference, संस्कृत उच्चारण, धुन, ध्वनि-गुणवत्ता या स्त्री-स्वर की पुष्टि नहीं है।</p>
+<p><strong>कोई session विफल:</strong> विवरण में CORS/network, WASM operator, memory या runtime की त्रुटि दिख सकती है। एक असफल मॉडल पर पूरा ऐप अनुमान से आगे नहीं बढ़ाया जाएगा।</p>
+<p><strong>यह परीक्षण किसी ऐप फ़ाइल को नहीं बदलता</strong> और न `vagdhenu-onnx.js` बनाता है। यह उसी इंजन को सुरक्षित रूप से जोड़ने से पहले की रनटाइम-संगतता जाँच है।</p>
+</section>
+
+<footer>Model source: <a href="https://huggingface.co/gnumanth/sanskrit-tts-wasm" target="_blank" rel="noopener noreferrer">gnumanth/sanskrit-tts-wasm</a>. ONNX Runtime Web is loaded from jsDelivr only for this diagnostic page. No audio synthesis is claimed by this test.</footer>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const ORT_VERSION = '1.23.2';
+  const ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+  const ORT_SCRIPT = ORT_BASE + 'ort.all.min.js';
+  const models = [
+    {name:'Conditioner', file:'vagdhenu_cond_q8.onnx', approx:'लगभग 20 MB'},
+    {name:'DiT step', file:'vagdhenu_dit_step_q8.onnx', approx:'लगभग 199 MB'},
+    {name:'Vocos vocoder', file:'vagdhenu_vocos_q8.onnx', approx:'लगभग 56 MB'}
+  ];
+  const $ = id => document.getElementById(id);
+  let stopped = false, running = false, ortLoadPromise = null;
+  const logs = [];
+
+  function log(s) {
+    const line = `[${new Date().toISOString()}] ${s}`;
+    logs.push(line);
+    $('log').textContent = logs.join('\n');
+  }
+
+  function status(s, kind='info') {
+    $('status').textContent = s;
+    $('status').dataset.kind = kind;
+  }
+
+  function progress(p) {
+    $('bar').style.width = `${Math.max(0,Math.min(100,p))}%`;
+  }
+
+  function metaText(meta) {
+    if (!meta) return 'metadata unavailable';
+    const dims = Array.isArray(meta.dimensions)
+      ? meta.dimensions.map(x => typeof x === 'number' ? x : String(x)).join('×')
+      : '?';
+    return `${meta.type || 'unknown'} [${dims}]`;
+  }
+
+  function metadataTable(session) {
+    const out = [];
+    for (const name of (session.inputNames || [])) {
+      out.push(`IN  ${name}: ${metaText(session.inputMetadata?.[name])}`);
+    }
+    for (const name of (session.outputNames || [])) {
+      out.push(`OUT ${name}: ${metaText(session.outputMetadata?.[name])}`);
+    }
+    return out.join('\n') || 'Input/output names not exposed by this runtime.';
+  }
+
+  async function loadOrt() {
+    if (window.ort) return window.ort;
+    if (ortLoadPromise) return ortLoadPromise;
+
+    ortLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = ORT_SCRIPT;
+      script.async = true;
+      script.onload = () => window.ort
+        ? resolve(window.ort)
+        : reject(new Error('ONNX Runtime script loaded, but window.ort is unavailable.'));
+      script.onerror = () => reject(new Error(`ONNX Runtime script could not be loaded: ${ORT_SCRIPT}`));
+      document.head.appendChild(script);
+    });
+
+    const ort = await ortLoadPromise;
+    ort.env.logLevel = 'warning';
+    ort.env.wasm.wasmPaths = ORT_BASE;
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+    return ort;
+  }
+
+  function modelUrl(file) {
+    return `https://huggingface.co/gnumanth/sanskrit-tts-wasm/resolve/main/${file}`;
+  }
+
+  function makeRows() {
+    $('results').replaceChildren();
+    models.forEach((m,i) => {
+      const tr = document.createElement('tr');
+      tr.id = `row-${i}`;
+      const td1 = document.createElement('td');
+      td1.textContent = `${m.name}\n${m.file}\n${m.approx}`;
+      const td2 = document.createElement('td');
+      td2.id = `result-${i}`;
+      td2.textContent = 'अभी जाँचा नहीं';
+      const td3 = document.createElement('td');
+      td3.id = `time-${i}`;
+      td3.textContent = '—';
+      tr.append(td1,td2,td3);
+      $('results').append(tr);
+    });
+  }
+
+  function setRow(i, value, elapsed='—', kind='info') {
+    const cell = $(`result-${i}`);
+    if (cell) {
+      cell.textContent = value;
+      cell.dataset.kind = kind;
+    }
+    const time = $(`time-${i}`);
+    if (time) time.textContent = elapsed;
+  }
+
+  async function testModel(m,i) {
+    if (stopped) return false;
+
+    const url = modelUrl(m.file);
+    const start = performance.now();
+
+    status(`${m.name}: model URL की उपलब्धता जाँची जा रही है…`);
+    setRow(i,'URL जाँची जा रही है…');
+    log(`HEAD ${url}`);
+
+    let head;
+    try {
+      head = await fetch(url,{method:'HEAD',cache:'no-store'});
+    } catch(e) {
+      throw new Error(`${m.file}: HEAD request failed (network/CORS): ${e.message || e}`);
+    }
+
+    if (!head.ok) throw new Error(`${m.file}: HEAD HTTP ${head.status}`);
+
+    const ctype = (head.headers.get('content-type') || '').toLowerCase();
+    const length = head.headers.get('content-length');
+    log(`${m.file}: HEAD HTTP ${head.status}; type=${ctype || 'unknown'}; length=${length || 'not exposed'}`);
+
+    if (ctype.includes('text/html')) {
+      throw new Error(`${m.file}: मॉडल के बजाय HTML प्राप्त हुआ।`);
+    }
+
+    if (stopped) return false;
+
+    status(`${m.name}: ONNX Runtime WASM session बन रहा है। फ़ाइल बड़ी है; कृपया टैब न बंद करें…`);
+    setRow(i,'session initialization चल रही है…');
+
+    const ort = await loadOrt();
+    log(`ONNX Runtime ${ORT_VERSION}; backend=wasm; numThreads=1; create ${m.file}`);
+
+    let session = null;
+    try {
+      session = await ort.InferenceSession.create(url, {
+        executionProviders:['wasm'],
+        graphOptimizationLevel:'all'
+      });
+
+      const metadata = metadataTable(session);
+      const elapsed = ((performance.now()-start)/1000).toFixed(1)+' s';
+      setRow(i,'PASS — session बना',elapsed,'success');
+      log(`${m.file}: SESSION PASS in ${elapsed}\n${metadata}`);
+      log(`inputNames=${JSON.stringify(session.inputNames || [])}`);
+      log(`outputNames=${JSON.stringify(session.outputNames || [])}`);
+      return true;
+    } catch(e) {
+      const elapsed = ((performance.now()-start)/1000).toFixed(1)+' s';
+      setRow(i,'FAIL — '+(e.message || String(e)),elapsed,'error');
+      log(`${m.file}: SESSION FAIL after ${elapsed}\n${e.stack || e}`);
+      throw e;
+    } finally {
+      if (session && typeof session.release === 'function') {
+        try {
+          await session.release();
+          log(`${m.file}: session released.`);
+        } catch(e) {
+          log(`${m.file}: session release warning: ${e.message || e}`);
+        }
+      }
+      session = null;
+    }
+  }
+
+  async function runAll() {
+    if (running) return;
+    if (!window.isSecureContext) {
+      status('HTTPS secure context नहीं मिला। GitHub Pages के HTTPS URL पर ही चलाएँ।','error');
+      return;
+    }
+    if (typeof WebAssembly === 'undefined') {
+      status('इस ब्राउज़र में WebAssembly उपलब्ध नहीं है।','error');
+      return;
+    }
+
+    running = true;
+    stopped = false;
+    $('run-all').disabled = true;
+    $('stop').disabled = false;
+    makeRows();
+    progress(0);
+    logs.length = 0;
+    log('Audit started. This is session-load testing only, not audio inference.');
+
+    let passed = 0, failed = 0;
+    try {
+      for (let i=0;i<models.length;i++) {
+        if (stopped) {
+          log('Run stopped by user before next model.');
+          break;
+        }
+        try {
+          const ok = await testModel(models[i],i);
+          if (ok) passed++;
+        } catch(e) {
+          failed++;
+          if ($(`result-${i}`)?.textContent.includes('जाँची')) {
+            setRow(i,'FAIL — '+(e.message || String(e)));
+          }
+          status(`${models[i].name} विफल: ${e.message || e}`,'error');
+        }
+        progress(((i+1)/models.length)*100);
+        if (i < models.length-1 && !stopped) {
+          await new Promise(resolve => setTimeout(resolve,400));
+        }
+      }
+
+      if (stopped) {
+        status(`जाँच रोक दी गई। सफल session: ${passed}; विफल: ${failed}; बाकी मॉडल नहीं जाँचे गए।`,'warning');
+      } else if (failed===0 && passed===models.length) {
+        status('PASS: तीनों ONNX sessions WASM backend पर बने। यह session-load compatibility का प्रमाण है; वास्तविक inference/ऑडियो अभी नहीं परखा गया।','success');
+      } else {
+        status(`जाँच पूरी: सफल session ${passed}; विफल ${failed}. विवरण खोलकर वास्तविक त्रुटि पढ़ें। कोई audio synthesis नहीं हुई.`, failed ? 'error' : 'warning');
+      }
+    } finally {
+      running = false;
+      $('run-all').disabled = false;
+      $('stop').disabled = true;
+    }
+  }
+
+  $('run-all').addEventListener('click',runAll);
+  $('stop').addEventListener('click',()=>{
+    stopped = true;
+    $('stop').disabled = true;
+    status('रोकने का अनुरोध स्वीकार हुआ; चल रहा session initialization पूरा/विफल होने पर अगला मॉडल नहीं खोला जाएगा।','warning');
+    log('Stop requested. Current model initialization cannot always be cancelled mid-flight.');
+  });
+
+  $('secure').textContent = `HTTPS: ${window.isSecureContext?'हाँ':'नहीं'}`;
+  $('wasm').textContent = `WebAssembly: ${typeof WebAssembly!=='undefined'?'उपलब्ध':'अनुपलब्ध'}`;
+  $('gpu').textContent = `WebGPU API: ${navigator.gpu?'उपलब्ध':'अनुपलब्ध'}`;
+  $('threads').textContent = `hardwareConcurrency: ${navigator.hardwareConcurrency || 'unknown'}`;
+  log(`SecureContext=${window.isSecureContext}; WASM=${typeof WebAssembly!=='undefined'}; WebGPU=${Boolean(navigator.gpu)}; hardwareConcurrency=${navigator.hardwareConcurrency || 'unknown'}`);
+})();
+</script>
+</body>
+</html>
