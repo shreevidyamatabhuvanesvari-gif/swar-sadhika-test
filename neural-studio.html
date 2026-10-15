@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17152b">
+<meta name="description" content="स्वर-साधिका से वास्तविक Vāgdhenu संस्कृत neural chant studio तक पहुँच।">
+<title>स्वर-साधिका — Neural Chant Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#11101d;--panel:#1c1a2d;--line:#3a3655;--text:#f5f1ff;--muted:#c0bad5;--accent:#e6ba71;--good:#8fe0b7;--warn:#ffe0a1}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#292344 0%,var(--bg) 60%);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Noto Sans Devanagari","Nirmala UI",Mangal,sans-serif}
+main{width:min(1100px,100%);margin:auto;padding:clamp(14px,3vw,28px)}header{display:flex;gap:12px;align-items:center;margin-bottom:16px}.mark{width:48px;height:48px;border:1px solid #70628f;border-radius:15px;background:#302747;display:grid;place-items:center;color:var(--accent);font-size:26px}h1{font-size:clamp(1.3rem,4vw,1.9rem);margin:0;line-height:1.2}p{margin:8px 0}.muted{color:var(--muted)}.panel{padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:16px;margin:12px 0}.actions{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}a{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;padding:12px 16px;background:#302b49;border:1px solid #514a72;color:var(--text);text-decoration:none;font-weight:750}.primary{background:var(--accent);color:#20192b;border-color:var(--accent)}iframe{width:100%;height:min(76vh,900px);min-height:480px;background:#fff;border:1px solid var(--line);border-radius:12px}.note{border-left:3px solid var(--warn);padding:8px 12px;color:var(--muted);background:#12111e;border-radius:5px}.small{font-size:.88rem;color:var(--muted)}@media(max-width:560px){.actions a{width:100%}iframe{height:70vh;min-height:400px}}
+</style>
+</head>
+<body><main>
+<header><div class="mark" aria-hidden="true">स्व</div><div><h1>स्वर-साधिका · Neural Chant Studio</h1><div class="muted">वास्तविक Vāgdhenu संस्कृत गायन इंजन तक सीधी पहुँच</div></div></header>
+<section class="panel">
+<p>यह पृष्ठ आधिकारिक Vāgdhenu browser studio खोलता है। उस स्टूडियो में मॉडल पहली बार डाउनलोड हो सकते हैं और समर्थित ब्राउज़र में inference डिवाइस पर चलता है। यह अभी आपके मौजूदा 9:16 editor के साथ audio को स्वतः नहीं जोड़ता।</p>
+<div class="actions"><a class="primary" href="https://h3manth.com/ai/sanskrit-tts/" target="_blank" rel="noopener noreferrer">Vāgdhenu को नए टैब में खोलें ↗</a><a href="./index.html">स्वर-साधिका ऐप पर लौटें</a></div>
+<p class="note">यदि नीचे का embed खाली रहे या ब्राउज़र उसे रोक दे, ऊपर का “नए टैब में खोलें” लिंक उपयोग करें। सफल परीक्षण तभी मानें जब संस्कृत पाठ की आवाज़ बने, उसे चलाया जा सके और ऑडियो डाउनलोड/सहेजा जा सके।</p>
+</section>
+<section class="panel"><h2 style="margin-top:0">Vāgdhenu Studio</h2>
+<iframe title="Official Vāgdhenu Sanskrit neural chant studio" src="https://h3manth.com/ai/sanskrit-tts/" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; clipboard-read; clipboard-write; fullscreen; webgpu" allowfullscreen></iframe>
+<p class="small">यदि वेबसाइट iframe embedding की अनुमति नहीं देती, यह ब्राउज़र की सुरक्षा नीति है—ऐसी स्थिति में ऊपर दिया गया direct-open बटन काम का वैकल्पिक रास्ता है।</p>
+</section>
+<section class="panel"><strong>महत्त्वपूर्ण स्थिति</strong><p class="small">यह bridge वास्तविक Vāgdhenu स्टूडियो तक पहुँच देता है; यह Vāgdhenu का JavaScript स्रोत और ONNX runtime आपके GitHub repository में vendor नहीं करता। इसलिए यह तत्काल उपयोग का रास्ता है, पूर्ण offline/local-source integration release नहीं।</p></section>
+</main></body></html>
