@@ -2,1141 +2,355 @@
 <html lang="hi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#123b75">
-  <meta name="description" content="Swar-Sadhika — संस्कृत, हिंदी और देवनागरी पाठ के लिए वाचन तथा 9:16 वीडियो स्टूडियो।">
-  <title>Swar-Sadhika | Anjali</title>
+  <meta name="description" content="Swar-Sadhika — संस्कृत वाचन, वैदिक पाठ, 9:16 वीडियो स्टूडियो और स्थानीय AI गायन परीक्षण।">
+  <title>Swar-Sadhika | संस्कृत वाचन एवं गायन</title>
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #172235;
-      --muted: #5b6678;
-      --surface: #ffffff;
-      --surface-2: #f3f6fb;
-      --line: #d9e1ee;
-      --brand: #123b75;
-      --brand-2: #2056a5;
-      --brand-soft: #eaf1fd;
-      --good: #176a43;
-      --good-bg: #e8f7ef;
-      --warn: #8b5200;
-      --warn-bg: #fff4d8;
-      --bad: #a32929;
-      --bad-bg: #fff0f0;
-      --radius: 16px;
-      --shadow: 0 10px 30px rgba(22, 45, 82, .08);
-    }
-    * { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      min-width: 300px;
-      color: var(--ink);
-      background: #f5f7fb;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif;
-      line-height: 1.5;
-    }
-    button, input, select, textarea { font: inherit; }
-    button, input[type="checkbox"], input[type="range"], select { cursor: pointer; }
-    button { min-height: 44px; }
-    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
-      outline: 3px solid #f0a51b; outline-offset: 3px;
-    }
-    a { color: var(--brand-2); }
-    .app-header {
-      background: linear-gradient(120deg, #102b55, #174d91);
-      color: #fff; padding: 18px max(16px, env(safe-area-inset-right)) 17px max(16px, env(safe-area-inset-left));
-    }
-    .header-inner { max-width: 1440px; margin: 0 auto; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .brand { display: flex; gap: 12px; align-items: center; min-width: 0; }
-    .brand-mark { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); font-size: 25px; flex: 0 0 auto; }
-    .brand h1 { font-size: clamp(1.2rem, 2.8vw, 1.7rem); line-height: 1.2; margin: 0; letter-spacing: .01em; }
-    .brand p { margin: 4px 0 0; color: #dce9ff; font-size: .88rem; }
-    .header-badges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .top-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; font-size: .78rem; color: #f2f6ff; background: rgba(255,255,255,.08); }
-    .top-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #ffd166; }
-    .top-nav { max-width: 1440px; margin: 13px auto 0; display: flex; gap: 9px; overflow-x: auto; padding: 2px 0 3px; }
-    .top-nav a { flex: 0 0 auto; color: #fff; text-decoration: none; border-radius: 999px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.25); font-size: .85rem; }
-    .top-nav a:hover { background: rgba(255,255,255,.13); }
-    main { max-width: 1440px; margin: 22px auto 40px; padding: 0 16px; }
-    .notice { border: 1px solid #cbd8ee; border-left: 5px solid var(--brand-2); border-radius: 12px; padding: 12px 14px; background: #fff; color: #34435c; margin-bottom: 18px; font-size: .93rem; }
-    .notice strong { color: #14396e; }
-    .workspace { display: grid; grid-template-columns: minmax(285px, .83fr) minmax(0, 1.17fr); align-items: start; gap: 18px; }
-    .column { display: grid; gap: 16px; min-width: 0; }
-    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; overflow: hidden; }
-    .panel-head { padding: 15px 17px 12px; border-bottom: 1px solid #e8edf5; display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; }
-    .panel-head h2 { margin: 0; font-size: 1.06rem; line-height: 1.35; }
-    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: .85rem; }
-    .panel-body { padding: 16px 17px 18px; }
-    .section-kicker { display: inline-block; font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: var(--brand-2); text-transform: uppercase; margin-bottom: 3px; }
-    .pill { border: 1px solid var(--line); padding: 4px 8px; border-radius: 999px; background: var(--surface-2); color: #45546c; font-size: .75rem; white-space: nowrap; }
-    .field { display: grid; gap: 6px; min-width: 0; margin-bottom: 13px; }
-    .field:last-child { margin-bottom: 0; }
-    label, .field-label { font-weight: 700; font-size: .9rem; }
-    .hint { color: var(--muted); font-size: .81rem; }
-    textarea, input[type="text"], select, input[type="number"] {
-      width: 100%; border: 1px solid #c8d3e3; border-radius: 10px; background: #fff; color: var(--ink); padding: 10px 11px; min-width: 0;
-    }
-    textarea { min-height: 116px; resize: vertical; line-height: 1.65; }
-    input[type="file"] { width: 100%; max-width: 100%; border: 1px dashed #b8c7dc; border-radius: 10px; padding: 9px; background: #f9fbff; font-size: .86rem; }
-    input[type="range"] { width: 100%; accent-color: var(--brand-2); }
-    input[type="checkbox"] { width: 19px; height: 19px; flex: 0 0 auto; accent-color: var(--brand-2); }
-    .btn-row { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; border: 1px solid transparent; padding: 10px 13px; font-weight: 750; text-decoration: none; text-align: center; min-width: 0; line-height: 1.3;
-    }
-    .btn-primary { background: #123b75; color: #fff; border-color: #123b75; box-shadow: 0 3px 0 #0a2851; }
-    .btn-primary:hover:not(:disabled) { background: #2056a5; }
-    .btn-primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 0 #0a2851; }
-    .btn-secondary { background: #edf3fc; border-color: #bfd0e8; color: #173f7b; }
-    .btn-secondary:hover:not(:disabled) { background: #dfeafa; }
-    .btn-quiet { background: #fff; color: #45546c; border-color: #ccd6e5; }
-    .btn-danger { background: #fff1f1; border-color: #e9bcbc; color: #9c2727; }
-    .btn:disabled { color: #7b8491; background: #e8ebf0; border-color: #d8dce3; box-shadow: none; transform: none; cursor: not-allowed; opacity: 1; }
-    .btn-full { width: 100%; }
-    .status { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); color: #40506a; font-size: .87rem; overflow-wrap: anywhere; }
-    .status.good { background: var(--good-bg); border-color: #b9e5ce; color: var(--good); }
-    .status.warn { background: var(--warn-bg); border-color: #efd18b; color: var(--warn); }
-    .status.bad { background: var(--bad-bg); border-color: #efc2c2; color: var(--bad); }
-    .status-line { display: flex; gap: 8px; align-items: flex-start; }
-    .progress-track { width: 100%; height: 10px; background: #e7edf5; border-radius: 999px; overflow: hidden; border: 1px solid #d8e1ee; }
-    .progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg,#286ac3,#58a5f6); transition: width .15s linear; }
-    .progress-meta { display: flex; justify-content: space-between; gap: 12px; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }
-    .stage-wrap { padding: 15px; background: #eaf0f8; }
-    .stage {
-      width: min(100%, 440px); aspect-ratio: 9 / 16; margin: 0 auto; position: relative; isolation: isolate; overflow: hidden; border-radius: 15px; background: radial-gradient(ellipse at 50% 25%, #e5efff, #aabbd4 72%, #7386a4); box-shadow: 0 12px 30px rgba(21,42,75,.2); border: 1px solid rgba(24,51,90,.2);
-    }
-    .stage-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; background: #182235; }
-    .stage-media.active { display: block; }
-    .stage-empty { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; color: #243b5e; }
-    .stage-empty .symbol { font-size: 48px; line-height: 1.2; }
-    .stage-empty strong { display: block; font-size: 1.1rem; margin: 12px 0 5px; }
-    .stage-empty p { margin: 0; font-size: .86rem; }
-    .stage-vignette { pointer-events: none; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg,rgba(0,0,0,.18),transparent 22%,transparent 60%,rgba(0,0,0,.35)); }
-    .overlay-text { position: absolute; z-index: 2; left: 6%; right: 6%; top: 50%; transform: translateY(-50%); text-align: center; overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.55; font-weight: 850; font-size: 28px; letter-spacing: .005em; text-shadow: 0 2px 2px rgba(0,0,0,.9), 0 0 7px rgba(0,0,0,.9), 0 0 14px rgba(0,0,0,.6); -webkit-text-stroke: .25px rgba(0,0,0,.45); }
-    .overlay-text .c1 { color: #fff36b; } .overlay-text .c2 { color: #ff7887; } .overlay-text .c3 { color: #7dffb0; } .overlay-text .c4 { color: #7ed8ff; } .overlay-text .c5 { color: #ffa5ff; } .overlay-text .c6 { color: #ffffff; }
-    .stage-label { position: absolute; z-index: 3; left: 10px; top: 10px; max-width: calc(100% - 20px); color: #fff; background: rgba(13,28,51,.72); padding: 5px 8px; border-radius: 7px; font-size: .72rem; backdrop-filter: blur(6px); }
-    .stage-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 14px; }
-    .stage-tools .field { margin: 0; }
-    .queue-list, .media-list { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
-    .queue-item, .media-item { border: 1px solid #dae3ef; border-radius: 10px; padding: 10px; display: grid; gap: 8px; background: #fff; min-width: 0; }
-    .queue-item.selected { border-color: #4a81cb; box-shadow: 0 0 0 2px #e4efff; }
-    .item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; min-width: 0; }
-    .item-text { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; flex: 1; font-size: .9rem; }
-    .item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-    .small-btn { border: 1px solid #cbd7e8; border-radius: 8px; padding: 5px 8px; background: #f4f7fc; color: #214779; font-size: .78rem; min-height: 34px; }
-    .small-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .item-state { display: inline-block; font-size: .72rem; border-radius: 999px; padding: 3px 7px; color: #526078; background: #edf1f7; white-space: nowrap; }
-    .item-state.playing { background: #e4efff; color: #174c99; }
-    .item-state.done { background: #e5f7ed; color: #19643e; }
-    .item-state.error { background: #fff0f0; color: #9b2929; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .check-row { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: .88rem; }
-    .file-list-empty { color: var(--muted); padding: 10px 0 0; font-size: .86rem; }
-    .media-player { width: 100%; max-width: 100%; margin-top: 12px; }
-    audio.media-player { height: 42px; }
-    video.media-player { border-radius: 10px; background: #111827; }
-    .divider { border: 0; border-top: 1px solid #e4eaf2; margin: 16px 0; }
-    .quality-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-    .quality-chip { padding: 8px 9px; border-radius: 9px; border: 1px solid #dce4ef; background: #f8faff; font-size: .8rem; }
-    .quality-chip strong { display: block; color: #2b456c; }
-    .footer { max-width: 1440px; margin: 0 auto; padding: 0 16px 30px; color: #697588; font-size: .82rem; }
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    @media (max-width: 960px) { .workspace { grid-template-columns: minmax(0, 1fr); } .preview-column { order: 0; } .controls-column { order: 1; } .stage { width: min(100%, 410px); } }
-    @media (max-width: 540px) {
-      .app-header { padding-top: 14px; }
-      .header-inner { align-items: flex-start; }
-      .header-badges { width: 100%; }
-      main { margin-top: 14px; padding: 0 10px; }
-      .workspace { gap: 12px; }
-      .panel-head { padding: 13px 13px 10px; }
-      .panel-body { padding: 13px; }
-      .stage-wrap { padding: 9px; }
-      .stage { border-radius: 10px; }
-      .overlay-text { left: 5%; right: 5%; }
-      .stage-tools { grid-template-columns: 1fr; }
-      .btn-row > .btn { flex: 1 1 auto; }
-      .two-col, .quality-grid { grid-template-columns: 1fr; }
-    }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+    :root{color-scheme:light;--ink:#172235;--muted:#5b6678;--paper:#fff;--bg:#f3f6fb;--line:#d9e1ee;--blue:#123b75;--blue2:#2056a5;--green:#176a43;--amber:#8b5200;--red:#a32929;--radius:15px;--shadow:0 8px 24px #162d520c}
+    *{box-sizing:border-box} [hidden]{display:none!important} html{scroll-behavior:smooth} body{margin:0;min-width:300px;color:var(--ink);background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans Devanagari","Nirmala UI",Mangal,sans-serif;line-height:1.5}
+    button,input,select,textarea{font:inherit} button{min-height:42px;cursor:pointer} button:disabled{opacity:.5;cursor:not-allowed} :focus-visible{outline:3px solid #f0a51b;outline-offset:3px} a{color:inherit}
+    .header{padding:16px;color:#fff;background:linear-gradient(120deg,#102b55,#174d91)} .header-inner,main,footer{max-width:1100px;margin-inline:auto}.header-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand h1{margin:0;font-size:clamp(1.2rem,3vw,1.7rem)}.brand p{margin:4px 0 0;color:#dce9ff;font-size:.84rem}.header-status{font-size:.8rem;color:#e8f1ff}
+    .tabs{display:flex;gap:7px;overflow-x:auto;padding-top:14px;scrollbar-width:thin}.tab-btn{flex:0 0 auto;padding:8px 12px;color:#fff;border:1px solid #ffffff55;border-radius:999px;background:#ffffff12;font-size:.82rem}.tab-btn[aria-selected="true"]{background:#fff;color:var(--blue);font-weight:800}
+    main{padding:16px 12px 32px}.notice{padding:11px 13px;margin-bottom:14px;background:#fff;border:1px solid #cad8ed;border-left:5px solid var(--blue2);border-radius:11px;font-size:.88rem}.workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}.panel{min-width:0;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.panel-head{padding:14px 15px;border-bottom:1px solid #e8edf5}.panel-head h2{margin:0;font-size:1.05rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.84rem}.panel-body{padding:14px}.field{display:grid;gap:6px;margin-bottom:13px}label,.field-label{font-size:.88rem;font-weight:750}.hint{font-size:.8rem;color:var(--muted)}textarea,input[type="text"],input[type="number"],select{width:100%;min-width:0;padding:10px;border:1px solid #c8d3e3;border-radius:9px;background:#fff;color:var(--ink)}textarea{min-height:145px;resize:vertical;line-height:1.8}input[type="file"]{width:100%;max-width:100%;padding:9px;border:1px dashed #b8c7dc;border-radius:9px;background:#f9fbff}input[type="range"]{width:100%;accent-color:var(--blue2)}input[type="checkbox"]{width:18px;height:18px}.check-row{display:flex;align-items:center;gap:8px;font-size:.88rem}.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:42px;padding:9px 12px;border:1px solid transparent;border-radius:9px;text-align:center;text-decoration:none;font-weight:750;line-height:1.3}.primary{color:#fff;background:var(--blue);border-color:var(--blue)}.secondary{color:#173f7b;background:#edf3fc;border-color:#bfd0e8}.quiet{color:#45546c;background:#fff;border-color:#ccd6e5}.danger{color:#9c2727;background:#fff1f1;border-color:#e9bcbc}.btn.full{width:100%}.status{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#f3f6fb;color:#40506a;font-size:.85rem;overflow-wrap:anywhere}.status.good{color:var(--green);background:#e8f7ef}.status.warn{color:var(--amber);background:#fff4d8}.status.bad{color:var(--red);background:#fff0f0}
+    /* 9:16 पूर्वावलोकन: दृश्य wrapping कभी भी वाचन-queue को नहीं बदलता। */
+    .stage-wrap{padding:12px;background:#eaf0f8}.stage{position:relative;isolation:isolate;width:min(100%,390px);aspect-ratio:9/16;margin:0 auto;overflow:hidden;border-radius:12px;background:linear-gradient(145deg,#dce9ff,#687e9c);box-shadow:0 12px 28px #152a4b30}.stage-media{display:none;position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;background:#111827}.stage-media.active{display:block}.stage-empty{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;padding:20px;text-align:center;color:#243b5e}.stage-empty strong{font-size:1.1rem}.stage-empty p{font-size:.84rem}.stage-shade{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#0005,transparent 25%,transparent 66%,#0008)}.overlay-text{position:absolute;z-index:2;left:6%;right:6%;top:50%;transform:translateY(-50%);max-height:72%;overflow:hidden;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:28px;font-weight:850;line-height:1.55;text-shadow:0 2px 3px #000,0 0 9px #000;-webkit-text-stroke:.25px #000;pointer-events:none}.overlay-text .c1{color:#fff36b}.overlay-text .c2{color:#ff7887}.overlay-text .c3{color:#7dffb0}.overlay-text .c4{color:#7ed8ff}.overlay-text .c5{color:#ffa5ff}.overlay-text .c6{color:#fff}.stage-label{position:absolute;z-index:3;top:8px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;border-radius:6px;color:#fff;background:#0d1c33bd;font-size:.7rem}.screen-actions{position:absolute;z-index:4;left:8px;right:8px;bottom:8px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.screen-actions button{min-height:34px;padding:5px 9px;border:1px solid #ffffff77;border-radius:8px;color:#fff;background:#102b55dc;font-size:.78rem}.screen-actions button:disabled{opacity:.55}.stage-controls{display:grid;gap:10px;margin-top:12px}.progress-track{height:9px;overflow:hidden;border-radius:99px;background:#e7edf5}.progress-bar{width:0;height:100%;background:#286ac3}.progress-meta{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:.79rem}.list{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}.list-item{padding:10px;border:1px solid #dae3ef;border-radius:9px}.item-title{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem}.item-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.small-btn{padding:5px 8px;min-height:32px;border:1px solid #cbd7e8;border-radius:7px;background:#f4f7fc;color:#214779}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}.media-player{width:100%;margin-top:10px}.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:10px;border:1px solid var(--line);border-radius:9px;background:#f8faff;font-size:.82rem}.metric strong{display:block}.footer{padding:0 12px 24px;color:#697588;font-size:.8rem}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    #stage:fullscreen{width:min(100vw,56.25dvh);height:min(100dvh,177.78vw);max-width:none;aspect-ratio:9/16;margin:auto;border-radius:0;box-shadow:none;background:#000}#stage:fullscreen .overlay-text{max-height:72%;font-size:clamp(22px,5.3vw,48px)}body:has(#stage:fullscreen){background:#000}
+    @media(max-width:540px){main{padding:11px 8px 24px}.panel-body{padding:12px}.panel-head{padding:12px}.stage-wrap{padding:8px}.two-col{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}.btn-row>.btn{flex:1 1 auto}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
   </style>
 </head>
 <body>
-  <header class="app-header">
-    <div class="header-inner">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">ॐ</div>
-        <div><h1>Swar-Sadhika <span style="font-weight:500">/ Anjali</span></h1><p>संस्कृत वाचन · रंगीन पाठ · 9:16 वीडियो स्टूडियो</p></div>
+<header class="header">
+  <div class="header-inner">
+    <div class="brand"><h1>ॐ Swar-Sadhika</h1><p>संस्कृत वाचन · वैदिक पाठ · 9:16 वीडियो स्टूडियो</p></div>
+    <div id="header-status" class="header-status" aria-live="polite">Browser वाचन जाँचा जा रहा है…</div>
+  </div>
+  <nav class="tabs" aria-label="अनुभाग चुनें">
+    <button class="tab-btn" type="button" data-open="studio" aria-selected="true">9:16 Studio</button>
+    <button class="tab-btn" type="button" data-open="queue" aria-selected="false">पाठ कतार</button>
+    <button class="tab-btn" type="button" data-open="voice" aria-selected="false">Browser Voice</button>
+    <button class="tab-btn" type="button" data-open="photo" aria-selected="false">फोटो</button>
+    <button class="tab-btn" type="button" data-open="videos" aria-selected="false">वीडियो</button>
+    <button class="tab-btn" type="button" data-open="audio" aria-selected="false">ऑडियो</button>
+    <button class="tab-btn" type="button" data-open="export" aria-selected="false">रिकॉर्डिंग / Export</button>
+    <button class="tab-btn" type="button" data-open="ai" aria-selected="false">AI परीक्षण</button>
+  </nav>
+</header>
+<main>
+  <div class="notice"><strong>महत्त्वपूर्ण:</strong> पाठ कतार में स्क्रीन के आकार के अनुसार शब्दों को अलग वाचन-खंडों में नहीं बाँटा जाता। हर खाली न होने वाली मूल पंक्ति एक queue item होती है। Browser TTS पर उपलब्ध आवाज़ डिवाइस और ब्राउज़र पर निर्भर करती है; महिला-स्वर या वैदिक उच्चारण की गारंटी नहीं है। वास्तविक AI गायन तभी सफल माना जाएगा जब स्थानीय मॉडल inference और ऑडियो दोनों जाँचे गए हों।</div>
+  <div class="workspace">
+    <section class="panel" id="panel-studio" data-panel="studio">
+      <div class="panel-head"><h2>9:16 वीडियो स्टूडियो</h2><p>फोटो या वीडियो के ऊपर वर्तमान संस्कृत पाठ। प्ले बटन दबाने पर दृश्य 9:16 फुलस्क्रीन में खुलेगा।</p></div>
+      <div class="stage-wrap">
+        <div class="stage" id="stage">
+          <div class="stage-empty" id="stage-empty"><strong>ॐ Swar-Sadhika</strong><p>वीडियो या फोटो चुनें और पाठ कतार में जोड़ें।<br>फिर नीचे Play दबाएँ।</p></div>
+          <img id="photo-preview" class="stage-media" alt="पृष्ठभूमि फोटो">
+          <video id="video-preview" class="stage-media" playsinline preload="metadata"></video>
+          <div class="stage-shade" aria-hidden="true"></div>
+          <div id="overlay-text" class="overlay-text" aria-live="polite"></div>
+          <div id="stage-label" class="stage-label">9:16 पूर्वावलोकन</div>
+          <div class="screen-actions" aria-label="फुलस्क्रीन प्लेबैक नियंत्रण">
+            <button id="screen-pause" type="button" disabled>Ⅱ रोकें</button>
+            <button id="screen-resume" type="button" disabled>▶ जारी रखें</button>
+            <button id="screen-stop" type="button" disabled>■ बंद करें</button>
+          </div>
+        </div>
+        <div class="stage-controls">
+          <div class="two-col">
+            <div class="field"><label for="text-size">टेक्स्ट आकार: <output id="text-size-value">28 px</output></label><input id="text-size" type="range" min="16" max="44" value="28"></div>
+            <div class="field"><label for="text-position">टेक्स्ट की स्थिति</label><select id="text-position"><option value="center">बीच में</option><option value="top">ऊपर</option><option value="bottom">नीचे</option></select></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="play-fullscreen" type="button">▶ टेक्स्ट + वीडियो Fullscreen चलाएँ</button>
+            <button class="btn secondary" id="fullscreen-only" type="button">⛶ Fullscreen Preview</button>
+          </div>
+          <div id="play-status" class="status" role="status" aria-live="polite">पाठ कतार खाली है। पहले पाठ जोड़ें।</div>
+        </div>
       </div>
-      <div class="header-badges" aria-label="इंजन की स्थिति">
-        <span class="top-badge"><span class="dot" id="tts-dot"></span><span id="header-tts-state">Browser TTS जाँच रहे हैं</span></span>
-        <span class="top-badge"><span class="dot"></span>स्थानीय मीडिया</span>
-        <span class="top-badge">AI गायन: अलग परीक्षण</span>
+      <div class="panel-body">
+        <div class="progress-meta"><span>वाचन प्रगति</span><strong id="progress-percent">0%</strong></div>
+        <div class="progress-track" id="progress-track" role="progressbar" aria-label="वाचन प्रगति" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-bar" class="progress-bar"></div></div>
+        <div class="progress-meta"><span id="progress-caption">0 / 0 पंक्तियाँ पूर्ण</span><span id="current-caption">कोई वाचन सक्रिय नहीं</span></div>
+        <div class="hint">नोट: Fullscreen में केवल 9:16 दृश्य दिखाया जाता है। इसके अंदर Pause, Resume और Stop नियंत्रण उपलब्ध रहते हैं।</div>
       </div>
-    </div>
-    <nav class="top-nav" aria-label="मुख्य अनुभाग">
-      <a href="#studio">9:16 Preview</a><a href="#queue">पाठ कतार</a><a href="#voice">Browser Voice</a><a href="#photo">फोटो</a><a href="#videos">वीडियो</a><a href="#audio">ऑडियो</a><a href="#export">रिकॉर्ड / Export</a><a href="#singing">स्थानीय AI गायन</a>
-    </nav>
-  </header>
+    </section>
 
-  <main>
-    <div class="notice" role="note"><strong>महत्त्वपूर्ण तकनीकी भेद:</strong> Browser TTS पाठ को बोलकर पढ़ता है; वह AI गायन नहीं है। इस पृष्ठ पर टेक्स्ट, फोटो/वीडियो overlay और ब्राउज़र द्वारा समर्थित वास्तविक MediaRecorder output उपलब्ध कराया गया है। स्थानीय AI गायन की सफलता अलग prototype में वास्तविक model inference और audio output से ही प्रमाणित होगी।</div>
-
-    <div class="workspace">
-      <div class="column preview-column">
-        <section class="panel" id="studio" aria-labelledby="preview-heading">
-          <div class="panel-head"><div><span class="section-kicker">Live composition</span><h2 id="preview-heading">9:16 वीडियो पूर्वावलोकन</h2><p>फोटो या वीडियो के ऊपर छह रंगों में देवनागरी पाठ।</p></div><span class="pill" id="preview-mode">खाली दृश्य</span></div>
-          <div class="stage-wrap">
-            <div class="stage" id="preview-stage" aria-label="9:16 आउटपुट पूर्वावलोकन">
-              <div class="stage-empty" id="stage-empty"><div class="symbol" aria-hidden="true">✧</div><strong>Swar-Sadhika Studio</strong><p>फोटो या वीडियो चुनें।<br>कतार/ड्राफ्ट का टेक्स्ट यहाँ दिखेगा।</p></div>
-              <img id="photo-preview" class="stage-media" alt="चुनी गई पृष्ठभूमि फोटो">
-              <video id="video-preview" class="stage-media" playsinline preload="metadata" controls aria-label="वीडियो पूर्वावलोकन"></video>
-              <div class="stage-vignette" aria-hidden="true"></div>
-              <div class="overlay-text" id="overlay-text" aria-live="polite"></div>
-              <div class="stage-label" id="stage-label">पूर्वावलोकन · वास्तविक export canvas से रेंडर होगा</div>
-            </div>
-            <div class="stage-tools">
-              <div class="field"><label for="text-size">टेक्स्ट आकार: <output id="text-size-value">28 px</output></label><input id="text-size" type="range" min="18" max="44" value="28" step="1"></div>
-              <div class="field"><label for="text-position">टेक्स्ट की स्थिति</label><select id="text-position"><option value="center">बीच में</option><option value="top">ऊपर</option><option value="bottom">नीचे</option></select></div>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="status" id="preview-text-status" aria-live="polite">टेक्स्ट पूर्वावलोकन के लिए पाठ लिखें या कतार में से पाठ चुनें।</div>
-            <div style="margin-top:13px"><div class="progress-meta"><span>कतार की प्रगति</span><strong id="progress-percent">0%</strong></div><div class="progress-track" role="progressbar" aria-label="कतार की प्रगति" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="queue-progress"><div class="progress-bar" id="queue-progress-bar"></div></div><div class="progress-meta" style="margin-top:6px;margin-bottom:0"><span id="progress-caption">0 / 0 पाठ पूर्ण</span><span id="current-progress-caption">कोई वाचन सक्रिय नहीं</span></div></div>
-          </div>
-        </section>
-
-        <section class="panel" id="photo" aria-labelledby="photo-heading">
-          <div class="panel-head"><div><span class="section-kicker">Image layer</span><h2 id="photo-heading">फोटो ओवरले</h2><p>स्थानीय JPG, PNG या WebP फोटो जोड़ें।</p></div></div>
-          <div class="panel-body">
-            <div class="field"><label for="photo-input">फोटो चुनें</label><input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp"></div>
-            <div class="btn-row"><button type="button" class="btn btn-secondary" id="use-photo-btn" disabled>फोटो को Preview में दिखाएँ</button><button type="button" class="btn btn-quiet" id="remove-photo-btn" disabled>फोटो हटाएँ</button></div>
-            <div id="photo-status" class="status" role="status" style="margin-top:12px">कोई फोटो नहीं चुनी गई।</div>
-          </div>
-        </section>
-
-        <section class="panel" id="export" aria-labelledby="export-heading">
-          <div class="panel-head"><div><span class="section-kicker">Real-time rendering</span><h2 id="export-heading">रिकॉर्डिंग एवं Export</h2><p>Canvas पर दृश्य/टेक्स्ट रेंडर करके ब्राउज़र-संगत वीडियो रिकॉर्ड करें।</p></div><span class="pill" id="recorder-capability">क्षमता जाँची जा रही है</span></div>
-          <div class="panel-body">
-            <div class="status warn" id="export-limitations">Browser support के अनुसार WebM या MP4 उपलब्ध हो सकता है। Browser TTS का ऑडियो इस रिकॉर्डिंग में अपने-आप शामिल नहीं होता। WAV/MP3 transcoding यहाँ लागू नहीं है।</div>
-            <div class="field" style="margin-top:13px"><label for="recording-fps">रिकॉर्डिंग फ्रेम दर</label><select id="recording-fps"><option value="24">24 FPS</option><option value="30" selected>30 FPS</option></select></div>
-            <div class="btn-row"><button type="button" class="btn btn-primary" id="record-start-btn">● रिकॉर्डिंग शुरू करें</button><button type="button" class="btn btn-danger" id="record-stop-btn" disabled>■ रिकॉर्डिंग रोकें</button></div>
-            <div class="status" id="record-status" role="status" style="margin-top:12px">रिकॉर्डिंग शुरू नहीं हुई।</div>
-            <div class="btn-row" style="margin-top:10px"><a id="record-download" class="btn btn-secondary" hidden download="swar-sadhika-recording.webm">रिकॉर्डिंग डाउनलोड करें</a></div>
-            <p class="hint" style="margin:10px 0 0">रिकॉर्डिंग में वर्तमान 9:16 canvas, टेक्स्ट overlay तथा उपलब्ध होने पर video/background audio शामिल होगा। रिकॉर्ड बटन दबाने के बाद browser द्वारा समर्थित वास्तविक MediaRecorder session ही शुरू होगा।</p>
-            <canvas id="render-canvas" width="720" height="1280" class="sr-only" aria-hidden="true"></canvas>
-          </div>
-        </section>
+    <section class="panel" id="panel-queue" data-panel="queue" hidden>
+      <div class="panel-head"><h2>मंत्र एवं पाठ कतार</h2><p>हर मूल non-empty पंक्ति अक्षुण्ण रखी जाती है। दृश्य में लाइन wrap हो सकती है, लेकिन इससे वाचन कतार नहीं बदलती।</p></div>
+      <div class="panel-body">
+        <div class="field"><label for="text-input">संस्कृत / वैदिक / हिंदी पाठ</label><textarea id="text-input" lang="sa-Deva" spellcheck="false" placeholder="यहाँ पूरा मंत्र या श्लोक लिखें…&#10;हर मूल पंक्ति को नई लाइन में रखें।"></textarea><div class="hint">मूल वर्ण, मात्रा, संयुक्ताक्षर, दण्ड और उपलब्ध वैदिक चिह्न हटाए नहीं जाएँगे। बहुत लंबी पंक्ति भी शब्द के बीच से छोटे utterance में नहीं टूटेगी। Browser TTS का अपना उच्चारण व्यवहार अलग हो सकता है।</div></div>
+        <div class="btn-row"><button class="btn primary" id="queue-add" type="button">+ कतार में जोड़ें</button><button class="btn secondary" id="draft-preview" type="button">ड्राफ्ट Preview</button><button class="btn danger" id="queue-clear" type="button">कतार साफ करें</button></div>
+        <div id="queue-status" class="status warn" style="margin-top:10px">कतार खाली है।</div>
+        <ul id="queue-list" class="list" aria-label="पाठ कतार"></ul>
+        <div id="preserve-test" class="status" style="margin-top:10px">पाठ-संरक्षण परीक्षण अभी नहीं चला।</div>
       </div>
+    </section>
 
-      <div class="column controls-column">
-        <section class="panel" id="queue" aria-labelledby="queue-heading">
-          <div class="panel-head"><div><span class="section-kicker">Text workspace</span><h2 id="queue-heading">पाठ लिखें एवं कतार बनाएँ</h2><p>हर बार “कतार में जोड़ें” दबाने पर एक अलग item बनेगा।</p></div><span class="pill" id="queue-count">0 पाठ</span></div>
-          <div class="panel-body">
-            <div class="field"><label for="text-input">संस्कृत / हिंदी पाठ</label><textarea id="text-input" lang="hi" spellcheck="false" placeholder="यहाँ मंत्र, श्लोक या सुविचार लिखें…&#10;मूल पाठ और line breaks सुरक्षित रखे जाएँगे।"></textarea><div class="hint">टेक्स्ट बॉक्स में लिखा हुआ पाठ अभी कतार में शामिल नहीं है। उसके लिए नीचे “+ कतार में जोड़ें” दबाएँ।</div></div>
-            <div class="btn-row"><button type="button" class="btn btn-secondary" id="queue-add-btn">+ कतार में जोड़ें</button><button type="button" class="btn btn-quiet" id="draft-preview-btn">ड्राफ्ट Preview</button><button type="button" class="btn btn-danger" id="queue-clear-btn">कतार साफ करें</button></div>
-            <div class="status warn" id="queue-notice" role="status" style="margin-top:12px">पहले ‘+ कतार में जोड़ें’ दबाएँ।</div>
-            <ul class="queue-list" id="queue-list" aria-label="कतार में शामिल पाठ"></ul>
-            <div class="hint" id="queue-empty-note" style="margin-top:9px">अभी कतार खाली है।</div>
-          </div>
-        </section>
-
-        <section class="panel" id="voice" aria-labelledby="voice-heading">
-          <div class="panel-head"><div><span class="section-kicker">Speech synthesis</span><h2 id="voice-heading">Browser Voice — सामान्य वाचन</h2><p>वास्तविक Web Speech API; यह AI गायन नहीं है।</p></div><span class="pill" id="voice-api-pill">जाँच जारी</span></div>
-          <div class="panel-body">
-            <div class="status" id="tts-status" role="status" aria-live="polite">ब्राउज़र वाचन क्षमता जाँची जा रही है।</div>
-            <div class="field" style="margin-top:13px"><label for="voice-select">उपलब्ध आवाज़</label><select id="voice-select" disabled><option value="">Voice सूची लोड हो रही है…</option></select><div class="hint" id="voice-hint">उपलब्ध आवाज़ें ब्राउज़र और डिवाइस पर निर्भर हैं।</div></div>
-            <div class="btn-row" style="margin-bottom:14px"><button type="button" class="btn btn-quiet" id="voice-refresh-btn">आवाज़ें फिर जाँचें</button><label class="check-row" for="pause-media-during-tts"><input id="pause-media-during-tts" type="checkbox" checked> वाचन के दौरान अन्य audio रोकें</label></div>
-            <div class="two-col">
-              <div class="field"><label for="tts-rate">गति: <output id="tts-rate-value">1.0×</output></label><input id="tts-rate" type="range" min="0.5" max="1.5" step="0.1" value="1"></div>
-              <div class="field"><label for="tts-volume">Volume: <output id="tts-volume-value">100%</output></label><input id="tts-volume" type="range" min="0" max="1" step="0.05" value="1"></div>
-              <div class="field"><label for="tts-pitch">Pitch: <output id="tts-pitch-value">1.0</output></label><input id="tts-pitch" type="range" min="0.5" max="2" step="0.1" value="1"></div>
-            </div>
-            <div class="btn-row" style="margin-top:4px">
-              <button type="button" class="btn btn-primary" id="tts-start-btn" disabled>▶ वाचन शुरू</button>
-              <button type="button" class="btn btn-secondary" id="tts-pause-btn" disabled>Ⅱ Pause</button>
-              <button type="button" class="btn btn-secondary" id="tts-resume-btn" disabled>▶ Resume</button>
-              <button type="button" class="btn btn-danger" id="tts-stop-btn" disabled>■ Stop</button>
-            </div>
-            <div class="status warn" style="margin-top:13px">Browser API केवल समर्थित voice, rate, volume और pitch देता है। Timbre, resonance, विस्तृत prosody या melodic singing को इन sliders से नियंत्रित नहीं किया जा सकता।</div>
-            <div class="quality-grid" aria-label="लक्षित आवाज़ गुणवत्ता प्रोफ़ाइल">
-              <div class="quality-chip"><strong>Timbre · 9.5</strong><span class="hint">AI/model लक्ष्य; TTS control नहीं</span></div>
-              <div class="quality-chip"><strong>Pitch · 8.5</strong><span class="hint">TTS slider केवल सामान्य pitch बदलता है</span></div>
-              <div class="quality-chip"><strong>Prosody · 9.5</strong><span class="hint">Browser में विस्तृत नियंत्रण नहीं</span></div>
-              <div class="quality-chip"><strong>Articulation · 9.0</strong><span class="hint">voice/भाषा पर निर्भर</span></div>
-              <div class="quality-chip"><strong>Rate/Tempo · 8.5</strong><span class="hint">समर्थित rate नियंत्रण अलग है</span></div>
-              <div class="quality-chip"><strong>Pitch variation/Resonance · 9.5</strong><span class="hint">TTS API में समर्पित controls नहीं</span></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel" id="videos" aria-labelledby="video-heading">
-          <div class="panel-head"><div><span class="section-kicker">Clip studio</span><h2 id="video-heading">वीडियो क्लिप स्टूडियो</h2><p>एक या अधिक स्थानीय क्लिप; एक समय में एक active दृश्य।</p></div><span class="pill" id="video-count">0 क्लिप</span></div>
-          <div class="panel-body">
-            <div class="field"><label for="video-input">वीडियो क्लिप चुनें</label><input id="video-input" type="file" accept="video/*" multiple></div>
-            <div class="btn-row"><button type="button" class="btn btn-secondary" id="video-play-btn" disabled>▶ Play</button><button type="button" class="btn btn-quiet" id="video-pause-btn" disabled>Ⅱ Pause</button><button type="button" class="btn btn-quiet" id="video-reset-btn" disabled>↺ Reset</button></div>
-            <label class="check-row" for="video-loop" style="margin-top:12px"><input type="checkbox" id="video-loop"> वर्तमान क्लिप को Loop करें</label>
-            <div id="video-status" class="status" role="status" style="margin-top:12px">कोई वीडियो क्लिप नहीं चुनी गई।</div>
-            <ul id="video-list" class="media-list" aria-label="चुनी गई वीडियो क्लिप"></ul>
-            <p class="hint" style="margin:10px 0 0">एक क्लिप समाप्त होने पर अगली चुनी हुई क्लिप चल सकती है। वीडियो पर पाठ की newline-separated पंक्तियाँ एक समय में केवल एक दिखाई देंगी और क्लिप की अवधि में क्रमशः आगे बढ़ेंगी। बिना line break वाला paragraph एक display line माना जाएगा। Codec/autoplay support ब्राउज़र के अनुसार बदलता है। वीडियो चलाने के लिए स्पष्ट Play action आवश्यक है।</p>
-          </div>
-        </section>
-
-        <section class="panel" id="audio" aria-labelledby="audio-heading">
-          <div class="panel-head"><div><span class="section-kicker">Soundtrack</span><h2 id="audio-heading">Background audio track</h2><p>स्थानीय audio file जोड़ें; एक समय में एक active track।</p></div><span class="pill" id="audio-count">0 ट्रैक</span></div>
-          <div class="panel-body">
-            <div class="field"><label for="audio-input">ऑडियो फाइलें चुनें</label><input id="audio-input" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.webm" multiple></div>
-            <label class="check-row" for="audio-loop"><input type="checkbox" id="audio-loop"> Background track को Loop करें</label>
-            <div class="btn-row" style="margin-top:11px"><button type="button" class="btn btn-secondary" id="audio-play-btn" disabled>▶ ऑडियो चलाएँ</button><button type="button" class="btn btn-quiet" id="audio-pause-btn" disabled>Ⅱ Pause</button><button type="button" class="btn btn-danger" id="audio-stop-btn" disabled>■ Stop</button></div>
-            <audio id="background-audio" class="media-player" controls preload="metadata" hidden></audio>
-            <div id="audio-status" class="status" role="status" style="margin-top:12px">कोई ऑडियो ट्रैक नहीं चुना गया।</div>
-            <ul id="audio-list" class="media-list" aria-label="चुने गए ऑडियो ट्रैक"></ul>
-            <p class="hint" style="margin:10px 0 0">MP3/WAV/M4A का चलना browser decoder पर निर्भर है। यह ऐप फाइल को केवल extension बदलकर किसी दूसरे format में परिवर्तित नहीं करता।</p>
-          </div>
-        </section>
-
-        <section class="panel" id="singing" aria-labelledby="singing-heading">
-          <div class="panel-head"><div><span class="section-kicker">अलग AI परीक्षण पैनल</span><h2 id="singing-heading">स्थानीय AI संस्कृत गायन</h2><p>मुख्य स्टूडियो और वास्तविक मॉडल परीक्षण अलग रखे गए हैं।</p></div><span class="pill" id="ai-state-pill">अप्रमाणित</span></div>
-          <div class="panel-body">
-            <div class="status warn" id="ai-status" role="status" aria-live="polite">AI गायन अभी प्रमाणित नहीं है। परीक्षण पैनल खोलना, WebGPU उपलब्ध होना या बटन दबना सफल inference का प्रमाण नहीं है।</div>
-            <div class="btn-row" style="margin-top:11px">
-              <a class="btn btn-primary" href="./singing-engine-prototype.html">AI परीक्षण पैनल खोलें ↗</a>
-              <a class="btn btn-quiet" href="./model-audit.html">Model audit ↗</a>
-              <a class="btn btn-quiet" href="./module-audit-anjali.html">Module audit ↗</a>
-            </div>
-            <p class="hint" style="margin:12px 0 0">AI परीक्षण अलग पृष्ठ में खुलेगा। वापस मुख्य स्टूडियो पर आने के लिए ब्राउज़र का Back बटन उपयोग करें। वास्तविक inference और मान्य audio output का प्रमाण अलग से आवश्यक है।</p>
-          </div>
-        </section>
+    <section class="panel" id="panel-voice" data-panel="voice" hidden>
+      <div class="panel-head"><h2>Browser Voice — सामान्य वाचन</h2><p>Web Speech API का उपयोग। यह स्वयं AI गायन इंजन नहीं है।</p></div>
+      <div class="panel-body">
+        <div id="voice-status" class="status" aria-live="polite">Voice सूची जाँची जा रही है।</div>
+        <div class="field" style="margin-top:12px"><label for="voice-select">उपलब्ध आवाज़ें</label><select id="voice-select"></select></div>
+        <div class="btn-row"><button class="btn secondary" id="voice-refresh" type="button">आवाज़ें फिर जाँचें</button><button class="btn quiet" id="voice-test" type="button">चुनी हुई आवाज़ जाँचें</button></div>
+        <div class="two-col" style="margin-top:12px">
+          <div class="field"><label for="rate">गति: <output id="rate-value">1.0×</output></label><input id="rate" type="range" min=".5" max="1.5" step=".1" value="1"></div>
+          <div class="field"><label for="pitch">Pitch: <output id="pitch-value">1.0</output></label><input id="pitch" type="range" min=".5" max="2" step=".1" value="1"></div>
+          <div class="field"><label for="volume">Volume: <output id="volume-value">100%</output></label><input id="volume" type="range" min="0" max="1" step=".05" value="1"></div>
+        </div>
+        <label class="check-row"><input id="pause-media" type="checkbox" checked> वाचन के दौरान वीडियो और background audio रोकें</label>
+        <div class="status warn" style="margin-top:12px"><strong>महिला स्वर की सीमा:</strong> ब्राउज़र API आवाज़ का लिंग विश्वसनीय रूप से उपलब्ध नहीं कराती और किसी डिवाइस में महिला voice होने की गारंटी नहीं है। सूची में उपलब्ध उपयुक्त आवाज़ स्वयं चुनें। मधुर महिला AI गायन के लिए अलग, वास्तविक मॉडल inference आवश्यक है; Pitch slider से महिला आवाज़ या गायन की गारंटी नहीं मिलती।</div>
       </div>
-    </div>
-  </main>
+    </section>
 
-  <footer class="footer">Swar-Sadhika / Anjali · स्थानीय browser-first स्टूडियो। पाठ और media आपके browser में संसाधित होते हैं; इस मुख्य HTML में कोई remote AI generation API या API key शामिल नहीं है। शुरुआती मॉडल/runtime downloads, यदि प्रोटोटाइप में हों, अलग निर्भरता हैं।</footer>
+    <section class="panel" id="panel-photo" data-panel="photo" hidden>
+      <div class="panel-head"><h2>फोटो ओवरले</h2><p>फोटो केवल इस ब्राउज़र सत्र में स्थानीय रूप से उपयोग होती है।</p></div>
+      <div class="panel-body">
+        <div class="field"><label for="photo-input">फोटो चुनें</label><input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <div class="btn-row"><button class="btn secondary" id="photo-use" type="button" disabled>फोटो Preview में दिखाएँ</button><button class="btn quiet" id="photo-remove" type="button" disabled>फोटो हटाएँ</button></div>
+        <div id="photo-status" class="status" style="margin-top:10px">कोई फोटो नहीं चुनी गई।</div>
+      </div>
+    </section>
 
-  <script>
-  (() => {
-    'use strict';
+    <section class="panel" id="panel-videos" data-panel="videos" hidden>
+      <div class="panel-head"><h2>वीडियो क्लिप</h2><p>क्लिप चुनने के बाद Studio में लौटें और “टेक्स्ट + वीडियो Fullscreen चलाएँ” दबाएँ।</p></div>
+      <div class="panel-body">
+        <div class="field"><label for="video-input">वीडियो फाइलें चुनें</label><input id="video-input" type="file" accept="video/*" multiple></div>
+        <label class="check-row"><input id="video-loop" type="checkbox" checked> कतार के पूरे वाचन तक वीडियो Loop करें</label>
+        <div class="btn-row" style="margin-top:10px"><button class="btn secondary" id="video-play" type="button">▶ वीडियो Preview चलाएँ</button><button class="btn quiet" id="video-pause" type="button">Ⅱ Pause</button><button class="btn quiet" id="video-reset" type="button">↺ Reset</button></div>
+        <div id="video-status" class="status" style="margin-top:10px">कोई वीडियो क्लिप नहीं चुनी गई।</div>
+        <ul id="video-list" class="list"></ul>
+      </div>
+    </section>
 
-    const $ = (id) => document.getElementById(id);
-    const speechSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-    const synth = speechSupported ? window.speechSynthesis : null;
-    const textInput = $('text-input');
-    const queueList = $('queue-list');
-    const queueItems = [];
-    let nextQueueId = 1;
-    let selectedQueueId = null;
-    let playbackToken = 0;
-    let playback = { active: false, paused: false, index: 0, completed: 0, currentPercent: 0, utterance: null, token: 0 };
-    let voices = [];
-    let voiceReady = false;
-    let activeMediaMode = 'none';
-    let photoUrl = null;
-    let photoFile = null;
-    let videos = [];
-    let currentVideoIndex = -1;
-    let audioTracks = [];
-    let currentAudioIndex = -1;
-    let recording = null;
-    let recordingChunks = [];
-    let recordingStartedAt = 0;
-    let recordingTick = null;
-    let lastRecordingUrl = null;
-    let audioContext = null;
-    let audioCaptureDestination = null;
-    const mediaSourceNodes = new WeakMap();
-    const routedSources = new WeakSet();
-    const captureRoutedSources = new WeakSet();
-    let audioGraphWarningShown = false;
-    const renderCanvas = $('render-canvas');
-    const renderCtx = renderCanvas.getContext('2d', { alpha: false });
+    <section class="panel" id="panel-audio" data-panel="audio" hidden>
+      <div class="panel-head"><h2>Background Audio</h2><p>ऑडियो प्लेयर अलग है; Canvas वीडियो रिकॉर्डिंग में इसका ऑडियो अपने-आप शामिल नहीं होता।</p></div>
+      <div class="panel-body">
+        <div class="field"><label for="audio-input">ऑडियो फाइलें चुनें</label><input id="audio-input" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.webm" multiple></div>
+        <label class="check-row"><input id="audio-loop" type="checkbox"> ऑडियो Loop करें</label>
+        <div class="btn-row" style="margin-top:10px"><button class="btn secondary" id="audio-play" type="button">▶ ऑडियो चलाएँ</button><button class="btn quiet" id="audio-pause" type="button">Ⅱ Pause</button><button class="btn danger" id="audio-stop" type="button">■ Stop</button></div>
+        <audio id="audio-player" class="media-player" controls preload="metadata" hidden></audio>
+        <div id="audio-status" class="status" style="margin-top:10px">कोई ऑडियो नहीं चुना गया।</div>
+        <ul id="audio-list" class="list"></ul>
+      </div>
+    </section>
 
-    function setStatus(el, message, kind = '') {
-      el.textContent = message;
-      el.classList.remove('good', 'warn', 'bad');
-      if (kind) el.classList.add(kind);
+    <section class="panel" id="panel-export" data-panel="export" hidden>
+      <div class="panel-head"><h2>रिकॉर्डिंग एवं Export</h2><p>9:16 Canvas की रिकॉर्डिंग। TTS या अलग background audio शामिल होने का दावा नहीं किया जाता।</p></div>
+      <div class="panel-body">
+        <div class="status warn">यह रिकॉर्डिंग Canvas पर दिख रहे दृश्य और टेक्स्ट की है। Browser TTS का ऑडियो इसमें शामिल नहीं माना जाएगा। संयुक्त वीडियो+आवाज़ export अलग से सत्यापित करना होगा।</div>
+        <div class="field" style="margin-top:12px"><label for="fps">फ्रेम दर</label><select id="fps"><option value="24">24 FPS</option><option value="30" selected>30 FPS</option></select></div>
+        <div class="btn-row"><button class="btn primary" id="record-start" type="button">● रिकॉर्डिंग शुरू करें</button><button class="btn danger" id="record-stop" type="button" disabled>■ रिकॉर्डिंग रोकें</button></div>
+        <div id="record-status" class="status" style="margin-top:10px" aria-live="polite">रिकॉर्डिंग शुरू नहीं हुई।</div>
+        <a id="record-download" class="btn secondary" hidden download="swar-sadhika-recording.webm" style="margin-top:10px">रिकॉर्डिंग डाउनलोड करें</a>
+        <canvas id="render-canvas" width="720" height="1280" class="sr-only"></canvas>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-ai" data-panel="ai" hidden>
+      <div class="panel-head"><h2>स्थानीय AI संस्कृत गायन परीक्षण</h2><p>अलग पैनल में वास्तविक इंजन और ऑडियो का परीक्षण करें।</p></div>
+      <div class="panel-body">
+        <div id="ai-status" class="status warn">AI गायन अभी प्रमाणित नहीं है। पृष्ठ लोड, WebGPU उपलब्धता या Browser TTS चलना सफल स्थानीय मॉडल inference का प्रमाण नहीं है।</div>
+        <div class="btn-row" style="margin-top:12px"><a class="btn primary" href="./singing-engine-prototype.html">AI परीक्षण पैनल खोलें</a><a class="btn secondary" href="./model-audit.html">Model audit</a><a class="btn quiet" href="./module-audit-anjali.html">Module audit</a></div>
+        <div class="status" style="margin-top:12px">इस पृष्ठ में AI परीक्षण को iframe के रूप में नहीं चलाया जाता। परीक्षण लिंक अलग पृष्ठ खोलता है। जब तक मॉडल का inference सचमुच पूरा न हो और audio bytes/duration की पुष्टि न हो, कोई PASS घोषित नहीं किया जाएगा।</div>
+        <div class="status warn" style="margin-top:12px"><strong>महिला की मधुर गायन-आवाज़:</strong> यह ऐप का आवश्यक लक्ष्य है, लेकिन उसे केवल Browser TTS के pitch/rate से पूरा हुआ नहीं माना जाएगा। वास्तविक स्थानीय गायन मॉडल तथा Android पर उसका सफल परीक्षण आवश्यक है।</div>
+      </div>
+    </section>
+  </div>
+</main>
+<footer class="footer">Swar-Sadhika — browser-first संस्कृत वाचन एवं 9:16 स्टूडियो। कोई cloud AI API या API key स्वतः उपयोग नहीं होती। वास्तविक AI inference, महिला स्वर, उच्चारण गुणवत्ता और combined audio export को प्रमाण-आधारित परीक्षण से ही सफल माना जाएगा।</footer>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const synth = ('speechSynthesis' in window && 'SpeechSynthesisUtterance' in window) ? window.speechSynthesis : null;
+  const canvas = $('render-canvas');
+  const ctx = canvas.getContext('2d', {alpha:false});
+  const stage = $('stage');
+  const video = $('video-preview');
+  const photo = $('photo-preview');
+  const audio = $('audio-player');
+  const colors = ['#fff36b','#ff7887','#7dffb0','#7ed8ff','#ffa5ff','#ffffff'];
+  let queue = [], nextId = 1, selectedId = null, draftPreview = '';
+  let voices = [], videoFiles = [], audioFiles = [], currentVideo = -1, currentAudio = -1;
+  let photoUrl = null, runToken = 0, running = false, paused = false, itemIndex = 0, completed = 0, currentUtterance = null;
+  let recorder = null, recorderStream = null, recorderChunks = [], recorderMime = '', recordingUrl = null, raf = 0;
+
+  function setStatus(id, message, type='') {
+    const element = $(id);
+    element.textContent = message;
+    element.classList.remove('good','warn','bad');
+    if (type) element.classList.add(type);
+  }
+  function revoke(url) { if (url) URL.revokeObjectURL(url); }
+  function openPanel(name) {
+    document.querySelectorAll('[data-panel]').forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
+    document.querySelectorAll('[data-open]').forEach(button => { button.setAttribute('aria-selected', String(button.dataset.open === name)); });
+    if (name === 'studio') refreshStage();
+  }
+  document.querySelectorAll('[data-open]').forEach(button => button.addEventListener('click', () => openPanel(button.dataset.open)));
+
+  /* Queue construction never depends on screen width or grapheme count. */
+  function splitTextIntoQueueLines(text) {
+    return String(text || '').replace(/\r\n?/g,'\n').split('\n').filter(line => line.trim().length > 0).map(line => line.trim());
+  }
+  function signature(text) { return String(text || '').replace(/\s+/gu,''); }
+  function verifyQueuePreservesText(source, entries) {
+    const original = signature(source);
+    const rebuilt = signature(entries.map(item => item.text).join('\n'));
+    return {ok:original === rebuilt, originalCodePoints:Array.from(original).length, queuedCodePoints:Array.from(rebuilt).length};
+  }
+  function graphemes(text) {
+    if (window.Intl && Intl.Segmenter) {
+      try { return Array.from(new Intl.Segmenter('hi',{granularity:'grapheme'}).segment(text),part=>part.segment); } catch (_) {}
     }
-    function safeText(text) { return String(text ?? '').replace(/\u0000/g, ''); }
-
-    // वाचन-खंड केवल मूल newline या वाक्य-समाप्ति पर बनते हैं।
-    // स्क्रीन में फिट करने के लिए शब्द/संयुक्ताक्षर कभी नहीं तोड़े जाते।
-    function splitTextIntoSpeechUnits(text) {
-      const source = safeText(text).replace(/\r\n?/g, '\n');
-      const units = [];
-      const stopChars = /[।॥!?]/u;
-
-      for (const sourceLine of source.split('\n')) {
-        if (!sourceLine.trim()) continue;
-        let start = 0;
-        let i = 0;
-
-        while (i < sourceLine.length) {
-          if (!stopChars.test(sourceLine[i])) {
-            i++;
-            continue;
-          }
-
-          let end = i + 1;
-          while (end < sourceLine.length && stopChars.test(sourceLine[end])) end++;
-          let next = end;
-          while (next < sourceLine.length && /\s/u.test(sourceLine[next])) next++;
-
-          // "॥ १३१ ॥" या "॥ 131 ॥" की संख्या को अकेला वाचन-खंड न बनाएँ।
-          const mark = sourceLine.slice(i, end);
-          const rest = sourceLine.slice(next);
-          const verseNumberAfterDanda = mark.includes('॥') && /^[०-९0-9]+\s*॥/u.test(rest);
-
-          if (next > end && next < sourceLine.length && !verseNumberAfterDanda) {
-            const unit = sourceLine.slice(start, end).trim();
-            if (unit) units.push(unit);
-            start = next;
-            i = next;
-          } else {
-            i = end;
-          }
-        }
-
-        const tail = sourceLine.slice(start).trim();
-        if (tail) units.push(tail);
+    return Array.from(text);
+  }
+  function renderOverlay(text) {
+    const target = $('overlay-text'); target.replaceChildren();
+    let colorIndex = 0;
+    String(text || '').split('\n').forEach((line,lineIndex) => {
+      if (lineIndex) target.append(document.createElement('br'));
+      for (const unit of graphemes(line)) {
+        const span = document.createElement('span'); span.className = `c${colorIndex++ % colors.length + 1}`; span.textContent = unit; target.append(span);
       }
-
-      // सुरक्षा जाँच: सभी गैर-whitespace Unicode अक्षर उसी क्रम में रहने चाहिए।
-      const originalSequence = source.replace(/\s/gu, '');
-      const splitSequence = units.join('').replace(/\s/gu, '');
-      if (originalSequence !== splitSequence) {
-        throw new Error('पाठ-विभाजन जाँच विफल: मूल पाठ और कतार के अक्षर समान नहीं हैं।');
-      }
-
-      return units;
-    }
-    function splitGraphemes(text) {
-      const value = String(text ?? '');
-      if (window.Intl && typeof Intl.Segmenter === 'function') {
-        try { return Array.from(new Intl.Segmenter('hi', { granularity: 'grapheme' }).segment(value), item => item.segment); } catch (_) {}
-      }
-      const out = [];
-      for (const ch of value) {
-        if (out.length && (/\p{M}/u.test(ch) || ch === '\u200d' || out[out.length - 1].endsWith('\u094d') || out[out.length - 1].endsWith('\u200d'))) out[out.length - 1] += ch;
-        else out.push(ch);
-      }
-      return out;
-    }
-    function renderColoredText(element, text) {
-      element.replaceChildren();
-      const lines = String(text ?? '').split('\n');
-      let colorIndex = 0;
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex) element.appendChild(document.createElement('br'));
-        for (const grapheme of splitGraphemes(line)) {
-          const span = document.createElement('span');
-          span.className = `c${(colorIndex % 6) + 1}`;
-          span.textContent = grapheme;
-          element.appendChild(span);
-          colorIndex += 1;
-        }
-      });
-    }
-    function currentDisplayText() {
-      if (playback.active && queueItems[playback.index]) return queueItems[playback.index].text;
-      const selected = queueItems.find(item => item.id === selectedQueueId);
-      if (selected) return selected.text;
-      return textInput.value;
-    }
-
-    // हर newline-separated पाठ-पंक्ति अलग display unit है। खाली पंक्तियाँ स्क्रीन पर
-    // blank frame बनाने के बजाय छोड़ी जाती हैं; मूल queued text में कोई बदलाव नहीं होता।
-    function getDisplayLines(text = currentDisplayText()) {
-      return safeText(text).split(/\r\n?|\n|\u2028|\u2029/).map(line => line.trim()).filter(Boolean);
-    }
-
-    // वीडियो की वास्तविक currentTime के आधार पर उपलब्ध पंक्तियों को क्लिप की अवधि
-    // में समान हिस्सों में दिखाएँ। वीडियो paused/seeked हो तो उसी समय की पंक्ति रहेगी।
-    function getVideoLineState(text = currentDisplayText()) {
-      const lines = getDisplayLines(text);
-      if (!lines.length) return { lines, index: -1, line: '', duration: 0, currentTime: 0 };
-      const video = $('video-preview');
-      const duration = video && Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
-      const currentTime = video && Number.isFinite(video.currentTime) && video.currentTime > 0 ? video.currentTime : 0;
-      let index = 0;
-      if (lines.length > 1 && duration > 0) {
-        const safeTime = Math.min(currentTime, Math.max(0, duration - 0.000001));
-        index = Math.min(lines.length - 1, Math.floor((safeTime / duration) * lines.length));
-      }
-      return { lines, index, line: lines[index] || '', duration, currentTime };
-    }
-
-    function visibleOverlayText(text = currentDisplayText()) {
-      if (activeMediaMode === 'video' && currentVideoIndex >= 0) return getVideoLineState(text).line;
-      return text;
-    }
-
-    // लम्बी संस्कृत पंक्ति को दूसरी दृश्य-पंक्ति में wrap होने से रोकने के लिए
-    // केवल वीडियो-mode में font size को उपलब्ध चौड़ाई के भीतर fit किया जाता है।
-    function fitVideoLineFontSize(text, requestedSize) {
-      if (!text || !renderCtx) return requestedSize;
-      const stageWidth = $('preview-stage').getBoundingClientRect().width || 360;
-      const maxWidth = stageWidth * 0.84;
-      let size = Number(requestedSize) || 28;
-      while (size > 12) {
-        renderCtx.font = `850 ${size}px system-ui, "Noto Sans Devanagari", "Nirmala UI", "Mangal", sans-serif`;
-        if (renderCtx.measureText(text).width <= maxWidth) break;
-        size -= 1;
-      }
-      return Math.max(12, size);
-    }
-
-    function refreshPreviewText() {
-      const sourceText = currentDisplayText();
-      const text = visibleOverlayText(sourceText);
-      const inVideoMode = activeMediaMode === 'video' && currentVideoIndex >= 0;
-      const lineState = inVideoMode ? getVideoLineState(sourceText) : null;
-      renderColoredText($('overlay-text'), text);
-      $('overlay-text').style.whiteSpace = inVideoMode ? 'pre' : 'pre-wrap';
-      const requestedSize = Number($('text-size').value);
-      $('overlay-text').style.fontSize = `${inVideoMode ? fitVideoLineFontSize(text, requestedSize) : requestedSize}px`;
-      $('overlay-text').style.top = $('text-position').value === 'top' ? '18%' : $('text-position').value === 'bottom' ? '82%' : '50%';
-      $('text-size-value').textContent = `${$('text-size').value} px`;
-      const selected = queueItems.find(item => item.id === selectedQueueId);
-      let note = '';
-      if (inVideoMode && lineState && lineState.lines.length) {
-        note = `वीडियो पर पंक्ति ${lineState.index + 1}/${lineState.lines.length} दिखाई जा रही है। पंक्तियाँ क्लिप की अवधि में क्रमशः बदलती हैं; अगली पंक्ति के लिए पाठ में newline रखें।`;
-      } else if (!queueItems.length && sourceText.trim()) note = 'यह केवल ड्राफ्ट Preview है; कतार में शामिल नहीं है। वाचन के लिए “+ कतार में जोड़ें” दबाएँ।';
-      else if (playback.active && queueItems[playback.index]) note = `वर्तमान कतार पाठ ${playback.index + 1} / ${queueItems.length} का Preview।`;
-      else if (selected) note = `Preview कतार के चुने हुए पाठ से जुड़ा है (${queueItems.indexOf(selected) + 1} / ${queueItems.length})।`;
-      else if (queueItems.length) note = 'Preview के लिए कतार में किसी पाठ का “Preview” चुनें।';
-      else note = 'टेक्स्ट पूर्वावलोकन के लिए पाठ लिखें या कतार में से पाठ चुनें।';
-      setStatus($('preview-text-status'), note, (!queueItems.length && sourceText.trim()) ? 'warn' : '');
-    }
-    function refreshQueue() {
-      queueList.replaceChildren();
-      $('queue-count').textContent = `${queueItems.length} पाठ`;
-      $('queue-empty-note').hidden = queueItems.length > 0;
-      $('queue-clear-btn').disabled = queueItems.length === 0 && !playback.active;
-      queueItems.forEach((item, index) => {
-        const li = document.createElement('li');
-        li.className = `queue-item${item.id === selectedQueueId ? ' selected' : ''}`;
-        const top = document.createElement('div'); top.className = 'item-top';
-        const txt = document.createElement('div'); txt.className = 'item-text'; txt.textContent = `${index + 1}. ${item.text}`;
-        const state = document.createElement('span'); state.className = `item-state${item.state === 'वाचन में' ? ' playing' : item.state === 'पूर्ण' ? ' done' : item.state === 'त्रुटि' ? ' error' : ''}`; state.textContent = item.state || 'प्रतीक्षारत';
-        top.append(txt, state);
-        const actions = document.createElement('div'); actions.className = 'item-actions';
-        const previewBtn = document.createElement('button'); previewBtn.type = 'button'; previewBtn.className = 'small-btn'; previewBtn.textContent = 'Preview'; previewBtn.addEventListener('click', () => { selectedQueueId = item.id; refreshQueue(); refreshPreviewText(); });
-        const removeBtn = document.createElement('button'); removeBtn.type = 'button'; removeBtn.className = 'small-btn'; removeBtn.textContent = 'हटाएँ'; removeBtn.disabled = playback.active; removeBtn.addEventListener('click', () => { const idx = queueItems.findIndex(q => q.id === item.id); if (idx < 0) return; queueItems.splice(idx, 1); if (selectedQueueId === item.id) selectedQueueId = queueItems[0]?.id ?? null; if (queueItems.length === 0 && playback.active) stopQueue('कतार खाली हुई।'); refreshQueue(); updateTtsButtons(); refreshProgress(); refreshPreviewText(); });
-        actions.append(previewBtn, removeBtn); li.append(top, actions); queueList.appendChild(li);
-      });
-      updateTtsButtons();
-      refreshProgress();
-    }
-    function refreshProgress() {
-      const total = queueItems.length;
-      const completed = queueItems.filter(item => item.state === 'पूर्ण').length;
-      const raw = total ? ((completed + (playback.active ? playback.currentPercent / 100 : 0)) / total) * 100 : 0;
-      const pct = Math.max(0, Math.min(100, Math.round(raw)));
-      $('queue-progress-bar').style.width = `${pct}%`;
-      $('queue-progress').setAttribute('aria-valuenow', String(pct));
-      $('progress-percent').textContent = `${pct}%`;
-      $('progress-caption').textContent = `${completed} / ${total} पाठ पूर्ण`;
-      $('current-progress-caption').textContent = playback.active ? (playback.paused ? 'वाचन रुका हुआ है' : `पाठ ${Math.min(playback.index + 1, total)} चल रहा है`) : 'कोई वाचन सक्रिय नहीं';
-    }
-    function syncPreviewMode() {
-      $('photo-preview').classList.toggle('active', activeMediaMode === 'photo' && Boolean(photoUrl));
-      $('video-preview').classList.toggle('active', activeMediaMode === 'video' && currentVideoIndex >= 0);
-      $('stage-empty').hidden = activeMediaMode !== 'none';
-      $('preview-mode').textContent = activeMediaMode === 'photo' ? 'फोटो' : activeMediaMode === 'video' ? `वीडियो ${currentVideoIndex + 1}/${videos.length}` : 'खाली दृश्य';
-      $('stage-label').textContent = activeMediaMode === 'photo' ? 'फोटो + छह रंगों वाला टेक्स्ट' : activeMediaMode === 'video' ? 'वीडियो + छह रंगों वाला टेक्स्ट' : 'टेक्स्ट-only canvas दृश्य';
-      refreshPreviewText();
-    }
-    function pauseOtherMediaForTts() {
-      if (!$('pause-media-during-tts').checked) return;
-      const video = $('video-preview');
-      if (!video.paused) video.pause();
-      const audio = $('background-audio');
-      if (!audio.paused) audio.pause();
-      setStatus($('audio-status'), currentAudioIndex >= 0 ? `“${audioTracks[currentAudioIndex].file.name}” वाचन के दौरान रोका गया। इसे फिर चलाने के लिए Play दबाएँ।` : 'कोई ऑडियो ट्रैक सक्रिय नहीं।');
-      if (currentVideoIndex >= 0) setStatus($('video-status'), `“${videos[currentVideoIndex].file.name}” वाचन के दौरान रोका गया। दृश्य Preview में बना रह सकता है।`);
-    }
-    function updateTtsButtons() {
-      const canStart = speechSupported && voiceReady && voices.length > 0 && queueItems.length > 0 && !playback.active;
-      $('tts-start-btn').disabled = !canStart;
-      $('tts-pause-btn').disabled = !playback.active || playback.paused;
-      $('tts-resume-btn').disabled = !playback.active || !playback.paused;
-      $('tts-stop-btn').disabled = !playback.active;
-      $('queue-add-btn').disabled = !textInput.value.trim();
-      $('tts-start-btn').title = !queueItems.length && textInput.value.trim() ? 'पहले “+ कतार में जोड़ें” दबाएँ।' : !queueItems.length ? 'पहले कतार में वैध पाठ जोड़ें।' : !speechSupported ? 'इस ब्राउज़र में Web Speech API उपलब्ध नहीं है।' : !voiceReady ? 'आवाज़ सूची लोड होने की प्रतीक्षा करें या फिर जाँचें।' : !voices.length ? 'उपलब्ध voice के बिना वाचन शुरू नहीं हो सकता।' : '';
-    }
-    function refreshVoices() {
-      if (!speechSupported) {
-        voiceReady = false;
-        $('voice-select').disabled = true;
-        $('voice-select').replaceChildren(new Option('Speech Synthesis अनुपलब्ध', ''));
-        $('voice-api-pill').textContent = 'अनुपलब्ध';
-        $('header-tts-state').textContent = 'Browser TTS अनुपलब्ध';
-        $('tts-dot').style.background = '#ff7d7d';
-        setStatus($('tts-status'), 'इस browser में window.speechSynthesis / SpeechSynthesisUtterance उपलब्ध नहीं हैं। AI गायन भी इससे सिद्ध नहीं होता।', 'bad');
-        updateTtsButtons(); return;
-      }
-      voices = synth.getVoices() || [];
-      const select = $('voice-select');
-      const previous = select.value;
-      select.replaceChildren();
-      if (!voices.length) {
-        select.appendChild(new Option('अभी कोई voice उपलब्ध नहीं', ''));
-        select.disabled = true; voiceReady = false;
-        $('voice-api-pill').textContent = 'Voice नहीं मिली';
-        $('header-tts-state').textContent = 'Voice की प्रतीक्षा';
-        $('tts-dot').style.background = '#ffd166';
-        setStatus($('tts-status'), 'Speech API उपलब्ध है, लेकिन voice सूची अभी खाली है। “आवाज़ें फिर जाँचें” दबाएँ या browser की speech/voice सुविधा जाँचें।', 'warn');
-        $('voice-hint').textContent = 'API उपलब्ध होना पर्याप्त नहीं; वाचन शुरू करने के लिए कम-से-कम एक वास्तविक voice चाहिए।';
-      } else {
-        const preferred = voices.find(v => /^hi(?:-|$)/i.test(v.lang)) || voices.find(v => /sanskrit|संस्कृत/i.test(v.name)) || voices[0];
-        voices.forEach((voice, idx) => {
-          const opt = new Option(`${voice.name} — ${voice.lang || 'भाषा अज्ञात'}${voice.default ? ' (default)' : ''}`, String(idx));
-          select.appendChild(opt);
-        });
-        const previousVoice = voices.findIndex(v => `${v.name}|${v.lang}` === previous);
-        // Voice identity is encoded in option values at each refresh; preserve by voice signature when possible.
-        const saved = select.dataset.voiceSignature;
-        let chosen = voices.findIndex(v => `${v.name}|${v.lang}` === saved);
-        if (chosen < 0 && previousVoice >= 0) chosen = previousVoice;
-        if (chosen < 0) chosen = voices.indexOf(preferred);
-        select.value = String(chosen >= 0 ? chosen : 0);
-        select.dataset.voiceSignature = `${voices[Number(select.value)]?.name}|${voices[Number(select.value)]?.lang}`;
-        select.disabled = false; voiceReady = true;
-        $('voice-api-pill').textContent = `${voices.length} voices`;
-        $('header-tts-state').textContent = 'Browser TTS उपलब्ध';
-        $('tts-dot').style.background = '#70e3a4';
-        const hasHindi = voices.some(v => /^hi(?:-|$)/i.test(v.lang));
-        setStatus($('tts-status'), `Web Speech API उपलब्ध। ${voices.length} voice मिली। ${hasHindi ? 'Hindi voice उपलब्ध है; चयन की जाँच करें।' : 'Hindi voice सूची में नहीं मिली; चयनित voice का उच्चारण भिन्न हो सकता है।'}`, 'good');
-        $('voice-hint').textContent = hasHindi ? 'Hindi voice उपलब्ध है; संस्कृत उच्चारण फिर भी voice/browser पर निर्भर रहेगा।' : 'उपलब्ध आवाज़ें दिख रही हैं; हिन्दी/संस्कृत उच्चारण की शुद्धता की गारंटी नहीं।';
-      }
-      updateTtsButtons();
-    }
-    function selectedVoice() {
-      const idx = Number($('voice-select').value);
-      return Number.isInteger(idx) && idx >= 0 ? voices[idx] || null : null;
-    }
-    function startQueue() {
-      if (!speechSupported) { setStatus($('tts-status'), 'इस browser में Speech Synthesis उपलब्ध नहीं है।', 'bad'); return; }
-      if (!queueItems.length) { setStatus($('queue-notice'), 'पहले ‘+ कतार में जोड़ें’ दबाएँ।', 'warn'); updateTtsButtons(); return; }
-      if (!voiceReady || !voices.length || !selectedVoice()) { setStatus($('tts-status'), 'वाचन शुरू नहीं हुआ: कोई मान्य voice चयनित नहीं है।', 'warn'); refreshVoices(); return; }
-      if (playback.active) return;
-      // Clear earlier browser utterances before creating a new controlled sequence.
-      synth.cancel();
-      playbackToken += 1;
-      playback = { active: true, paused: false, index: 0, completed: 0, currentPercent: 0, utterance: null, token: playbackToken };
-      queueItems.forEach(item => item.state = 'प्रतीक्षारत');
-      selectedQueueId = queueItems[0]?.id ?? null;
-      pauseOtherMediaForTts();
-      refreshQueue(); refreshPreviewText();
-      speakCurrent(playback.token);
-    }
-    function speakCurrent(token) {
-      if (!playback.active || playback.token !== token || playback.paused) return;
-      if (playback.index >= queueItems.length) {
-        playback.active = false; playback.utterance = null; playback.currentPercent = 0;
-        setStatus($('tts-status'), `कतार का वाचन पूरा हुआ: ${playback.completed} पाठ समाप्त हुए।`, 'good');
-        refreshQueue(); refreshProgress(); refreshPreviewText(); updateTtsButtons(); return;
-      }
-      const item = queueItems[playback.index];
-      if (!item || !item.text.trim()) {
-        playback.index += 1;
-        speakCurrent(token); return;
-      }
-      const voice = selectedVoice();
-      if (!voice) { playback.active = false; setStatus($('tts-status'), 'चयनित voice अब उपलब्ध नहीं है। कतार रोकी गई।', 'bad'); refreshQueue(); updateTtsButtons(); return; }
-      const utterance = new SpeechSynthesisUtterance(item.text);
-      utterance.voice = voice;
-      utterance.lang = voice.lang || 'hi-IN';
-      utterance.rate = Number($('tts-rate').value);
-      utterance.volume = Number($('tts-volume').value);
-      utterance.pitch = Number($('tts-pitch').value);
-      playback.utterance = utterance;
-      playback.currentPercent = 0;
-      item.state = 'वाचन में';
-      selectedQueueId = item.id;
-      refreshQueue(); refreshPreviewText();
-      setStatus($('tts-status'), `ब्राउज़र ने पाठ ${playback.index + 1}/${queueItems.length} के लिए वाचन अनुरोध स्वीकार किया; वास्तविक start event की प्रतीक्षा है।`);
-      utterance.onstart = () => {
-        if (!playback.active || playback.token !== token || playback.utterance !== utterance) return;
-        setStatus($('tts-status'), `वाचन चल रहा है — पाठ ${playback.index + 1}/${queueItems.length}।`, 'good');
-      };
-      utterance.onboundary = (event) => {
-        if (!playback.active || playback.token !== token || playback.utterance !== utterance) return;
-        if (typeof event.charIndex === 'number' && item.text.length) {
-          playback.currentPercent = Math.max(0, Math.min(99, (event.charIndex / item.text.length) * 100));
-          refreshProgress();
-        }
-      };
-      utterance.onend = () => {
-        if (!playback.active || playback.token !== token || playback.utterance !== utterance) return;
-        item.state = 'पूर्ण'; playback.completed += 1; playback.currentPercent = 0;
-        playback.index += 1; playback.utterance = null;
-        refreshQueue(); refreshProgress();
-        if (playback.paused) return;
-        speakCurrent(token);
-      };
-      utterance.onerror = (event) => {
-        if (playback.token !== token || playback.utterance !== utterance) return;
-        item.state = 'त्रुटि'; playback.active = false; playback.utterance = null;
-        setStatus($('tts-status'), `वाचन त्रुटि: ${event.error || 'अज्ञात Speech Synthesis त्रुटि'}। शेष कतार अपने-आप जारी नहीं की गई।`, 'bad');
-        refreshQueue(); refreshProgress(); refreshPreviewText(); updateTtsButtons();
-      };
-      try { synth.speak(utterance); }
-      catch (error) {
-        item.state = 'त्रुटि'; playback.active = false; playback.utterance = null;
-        setStatus($('tts-status'), `वाचन शुरू नहीं हो सका: ${error.message || error}`, 'bad');
-        refreshQueue(); refreshProgress(); updateTtsButtons();
-      }
-    }
-    function pauseQueue() {
-      if (!playback.active || playback.paused) return;
-      playback.paused = true;
-      if (speechSupported && synth.speaking) synth.pause();
-      setStatus($('tts-status'), 'वाचन रुका हुआ है। Resume दबाने पर वही क्रम आगे चलेगा।', 'warn');
-      refreshProgress(); updateTtsButtons();
-    }
-    function resumeQueue() {
-      if (!playback.active || !playback.paused) return;
-      playback.paused = false;
-      if (speechSupported && synth.paused) synth.resume();
-      setStatus($('tts-status'), 'वाचन फिर शुरू किया जा रहा है।', 'good');
-      if (!playback.utterance) speakCurrent(playback.token);
-      refreshProgress(); updateTtsButtons();
-    }
-    function stopQueue(reason = 'वाचन रोक दिया गया।') {
-      playbackToken += 1;
-      if (speechSupported) synth.cancel();
-      playback = { active: false, paused: false, index: 0, completed: 0, currentPercent: 0, utterance: null, token: playbackToken };
-      queueItems.forEach(item => { if (item.state === 'वाचन में') item.state = 'प्रतीक्षारत'; });
-      setStatus($('tts-status'), reason, 'warn');
-      refreshQueue(); refreshProgress(); refreshPreviewText(); updateTtsButtons();
-    }
-
-    $('queue-add-btn').addEventListener('click', () => {
-      const text = textInput.value;
-      if (!text.trim()) { setStatus($('queue-notice'), 'खाली या केवल whitespace वाला पाठ कतार में नहीं जोड़ा गया।', 'warn'); updateTtsButtons(); return; }
-
-      let units;
-      try {
-        units = splitTextIntoSpeechUnits(text);
-      } catch (error) {
-        setStatus($('queue-notice'), error.message || 'पाठ-विभाजन जाँच विफल हुई।', 'bad');
-        return;
-      }
-      if (!units.length) { setStatus($('queue-notice'), 'पाठ से कोई पढ़ने योग्य खंड नहीं बना।', 'warn'); return; }
-
-      const firstNewItemId = nextQueueId;
-      for (const unit of units) {
-        queueItems.push({ id: nextQueueId++, text: unit, state: 'प्रतीक्षारत' });
-      }
-      selectedQueueId = firstNewItemId;
-      textInput.value = '';
-      setStatus($('queue-notice'), `${units.length} मूल पंक्ति/वाक्य-खंड जोड़े गए। शब्द स्क्रीन के आकार के कारण नहीं तोड़े गए; अक्षर-संरक्षण जाँच सफल रही।`, 'good');
-      refreshQueue(); refreshPreviewText(); updateTtsButtons();
     });
-    $('queue-clear-btn').addEventListener('click', () => {
-      if (playback.active) stopQueue('कतार साफ करने के कारण सक्रिय वाचन रोक दिया गया।');
-      queueItems.splice(0, queueItems.length); selectedQueueId = null;
-      setStatus($('queue-notice'), 'कतार साफ है। Text box का ड्राफ्ट अपने-आप कतार में नहीं जुड़ता।');
-      refreshQueue(); refreshPreviewText();
+  }
+  function shownText() {
+    if (running) return queue[itemIndex]?.text || '';
+    const selected = queue.find(item => item.id === selectedId);
+    return selected ? selected.text : draftPreview;
+  }
+  function refreshStage() {
+    renderOverlay(shownText());
+    $('overlay-text').style.fontSize = `${$('text-size').value}px`;
+    $('overlay-text').style.top = $('text-position').value === 'top' ? '19%' : $('text-position').value === 'bottom' ? '80%' : '50%';
+    $('text-size-value').textContent = `${$('text-size').value} px`;
+    photo.classList.toggle('active',Boolean(photoUrl) && photo.dataset.active === 'true');
+    video.classList.toggle('active',currentVideo >= 0 && video.dataset.active === 'true');
+    $('stage-empty').hidden = photo.classList.contains('active') || video.classList.contains('active');
+    $('stage-label').textContent = video.classList.contains('active') ? 'वीडियो + वर्तमान पाठ' : photo.classList.contains('active') ? 'फोटो + वर्तमान पाठ' : '9:16 पाठ पूर्वावलोकन';
+  }
+  function updateProgress() {
+    const total = queue.length; const pct = total ? Math.round(completed / total * 100) : 0;
+    $('progress-bar').style.width = `${pct}%`; $('progress-track').setAttribute('aria-valuenow',String(pct)); $('progress-percent').textContent = `${pct}%`;
+    $('progress-caption').textContent = `${completed} / ${total} पंक्तियाँ पूर्ण`;
+    $('current-caption').textContent = !running ? 'कोई वाचन सक्रिय नहीं' : paused ? 'वाचन रुका हुआ है' : `पंक्ति ${Math.min(itemIndex+1,total)} / ${total} चल रही है`;
+    $('screen-pause').disabled = !running || paused; $('screen-resume').disabled = !running || !paused; $('screen-stop').disabled = !running;
+    $('play-fullscreen').disabled = running || !queue.length || !synth;
+    $('queue-clear').disabled = running; $('queue-add').disabled = running;
+  }
+  function renderQueue() {
+    const list = $('queue-list'); list.replaceChildren();
+    queue.forEach((item,index) => {
+      const li = document.createElement('li'); li.className = 'list-item';
+      const title = document.createElement('div'); title.className = 'item-title'; title.textContent = `${index+1}. ${item.text}`;
+      const state = document.createElement('div'); state.className = 'hint'; state.textContent = item.state || 'प्रतीक्षारत';
+      const actions = document.createElement('div'); actions.className = 'item-actions';
+      const preview = document.createElement('button'); preview.type='button'; preview.className='small-btn'; preview.textContent='Preview'; preview.disabled=running;
+      preview.addEventListener('click',()=>{selectedId=item.id;draftPreview='';refreshStage();openPanel('studio');});
+      const remove = document.createElement('button'); remove.type='button'; remove.className='small-btn'; remove.textContent='हटाएँ'; remove.disabled=running;
+      remove.addEventListener('click',()=>{queue=queue.filter(q=>q.id!==item.id);if(selectedId===item.id)selectedId=queue[0]?.id??null;completed=Math.min(completed,queue.length);renderQueue();refreshStage();updateProgress();});
+      actions.append(preview,remove);li.append(title,state,actions);list.append(li);
     });
-    $('draft-preview-btn').addEventListener('click', () => { selectedQueueId = null; refreshPreviewText(); setStatus($('queue-notice'), textInput.value.trim() ? 'ड्राफ्ट Preview दिखाया गया है; यह कतार का हिस्सा नहीं है।' : 'Preview के लिए पहले text box में पाठ लिखें।', textInput.value.trim() ? '' : 'warn'); });
-    textInput.addEventListener('input', () => { updateTtsButtons(); if (!playback.active && !queueItems.some(item => item.id === selectedQueueId)) refreshPreviewText(); });
-    $('tts-start-btn').addEventListener('click', startQueue);
-    $('tts-pause-btn').addEventListener('click', pauseQueue);
-    $('tts-resume-btn').addEventListener('click', resumeQueue);
-    $('tts-stop-btn').addEventListener('click', () => stopQueue());
-    $('voice-select').addEventListener('change', () => { const voice = selectedVoice(); $('voice-select').dataset.voiceSignature = voice ? `${voice.name}|${voice.lang}` : ''; if (voice) setStatus($('tts-status'), `चयनित voice: ${voice.name} (${voice.lang || 'भाषा अज्ञात'})। वाचन शुरू करने पर इसी का उपयोग होगा।`); updateTtsButtons(); });
-    $('voice-refresh-btn').addEventListener('click', refreshVoices);
-    if (speechSupported && typeof synth.addEventListener === 'function') synth.addEventListener('voiceschanged', refreshVoices);
-    else if (speechSupported) synth.onvoiceschanged = refreshVoices;
-    $('tts-rate').addEventListener('input', () => $('tts-rate-value').textContent = `${Number($('tts-rate').value).toFixed(1)}×`);
-    $('tts-volume').addEventListener('input', () => $('tts-volume-value').textContent = `${Math.round(Number($('tts-volume').value) * 100)}%`);
-    $('tts-pitch').addEventListener('input', () => $('tts-pitch-value').textContent = Number($('tts-pitch').value).toFixed(1));
-    $('text-size').addEventListener('input', refreshPreviewText);
-    $('text-position').addEventListener('change', refreshPreviewText);
+    setStatus('queue-status',queue.length ? `${queue.length} मूल पंक्तियाँ कतार में हैं।` : 'कतार खाली है।',queue.length?'good':'warn');
+    updateProgress();
+  }
+  function refreshVoices() {
+    const select=$('voice-select');
+    if (!synth) { select.replaceChildren(new Option('Browser TTS उपलब्ध नहीं',''));setStatus('voice-status','इस browser में Speech Synthesis API उपलब्ध नहीं है।','bad');$('header-status').textContent='Browser TTS उपलब्ध नहीं';renderQueue();return; }
+    voices=synth.getVoices()||[];const previous=select.value;select.replaceChildren();
+    voices.forEach((voice,index)=>select.add(new Option(`${voice.name} — ${voice.lang}${voice.default?' (default)':''}`,String(index))));
+    if (!voices.length) {select.add(new Option('अभी कोई voice उपलब्ध नहीं',''));setStatus('voice-status','Voice सूची खाली है। Android/browser voice settings जाँचें।','warn');$('header-status').textContent='Voice की प्रतीक्षा';renderQueue();return;}
+    let index=Number(previous);if(!Number.isInteger(index)||index<0||index>=voices.length){index=voices.findIndex(v=>/^hi(?:-|$)/i.test(v.lang));if(index<0)index=0;}
+    select.value=String(index);setStatus('voice-status',`${voices.length} आवाज़ें उपलब्ध हैं। API महिला voice होने की गारंटी नहीं देती; उपयुक्त आवाज़ स्वयं चुनें।`,'good');$('header-status').textContent='Browser TTS उपलब्ध';renderQueue();
+  }
+  function selectedVoice(){const index=Number($('voice-select').value);return Number.isInteger(index)?voices[index]||null:null;}
+  function playMediaForRun(){
+    if ($('pause-media').checked) audio.pause();
+    if (currentVideo>=0) { video.loop=$('video-loop').checked; video.play().then(()=>setStatus('video-status','वीडियो चल रहा है।','good')).catch(error=>setStatus('video-status',`वीडियो शुरू नहीं हुआ: ${error.message||error}`,'warn')); }
+  }
+  async function startCombined() {
+    if(!synth||!queue.length||running)return;
+    if(!selectedVoice()){setStatus('play-status','वाचन शुरू नहीं हुआ: कोई voice उपलब्ध नहीं है।','bad');openPanel('voice');return;}
+    const fullscreenPromise = stage.requestFullscreen ? stage.requestFullscreen().catch(()=>false) : Promise.resolve(false);
+    runToken++;const token=runToken;
+    synth.cancel();running=true;paused=false;itemIndex=0;completed=0;currentUtterance=null;
+    queue.forEach(item=>item.state='प्रतीक्षारत');selectedId=queue[0]?.id??null;draftPreview='';
+    renderQueue();refreshStage();playMediaForRun();setStatus('play-status','वाचन शुरू हो रहा है। मूल पंक्तियाँ क्रम से पढ़ी जाएँगी।','good');
+    fullscreenPromise.then(result=>{if(result===false&&!document.fullscreenElement)setStatus('play-status','फुलस्क्रीन उपलब्ध नहीं हुआ; वाचन फिर भी चल सकता है। Stage पर Fullscreen बटन दबाकर देखें।','warn');});
+    speakNext(token);
+  }
+  function speakNext(token) {
+    if(!running||paused||token!==runToken)return;
+    if(itemIndex>=queue.length){finishRun(token);return;}
+    const item=queue[itemIndex];if(!item||!item.text.trim()){itemIndex++;speakNext(token);return;}
+    const voice=selectedVoice();if(!voice){finishRun(token,'Voice उपलब्ध नहीं है; वाचन रोका गया।',false);return;}
+    const utterance=new SpeechSynthesisUtterance(item.text);utterance.voice=voice;utterance.lang=voice.lang||'hi-IN';utterance.rate=Number($('rate').value);utterance.pitch=Number($('pitch').value);utterance.volume=Number($('volume').value);
+    currentUtterance=utterance;item.state='वाचन में';selectedId=item.id;renderQueue();refreshStage();
+    utterance.onstart=()=>{if(token===runToken&&currentUtterance===utterance)setStatus('play-status',`वाचन: पंक्ति ${itemIndex+1}/${queue.length}`,'good');};
+    utterance.onend=()=>{if(token!==runToken||currentUtterance!==utterance||!running)return;item.state='पूर्ण';completed++;itemIndex++;currentUtterance=null;renderQueue();refreshStage();if(!paused)speakNext(token);};
+    utterance.onerror=event=>{if(token!==runToken||currentUtterance!==utterance)return;item.state='वाचन त्रुटि';finishRun(token,`वाचन बीच में रुका: ${event.error||'अज्ञात त्रुटि'}। यह पंक्ति सफल नहीं मानी जाएगी।`,false);};
+    try{synth.speak(utterance);}catch(error){finishRun(token,`Speech शुरू नहीं हुआ: ${error.message||error}`,false);}
+  }
+  function finishRun(token,message='',success=true){if(token!==runToken)return;running=false;paused=false;currentUtterance=null;if(synth)synth.cancel();video.pause();renderQueue();refreshStage();updateProgress();setStatus('play-status',message||(completed===queue.length?'सभी कतार-पंक्तियों का Browser TTS वाचन पूरा हुआ। यह AI गायन की पुष्टि नहीं है।':'वाचन समाप्त हुआ।'),message?(success?'warn':'bad'):'good');}
+  function pauseRun(){if(!running||paused)return;paused=true;if(synth)synth.pause();video.pause();audio.pause();updateProgress();setStatus('play-status','वाचन और वीडियो रुके हैं। Resume दबाएँ।','warn');}
+  function resumeRun(){if(!running||!paused)return;paused=false;if(synth&&synth.paused)synth.resume();if(currentVideo>=0)video.play().catch(()=>setStatus('video-status','वीडियो Resume नहीं हुआ; अलग से Play दबाएँ।','warn'));if(!currentUtterance)speakNext(runToken);updateProgress();setStatus('play-status','वाचन फिर शुरू किया गया।','good');}
+  function stopRun(){if(!running)return;runToken++;if(synth)synth.cancel();running=false;paused=false;currentUtterance=null;queue.forEach(item=>{if(item.state==='वाचन में')item.state='प्रतीक्षारत';});video.pause();try{video.currentTime=0;}catch(_){}renderQueue();refreshStage();updateProgress();setStatus('play-status','वाचन रोक दिया गया।','warn');}
 
-    function showPhoto(file) {
-      if (!file) return;
-      if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) { setStatus($('photo-status'), 'असमर्थित फोटो प्रकार। JPG, PNG या WebP चुनें।', 'bad'); $('photo-input').value = ''; return; }
-      const nextUrl = URL.createObjectURL(file);
-      const probe = new Image();
-      probe.onload = () => {
-        if (photoUrl) URL.revokeObjectURL(photoUrl);
-        photoUrl = nextUrl; photoFile = file;
-        $('photo-preview').src = photoUrl;
-        $('use-photo-btn').disabled = false; $('remove-photo-btn').disabled = false;
-        activeMediaMode = 'photo'; pauseVisibleVideo(); stopBackgroundAudioForExclusiveMedia();
-        syncPreviewMode(); refreshPreviewText();
-        setStatus($('photo-status'), `फोटो लोड हुई: ${file.name} (${probe.naturalWidth} × ${probe.naturalHeight})।`, 'good');
-      };
-      probe.onerror = () => { URL.revokeObjectURL(nextUrl); setStatus($('photo-status'), 'फोटो पढ़ी नहीं जा सकी। कोई दूसरी JPG/PNG/WebP फाइल चुनें।', 'bad'); };
-      probe.src = nextUrl;
-    }
-    function removePhoto() {
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
-      photoUrl = null; photoFile = null; $('photo-preview').removeAttribute('src'); $('photo-input').value = '';
-      $('use-photo-btn').disabled = true; $('remove-photo-btn').disabled = true;
-      if (activeMediaMode === 'photo') activeMediaMode = 'none';
-      syncPreviewMode(); setStatus($('photo-status'), 'फोटो हटा दी गई।');
-    }
-    $('photo-input').addEventListener('change', () => { const file = $('photo-input').files?.[0]; if (file) showPhoto(file); });
-    $('use-photo-btn').addEventListener('click', () => { if (!photoUrl) return; pauseVisibleVideo(); stopBackgroundAudioForExclusiveMedia(); activeMediaMode = 'photo'; syncPreviewMode(); setStatus($('photo-status'), `Preview में फोटो दिखाई जा रही है: ${photoFile?.name || 'स्थानीय फोटो'}।`, 'good'); });
-    $('remove-photo-btn').addEventListener('click', removePhoto);
+  $('queue-add').addEventListener('click',()=>{
+    if(running)return;const source=$('text-input').value;if(!source.trim()){setStatus('queue-status','खाली पाठ कतार में नहीं जोड़ा जा सकता।','warn');return;}
+    const lines=splitTextIntoQueueLines(source);if(!lines.length){setStatus('queue-status','पाठ में कोई पढ़ने योग्य पंक्ति नहीं मिली।','warn');return;}
+    const newItems=lines.map(text=>({id:nextId++,text,state:'प्रतीक्षारत'}));const check=verifyQueuePreservesText(source,newItems);
+    if(!check.ok){setStatus('preserve-test','विफल: कतार बनाने पर मूल पाठ बदल गया; पंक्तियाँ नहीं जोड़ी गईं।','bad');return;}
+    const first=queue.length;queue.push(...newItems);selectedId=queue[first]?.id??null;draftPreview='';$('text-input').value='';
+    renderQueue();refreshStage();setStatus('preserve-test',`PASS: मूल और कतार के non-whitespace Unicode characters समान हैं (${check.originalCodePoints} code points).`,'good');setStatus('queue-status',`${lines.length} मूल पंक्तियाँ अक्षुण्ण कतार में जोड़ी गईं।`,'good');
+  });
+  $('queue-clear').addEventListener('click',()=>{if(running)return;queue=[];selectedId=null;draftPreview='';completed=0;renderQueue();refreshStage();setStatus('preserve-test','कतार साफ की गई। अगला जोड़ने पर पाठ-संरक्षण फिर जाँचा जाएगा।');});
+  $('draft-preview').addEventListener('click',()=>{const lines=splitTextIntoQueueLines($('text-input').value);if(!lines.length){setStatus('queue-status','पहले पाठ लिखें।','warn');return;}selectedId=null;draftPreview=lines[0];refreshStage();setStatus('queue-status',`ड्राफ्ट की पहली मूल पंक्ति Preview में दिखाई गई (${lines.length} पंक्तियाँ)।`,'good');openPanel('studio');});
+  $('text-input').addEventListener('input',()=>{if(running)return;if(!queue.some(item=>item.id===selectedId)){const lines=splitTextIntoQueueLines($('text-input').value);draftPreview=lines[0]||'';selectedId=null;refreshStage();}});
+  $('play-fullscreen').addEventListener('click',startCombined);$('screen-pause').addEventListener('click',pauseRun);$('screen-resume').addEventListener('click',resumeRun);$('screen-stop').addEventListener('click',stopRun);
+  $('fullscreen-only').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(stage.requestFullscreen)await stage.requestFullscreen();else setStatus('play-status','इस browser में Fullscreen API उपलब्ध नहीं है।','warn');}catch(error){setStatus('play-status',`Fullscreen नहीं खुला: ${error.message||error}`,'warn');}});
+  document.addEventListener('fullscreenchange',()=>{$('fullscreen-only').textContent=document.fullscreenElement?'⛶ Fullscreen बंद करें':'⛶ Fullscreen Preview';});
+  $('voice-refresh').addEventListener('click',refreshVoices);if(synth){if(typeof synth.addEventListener==='function')synth.addEventListener('voiceschanged',refreshVoices);else synth.onvoiceschanged=refreshVoices;}
+  $('voice-test').addEventListener('click',()=>{if(!synth)return;const voice=selectedVoice();if(!voice){setStatus('voice-status','पहले उपलब्ध voice चुनें।','warn');return;}synth.cancel();const utterance=new SpeechSynthesisUtterance('ॐ नमः शिवाय');utterance.voice=voice;utterance.lang=voice.lang||'hi-IN';utterance.rate=Number($('rate').value);utterance.pitch=Number($('pitch').value);utterance.volume=Number($('volume').value);utterance.onerror=event=>setStatus('voice-status',`Voice परीक्षण विफल: ${event.error||'अज्ञात त्रुटि'}`,'bad');utterance.onend=()=>setStatus('voice-status',`चुनी हुई voice ने परीक्षण वाक्य पूरा किया: ${voice.name}. यह महिला स्वर या मंत्र-शुद्धता का प्रमाण नहीं है।`,'good');synth.speak(utterance);});
+  [['rate','rate-value',v=>`${Number(v).toFixed(1)}×`],['pitch','pitch-value',v=>Number(v).toFixed(1)],['volume','volume-value',v=>`${Math.round(Number(v)*100)}%`]].forEach(([id,out,format])=>$(id).addEventListener('input',()=>$(out).textContent=format($(id).value)));
+  $('text-size').addEventListener('input',refreshStage);$('text-position').addEventListener('change',refreshStage);
 
-    function pauseVisibleVideo() { const video = $('video-preview'); if (!video.paused) video.pause(); }
-    function stopBackgroundAudioForExclusiveMedia() {
-      const audio = $('background-audio'); if (!audio.paused) audio.pause();
-    }
-    function renderVideoList() {
-      const list = $('video-list'); list.replaceChildren(); $('video-count').textContent = `${videos.length} क्लिप`;
-      $('video-play-btn').disabled = currentVideoIndex < 0 || playback.active;
-      $('video-pause-btn').disabled = currentVideoIndex < 0 || $('video-preview').paused;
-      $('video-reset-btn').disabled = currentVideoIndex < 0;
-      if (!videos.length) { const p = document.createElement('li'); p.className = 'file-list-empty'; p.textContent = 'अभी कोई वीडियो क्लिप नहीं।'; list.appendChild(p); }
-      videos.forEach((item, index) => {
-        const li = document.createElement('li'); li.className = 'media-item';
-        const top = document.createElement('div'); top.className = 'item-top';
-        const name = document.createElement('div'); name.className = 'item-text'; name.textContent = `${index + 1}. ${item.file.name}`;
-        const badge = document.createElement('span'); badge.className = 'item-state'; badge.textContent = index === currentVideoIndex ? 'चुनी गई' : 'उपलब्ध'; top.append(name, badge);
-        const buttons = document.createElement('div'); buttons.className = 'item-actions';
-        const use = document.createElement('button'); use.type = 'button'; use.className = 'small-btn'; use.textContent = 'Preview चुनें'; use.addEventListener('click', () => selectVideo(index, false));
-        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'small-btn'; remove.textContent = 'हटाएँ'; remove.addEventListener('click', () => removeVideo(index));
-        buttons.append(use, remove); li.append(top, buttons); list.appendChild(li);
-      });
-    }
-    function selectVideo(index, autoplay = false) {
-      if (index < 0 || index >= videos.length) return;
-      pauseVisibleVideo(); stopBackgroundAudioForExclusiveMedia();
-      const video = $('video-preview');
-      currentVideoIndex = index; activeMediaMode = 'video'; video.loop = $('video-loop').checked; video.muted = false;
-      video.src = videos[index].url; video.load(); syncPreviewMode(); renderVideoList();
-      setStatus($('video-status'), `क्लिप चुनी गई: ${videos[index].file.name}। Playback के लिए Play दबाएँ।`);
-      if (autoplay) video.play().then(() => { setStatus($('video-status'), `चल रही है: ${videos[index].file.name}`, 'good'); renderVideoList(); }).catch(error => setStatus($('video-status'), `Playback शुरू नहीं हुआ (${error.name || 'त्रुटि'}): ${error.message || 'ब्राउज़र ने रोक दिया'}। Play दबाकर फिर प्रयास करें।`, 'warn'));
-    }
-    function removeVideo(index) {
-      const wasCurrent = index === currentVideoIndex;
-      if (wasCurrent) { pauseVisibleVideo(); $('video-preview').removeAttribute('src'); $('video-preview').load(); }
-      URL.revokeObjectURL(videos[index].url); videos.splice(index, 1);
-      if (!videos.length) currentVideoIndex = -1;
-      else if (wasCurrent) currentVideoIndex = Math.min(index, videos.length - 1);
-      else if (index < currentVideoIndex) currentVideoIndex -= 1;
-      if (videos.length && wasCurrent) selectVideo(currentVideoIndex, false);
-      else { if (!videos.length && activeMediaMode === 'video') activeMediaMode = photoUrl ? 'photo' : 'none'; syncPreviewMode(); renderVideoList(); }
-      setStatus($('video-status'), videos.length ? `${videos.length} क्लिप सूची में हैं।` : 'सभी वीडियो क्लिप हटाई गईं।');
-    }
-    $('video-input').addEventListener('change', () => {
-      const picked = Array.from($('video-input').files || []);
-      let accepted = 0;
-      for (const file of picked) {
-        if (!file.type.startsWith('video/')) continue;
-        videos.push({ file, url: URL.createObjectURL(file) }); accepted += 1;
-      }
-      $('video-input').value = '';
-      renderVideoList();
-      if (accepted) { selectVideo(currentVideoIndex < 0 ? 0 : currentVideoIndex, false); setStatus($('video-status'), `${accepted} नई क्लिप जोड़ी गईं। Codec support अलग-अलग हो सकता है; playback जाँचें।`, 'good'); }
-      else if (picked.length) setStatus($('video-status'), 'चयन में browser-supported video MIME type वाली फाइल नहीं मिली।', 'bad');
-    });
-    $('video-play-btn').addEventListener('click', () => {
-      if (currentVideoIndex < 0) return;
-      stopBackgroundAudioForExclusiveMedia();
-      const video = $('video-preview'); activeMediaMode = 'video'; syncPreviewMode();
-      video.play().then(() => { setStatus($('video-status'), `वीडियो चल रहा है: ${videos[currentVideoIndex]?.file.name || 'क्लिप'}।`, 'good'); renderVideoList(); }).catch(error => { setStatus($('video-status'), `वीडियो शुरू नहीं हुआ (${error.name || 'त्रुटि'}): ${error.message || 'Play दबाकर फिर प्रयास करें।'}`, 'warn'); });
-    });
-    $('video-pause-btn').addEventListener('click', () => { $('video-preview').pause(); setStatus($('video-status'), 'वीडियो रुका हुआ है। Resume के लिए Play दबाएँ।', 'warn'); renderVideoList(); });
-    $('video-reset-btn').addEventListener('click', () => { const video = $('video-preview'); video.pause(); try { video.currentTime = 0; } catch (_) {} setStatus($('video-status'), 'वर्तमान क्लिप शुरू में reset की गई।'); renderVideoList(); });
-    $('video-loop').addEventListener('change', () => { $('video-preview').loop = $('video-loop').checked; setStatus($('video-status'), $('video-loop').checked ? 'वर्तमान क्लिप loop पर चलेगी।' : 'Loop बंद है; समाप्त होने पर अगली क्लिप की कोशिश होगी।'); });
-    $('video-preview').addEventListener('loadedmetadata', () => {
-      if (currentVideoIndex >= 0) setStatus($('video-status'), `वीडियो metadata लोड हुआ: ${Math.round($('video-preview').videoWidth)} × ${Math.round($('video-preview').videoHeight)}, ${Number.isFinite($('video-preview').duration) ? `${$('video-preview').duration.toFixed(1)} सेकंड` : 'अवधि अज्ञात'}।`, 'good');
-      refreshPreviewText();
-    });
-    $('video-preview').addEventListener('timeupdate', refreshPreviewText);
-    $('video-preview').addEventListener('seeked', refreshPreviewText);
-    $('video-preview').addEventListener('error', () => { if (currentVideoIndex >= 0) setStatus($('video-status'), `वीडियो लोड/डिकोड नहीं हो सका: ${videos[currentVideoIndex]?.file.name || 'क्लिप'}। यह codec इस browser में समर्थित न हो सकता है।`, 'bad'); });
-    $('video-preview').addEventListener('play', () => { renderVideoList(); refreshPreviewText(); });
-    $('video-preview').addEventListener('pause', () => { renderVideoList(); refreshPreviewText(); });
-    $('video-preview').addEventListener('ended', () => {
-      if ($('video-loop').checked || currentVideoIndex < 0) return;
-      if (currentVideoIndex + 1 < videos.length) selectVideo(currentVideoIndex + 1, true);
-      else { setStatus($('video-status'), 'अंतिम क्लिप समाप्त हुई।', 'good'); renderVideoList(); }
-    });
+  $('photo-input').addEventListener('change',()=>{const file=$('photo-input').files?.[0];if(!file)return;if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){setStatus('photo-status','केवल JPG, PNG या WebP फोटो चुनें।','bad');return;}const url=URL.createObjectURL(file);const probe=new Image();probe.onload=()=>{revoke(photoUrl);photoUrl=url;photo.src=url;photo.dataset.active='true';video.dataset.active='false';$('photo-use').disabled=false;$('photo-remove').disabled=false;refreshStage();setStatus('photo-status',`फोटो लोड हुई: ${file.name}`,'good');};probe.onerror=()=>{revoke(url);setStatus('photo-status','फोटो पढ़ी नहीं जा सकी।','bad');};probe.src=url;});
+  $('photo-use').addEventListener('click',()=>{if(!photoUrl)return;photo.dataset.active='true';video.dataset.active='false';refreshStage();openPanel('studio');});$('photo-remove').addEventListener('click',()=>{revoke(photoUrl);photoUrl=null;photo.removeAttribute('src');photo.dataset.active='false';$('photo-input').value='';$('photo-use').disabled=true;$('photo-remove').disabled=true;refreshStage();setStatus('photo-status','फोटो हटा दी गई।');});
 
-    function renderAudioList() {
-      const list = $('audio-list'); list.replaceChildren(); $('audio-count').textContent = `${audioTracks.length} ट्रैक`;
-      $('audio-play-btn').disabled = currentAudioIndex < 0 || playback.active;
-      $('audio-pause-btn').disabled = currentAudioIndex < 0 || $('background-audio').paused;
-      $('audio-stop-btn').disabled = currentAudioIndex < 0;
-      $('background-audio').hidden = currentAudioIndex < 0;
-      if (!audioTracks.length) { const p = document.createElement('li'); p.className = 'file-list-empty'; p.textContent = 'अभी कोई background track नहीं।'; list.appendChild(p); }
-      audioTracks.forEach((item, index) => {
-        const li = document.createElement('li'); li.className = 'media-item';
-        const top = document.createElement('div'); top.className = 'item-top';
-        const name = document.createElement('div'); name.className = 'item-text'; name.textContent = `${index + 1}. ${item.file.name}`;
-        const badge = document.createElement('span'); badge.className = 'item-state'; badge.textContent = index === currentAudioIndex ? 'Active' : 'सूची में'; top.append(name, badge);
-        const buttons = document.createElement('div'); buttons.className = 'item-actions';
-        const use = document.createElement('button'); use.type = 'button'; use.className = 'small-btn'; use.textContent = 'ट्रैक चुनें'; use.addEventListener('click', () => selectAudio(index));
-        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'small-btn'; remove.textContent = 'हटाएँ'; remove.addEventListener('click', () => removeAudio(index));
-        buttons.append(use, remove); li.append(top, buttons); list.appendChild(li);
-      });
-    }
-    function selectAudio(index) {
-      if (index < 0 || index >= audioTracks.length) return;
-      const audio = $('background-audio'); audio.pause(); currentAudioIndex = index; audio.src = audioTracks[index].url; audio.loop = $('audio-loop').checked; audio.load(); renderAudioList();
-      setStatus($('audio-status'), `ट्रैक चुना गया: ${audioTracks[index].file.name}। चलाने के लिए “ऑडियो चलाएँ” दबाएँ।`);
-    }
-    function removeAudio(index) {
-      const wasCurrent = index === currentAudioIndex;
-      if (wasCurrent) { $('background-audio').pause(); $('background-audio').removeAttribute('src'); $('background-audio').load(); }
-      URL.revokeObjectURL(audioTracks[index].url); audioTracks.splice(index, 1);
-      if (!audioTracks.length) currentAudioIndex = -1;
-      else if (wasCurrent) currentAudioIndex = Math.min(index, audioTracks.length - 1);
-      else if (index < currentAudioIndex) currentAudioIndex -= 1;
-      if (audioTracks.length && wasCurrent) selectAudio(currentAudioIndex);
-      renderAudioList(); setStatus($('audio-status'), audioTracks.length ? `${audioTracks.length} ट्रैक सूची में हैं।` : 'सभी ऑडियो ट्रैक हटाए गए।');
-    }
-    $('audio-input').addEventListener('change', () => {
-      const picked = Array.from($('audio-input').files || []); let accepted = 0;
-      for (const file of picked) {
-        const looksLikeAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|webm)$/i.test(file.name);
-        if (!looksLikeAudio) continue;
-        audioTracks.push({ file, url: URL.createObjectURL(file) }); accepted += 1;
-      }
-      $('audio-input').value = '';
-      if (accepted) { if (currentAudioIndex < 0) selectAudio(0); renderAudioList(); setStatus($('audio-status'), `${accepted} ऑडियो ट्रैक जोड़े गए। Decoder support जाँचने के लिए Play दबाएँ।`, 'good'); }
-      else if (picked.length) setStatus($('audio-status'), 'चयन में पहचानी जा सकने वाली audio फाइल नहीं मिली।', 'bad');
-    });
-    $('audio-loop').addEventListener('change', () => { $('background-audio').loop = $('audio-loop').checked; setStatus($('audio-status'), $('audio-loop').checked ? 'Background audio loop पर चलेगा।' : 'Audio loop बंद है।'); });
-    $('audio-play-btn').addEventListener('click', () => {
-      if (currentAudioIndex < 0) return;
-      pauseVisibleVideo(); if (activeMediaMode === 'video') activeMediaMode = 'video';
-      const audio = $('background-audio'); audio.loop = $('audio-loop').checked;
-      audio.play().then(() => { setStatus($('audio-status'), `ऑडियो चल रहा है: ${audioTracks[currentAudioIndex]?.file.name || 'track'}।`, 'good'); renderAudioList(); }).catch(error => setStatus($('audio-status'), `ऑडियो शुरू नहीं हुआ (${error.name || 'त्रुटि'}): ${error.message || 'फाइल/codec जाँचें।'}`, 'bad'));
-    });
-    $('audio-pause-btn').addEventListener('click', () => { $('background-audio').pause(); setStatus($('audio-status'), 'Background audio रुका हुआ है।'); renderAudioList(); });
-    $('audio-stop-btn').addEventListener('click', () => { const audio = $('background-audio'); audio.pause(); try { audio.currentTime = 0; } catch (_) {} setStatus($('audio-status'), 'Background audio stop/reset हो गया।'); renderAudioList(); });
-    $('background-audio').addEventListener('error', () => { if (currentAudioIndex >= 0) setStatus($('audio-status'), `Audio decode/load असफल: ${audioTracks[currentAudioIndex]?.file.name || 'track'}। यह format/codec browser में समर्थित न हो सकता है।`, 'bad'); });
-    $('background-audio').addEventListener('ended', () => setStatus($('audio-status'), 'ऑडियो ट्रैक समाप्त हुआ।', 'good'));
-    $('background-audio').addEventListener('play', renderAudioList);
-    $('background-audio').addEventListener('pause', renderAudioList);
+  function renderVideoList(){const list=$('video-list');list.replaceChildren();videoFiles.forEach((item,index)=>{const li=document.createElement('li');li.className='list-item';const title=document.createElement('div');title.className='item-title';title.textContent=`${index+1}. ${item.file.name}`;const actions=document.createElement('div');actions.className='item-actions';const use=document.createElement('button');use.type='button';use.className='small-btn';use.textContent='यह क्लिप चुनें';use.addEventListener('click',()=>selectVideo(index));const remove=document.createElement('button');remove.type='button';remove.className='small-btn';remove.textContent='हटाएँ';remove.addEventListener('click',()=>{if(running)stopRun();const current=currentVideo===index;revoke(item.url);videoFiles.splice(index,1);if(!videoFiles.length){currentVideo=-1;video.pause();video.removeAttribute('src');video.load();video.dataset.active='false';}else if(current){currentVideo=-1;selectVideo(Math.min(index,videoFiles.length-1));}else if(index<currentVideo)currentVideo--;renderVideoList();refreshStage();});actions.append(use,remove);li.append(title,actions);list.append(li);});if(!videoFiles.length){const li=document.createElement('li');li.className='hint';li.textContent='कोई वीडियो क्लिप नहीं चुनी गई।';list.append(li);}setStatus('video-status',videoFiles.length?`${videoFiles.length} क्लिप उपलब्ध हैं।`: 'कोई वीडियो क्लिप नहीं चुनी गई।');}
+  function selectVideo(index){if(index<0||index>=videoFiles.length)return;video.pause();currentVideo=index;video.src=videoFiles[index].url;video.loop=$('video-loop').checked;video.dataset.active='true';photo.dataset.active='false';video.load();refreshStage();setStatus('video-status',`चुनी गई क्लिप: ${videoFiles[index].file.name}`,'good');}
+  $('video-input').addEventListener('change',()=>{for(const file of Array.from($('video-input').files||[])){if(file.type.startsWith('video/'))videoFiles.push({file,url:URL.createObjectURL(file)});} $('video-input').value='';if(videoFiles.length&&currentVideo<0)selectVideo(0);renderVideoList();});
+  $('video-play').addEventListener('click',()=>{if(currentVideo<0){setStatus('video-status','पहले वीडियो क्लिप चुनें।','warn');return;}openPanel('studio');video.loop=$('video-loop').checked;video.play().then(()=>setStatus('video-status','वीडियो Preview चल रहा है।','good')).catch(error=>setStatus('video-status',`वीडियो नहीं चला: ${error.message||error}`,'warn'));});$('video-pause').addEventListener('click',()=>video.pause());$('video-reset').addEventListener('click',()=>{video.pause();try{video.currentTime=0;}catch(_){}});
+  $('video-loop').addEventListener('change',()=>{video.loop=$('video-loop').checked;});video.addEventListener('error',()=>setStatus('video-status','वीडियो लोड/डिकोड नहीं हुआ। Codec compatibility जाँचें।','bad'));
 
-    function canMediaRecord() {
-      if (!('MediaRecorder' in window) || typeof renderCanvas.captureStream !== 'function') return { ok: false, reason: 'इस browser में MediaRecorder या canvas.captureStream उपलब्ध नहीं है।' };
-      const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
-      const mimeType = types.find(type => typeof MediaRecorder.isTypeSupported !== 'function' || MediaRecorder.isTypeSupported(type));
-      if (!mimeType) return { ok: false, reason: 'MediaRecorder उपलब्ध है, लेकिन समर्थित output MIME type नहीं मिला।' };
-      return { ok: true, mimeType };
-    }
-    function refreshRecorderCapability() {
-      const capability = canMediaRecord();
-      $('record-start-btn').disabled = !capability.ok || Boolean(recording);
-      $('record-stop-btn').disabled = !recording;
-      $('recorder-capability').textContent = capability.ok ? capability.mimeType.split(';')[0] : 'Unavailable';
-      if (capability.ok) setStatus($('export-limitations'), `इस browser में ${capability.mimeType} रिकॉर्डिंग का प्रयास किया जा सकता है। TTS audio capture शामिल नहीं है; audio tracks का capture Web Audio support पर निर्भर है। WAV/MP3 encoding लागू नहीं है।`);
-      else setStatus($('export-limitations'), capability.reason, 'bad');
-    }
-    function coverImage(ctx, source, sx, sy, sw, sh, dx, dy, dw, dh) {
-      const sourceAspect = sw / sh, destAspect = dw / dh;
-      let cropX = sx, cropY = sy, cropW = sw, cropH = sh;
-      if (sourceAspect > destAspect) { cropW = sh * destAspect; cropX = sx + (sw - cropW) / 2; }
-      else { cropH = sw / destAspect; cropY = sy + (sh - cropH) / 2; }
-      ctx.drawImage(source, cropX, cropY, cropW, cropH, dx, dy, dw, dh);
-    }
-    function canvasDrawBackground(ctx) {
-      const w = renderCanvas.width, h = renderCanvas.height;
-      const gradient = ctx.createLinearGradient(0, 0, w, h); gradient.addColorStop(0, '#e5efff'); gradient.addColorStop(1, '#526985');
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
-      if (activeMediaMode === 'photo' && photoUrl && $('photo-preview').complete && $('photo-preview').naturalWidth > 0) {
-        const img = $('photo-preview'); coverImage(ctx, img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, w, h);
-      } else if (activeMediaMode === 'video' && currentVideoIndex >= 0) {
-        const video = $('video-preview');
-        if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) coverImage(ctx, video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, w, h);
-        else {
-          ctx.fillStyle = '#172338'; ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.font = '700 30px system-ui'; ctx.fillText('वीडियो लोड हो रहा है…', w / 2, h / 2);
-        }
-      } else {
-        ctx.fillStyle = 'rgba(18,42,75,.2)'; ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#17365f'; ctx.textAlign = 'center'; ctx.font = '700 28px system-ui'; ctx.fillText('Swar-Sadhika Studio', w / 2, h * .42);
-        ctx.font = '22px system-ui'; ctx.fillText('9:16 पाठ पूर्वावलोकन', w / 2, h * .46);
-      }
-      const vignette = ctx.createLinearGradient(0, 0, 0, h); vignette.addColorStop(0, 'rgba(0,0,0,.2)'); vignette.addColorStop(.25, 'rgba(0,0,0,0)'); vignette.addColorStop(.65, 'rgba(0,0,0,0)'); vignette.addColorStop(1, 'rgba(0,0,0,.38)');
-      ctx.fillStyle = vignette; ctx.fillRect(0, 0, w, h);
-    }
-    function canvasDrawText(ctx) {
-      // वीडियो में केवल वर्तमान newline-separated पंक्ति draw होती है; DOM preview
-      // और MediaRecorder canvas दोनों यही time-synced line state उपयोग करते हैं।
-      const sourceText = currentDisplayText();
-      const videoLineMode = activeMediaMode === 'video' && currentVideoIndex >= 0;
-      const text = visibleOverlayText(sourceText);
-      if (!text) return;
-      const w = renderCanvas.width, h = renderCanvas.height;
-      const stageWidth = $('preview-stage').getBoundingClientRect().width || 360;
-      const cssScale = w / stageWidth;
-      let fontPx = Math.max(25, Math.min(120, Number($('text-size').value) * cssScale));
-      const lineHeight = fontPx * 1.42;
-      const marginX = w * .07, maxWidth = w - marginX * 2;
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-      ctx.font = `850 ${fontPx}px system-ui, "Noto Sans Devanagari", "Nirmala UI", sans-serif`;
+  function renderAudioList(){const list=$('audio-list');list.replaceChildren();audioFiles.forEach((item,index)=>{const li=document.createElement('li');li.className='list-item';const title=document.createElement('div');title.className='item-title';title.textContent=`${index+1}. ${item.file.name}`;const actions=document.createElement('div');actions.className='item-actions';const use=document.createElement('button');use.type='button';use.className='small-btn';use.textContent='ट्रैक चुनें';use.addEventListener('click',()=>selectAudio(index));const remove=document.createElement('button');remove.type='button';remove.className='small-btn';remove.textContent='हटाएँ';remove.addEventListener('click',()=>{audio.pause();const current=currentAudio===index;revoke(item.url);audioFiles.splice(index,1);if(current){currentAudio=-1;audio.removeAttribute('src');audio.hidden=true;if(audioFiles.length)selectAudio(Math.min(index,audioFiles.length-1));}else if(index<currentAudio)currentAudio--;renderAudioList();});actions.append(use,remove);li.append(title,actions);list.append(li);});if(!audioFiles.length){const li=document.createElement('li');li.className='hint';li.textContent='कोई ऑडियो ट्रैक नहीं।';list.append(li);}setStatus('audio-status',audioFiles.length?`${audioFiles.length} ऑडियो फाइलें उपलब्ध हैं।`:'कोई ऑडियो नहीं चुना गया।');}
+  function selectAudio(index){if(index<0||index>=audioFiles.length)return;audio.pause();currentAudio=index;audio.src=audioFiles[index].url;audio.loop=$('audio-loop').checked;audio.hidden=false;audio.load();setStatus('audio-status',`चुना गया ट्रैक: ${audioFiles[index].file.name}`,'good');renderAudioList();}
+  $('audio-input').addEventListener('change',()=>{for(const file of Array.from($('audio-input').files||[])){if(file.type.startsWith('audio/')||/\.(mp3|wav|m4a|aac|ogg|webm)$/i.test(file.name))audioFiles.push({file,url:URL.createObjectURL(file)});} $('audio-input').value='';if(audioFiles.length&&currentAudio<0)selectAudio(0);renderAudioList();});
+  $('audio-loop').addEventListener('change',()=>audio.loop=$('audio-loop').checked);$('audio-play').addEventListener('click',()=>{if(currentAudio<0){setStatus('audio-status','पहले ऑडियो ट्रैक चुनें।','warn');return;}audio.play().then(()=>setStatus('audio-status','ऑडियो चल रहा है।','good')).catch(error=>setStatus('audio-status',`ऑडियो नहीं चला: ${error.message||error}`,'warn'));});$('audio-pause').addEventListener('click',()=>audio.pause());$('audio-stop').addEventListener('click',()=>{audio.pause();try{audio.currentTime=0;}catch(_){}});audio.addEventListener('error',()=>setStatus('audio-status','ऑडियो लोड/डिकोड नहीं हुआ। फाइल format जाँचें।','bad'));
 
-      if (videoLineMode) {
-        // एक logical पंक्ति को एक visual row में फिट करें, ताकि एक साथ कई
-        // संस्कृत पंक्तियाँ overlay पर न आ जाएँ। Canvas पर भी यही नियम लागू है।
-        while (fontPx > 20 && ctx.measureText(text).width > maxWidth) {
-          fontPx -= 1;
-          ctx.font = `850 ${fontPx}px system-ui, "Noto Sans Devanagari", "Nirmala UI", sans-serif`;
-        }
-      }
+  function cover(source,sw,sh,dw,dh){const sourceRatio=sw/sh,destRatio=dw/dh;let sx=0,sy=0,cw=sw,ch=sh;if(sourceRatio>destRatio){cw=sh*destRatio;sx=(sw-cw)/2;}else{ch=sw/destRatio;sy=(sh-ch)/2;}ctx.drawImage(source,sx,sy,cw,ch,0,0,dw,dh);}
+  function drawFrame(){const w=canvas.width,h=canvas.height;const gradient=ctx.createLinearGradient(0,0,w,h);gradient.addColorStop(0,'#e5efff');gradient.addColorStop(1,'#526985');ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+    if(video.dataset.active==='true'&&currentVideo>=0&&video.readyState>=2&&video.videoWidth&&video.videoHeight)cover(video,video.videoWidth,video.videoHeight,w,h);else if(photo.dataset.active==='true'&&photo.complete&&photo.naturalWidth)cover(photo,photo.naturalWidth,photo.naturalHeight,w,h);
+    const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,'#0004');shade.addColorStop(.45,'#0000');shade.addColorStop(1,'#0007');ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
+    const text=shownText();if(!text)return;let fontSize=Math.max(32,Math.min(88,Number($('text-size').value)*2));ctx.font=`850 ${fontSize}px "Noto Sans Devanagari","Nirmala UI",Mangal,sans-serif`;const maxWidth=w*.82;const lines=[];
+    for(const lineText of text.split('\n')){let visualLine='';for(const unit of graphemes(lineText)){const test=visualLine+unit;if(visualLine&&ctx.measureText(test).width>maxWidth){lines.push(visualLine);visualLine=unit;}else visualLine=test;}if(visualLine)lines.push(visualLine);}
+    if(!lines.length)return;const lineHeight=fontSize*1.45,blockHeight=lines.length*lineHeight;let top=$('text-position').value==='top'?h*.12:$('text-position').value==='bottom'?h*.82-blockHeight:(h-blockHeight)/2;top=Math.max(20,Math.min(h-blockHeight-20,top));let colorIndex=0;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    lines.forEach((line,lineIndex)=>{const y=top+(lineIndex+.85)*lineHeight;let units=graphemes(line);const widths=units.map(unit=>ctx.measureText(unit).width);let x=(w-widths.reduce((a,b)=>a+b,0))/2;units.forEach((unit,i)=>{ctx.lineWidth=Math.max(2,fontSize*.07);ctx.strokeStyle='#000';ctx.lineJoin='round';ctx.strokeText(unit,x+widths[i]/2,y);ctx.fillStyle=colors[colorIndex++%colors.length];ctx.fillText(unit,x+widths[i]/2,y);x+=widths[i];});});
+  }
+  function renderLoop(){drawFrame();raf=requestAnimationFrame(renderLoop);}
+  function recordingSupport(){if(!window.MediaRecorder||!canvas.captureStream)return{ok:false,message:'MediaRecorder या Canvas captureStream उपलब्ध नहीं है।'};const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];const mime=types.find(type=>!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(type));return mime?{ok:true,mime}:{ok:false,message:'इस browser में समर्थित recording format नहीं मिला।'};}
+  async function startRecording(){if(recorder)return;const capability=recordingSupport();if(!capability.ok){setStatus('record-status',capability.message,'bad');return;}revoke(recordingUrl);recordingUrl=null;$('record-download').hidden=true;recorderChunks=[];recorderMime=capability.mime;drawFrame();recorderStream=canvas.captureStream(Number($('fps').value)||30);
+    try{recorder=new MediaRecorder(recorderStream,{mimeType:recorderMime});recorder.ondataavailable=event=>{if(event.data&&event.data.size)recorderChunks.push(event.data);};recorder.onerror=event=>setStatus('record-status',`Recorder त्रुटि: ${event.error?.message||'अज्ञात त्रुटि'}`,'bad');recorder.onstop=()=>{const mime=recorder?.mimeType||recorderMime||'video/webm';const blob=new Blob(recorderChunks,{type:mime});recorderStream?.getTracks().forEach(track=>track.stop());recorderStream=null;recorder=null;if(!blob.size){setStatus('record-status','रिकॉर्डिंग खाली है; डाउनलोड तैयार नहीं हुआ।','bad');return;}recordingUrl=URL.createObjectURL(blob);const ext=mime.includes('mp4')?'mp4':'webm';$('record-download').href=recordingUrl;$('record-download').download=`swar-sadhika-${new Date().toISOString().replace(/[:.]/g,'-')}.${ext}`;$('record-download').hidden=false;setStatus('record-status',`Canvas वीडियो तैयार (${(blob.size/1048576).toFixed(2)} MB)। Browser TTS/background audio इसमें शामिल होने की पुष्टि नहीं है।`,'warn');};recorder.start(500);$('record-start').disabled=true;$('record-stop').disabled=false;setStatus('record-status','Canvas रिकॉर्डिंग चालू है। TTS ऑडियो इसमें शामिल नहीं माना जाएगा।','warn');}
+    catch(error){recorderStream?.getTracks().forEach(track=>track.stop());recorderStream=null;recorder=null;setStatus('record-status',`रिकॉर्डिंग शुरू नहीं हुई: ${error.message||error}`,'bad');}}
+  function stopRecording(){if(!recorder)return;if(recorder.state!=='inactive')recorder.stop();$('record-stop').disabled=true;$('record-start').disabled=false;}
+  $('record-start').addEventListener('click',startRecording);$('record-stop').addEventListener('click',stopRecording);
 
-      const lines = [];
-      const sourceLines = videoLineMode ? [text] : text.split('\n');
-      for (const explicitLine of sourceLines) {
-        const clusters = splitGraphemes(explicitLine);
-        let line = [], lineWidth = 0;
-        for (const cluster of clusters) {
-          const width = ctx.measureText(cluster).width;
-          if (!videoLineMode && line.length && lineWidth + width > maxWidth) { lines.push(line); line = []; lineWidth = 0; }
-          line.push({ text: cluster, width }); lineWidth += width;
-        }
-        lines.push(line);
-      }
-      const actualLineHeight = fontPx * 1.42;
-      const blockHeight = Math.max(actualLineHeight, lines.length * actualLineHeight);
-      let top;
-      if ($('text-position').value === 'top') top = h * .12;
-      else if ($('text-position').value === 'bottom') top = h * .78 - blockHeight;
-      else top = (h - blockHeight) / 2;
-      top = Math.max(25, Math.min(h - blockHeight - 20, top));
-      const palette = ['#fff36b', '#ff7887', '#7dffb0', '#7ed8ff', '#ffa5ff', '#ffffff'];
-      let colorIndex = 0;
-      lines.forEach((line, i) => {
-        const lineWidth = line.reduce((sum, part) => sum + part.width, 0);
-        let x = (w - lineWidth) / 2;
-        const y = top + (i + .84) * actualLineHeight;
-        for (const part of line) {
-          ctx.lineWidth = Math.max(2, fontPx * .09); ctx.strokeStyle = 'rgba(0,0,0,.9)'; ctx.lineJoin = 'round'; ctx.strokeText(part.text, x, y);
-          ctx.shadowColor = 'rgba(0,0,0,.8)'; ctx.shadowBlur = fontPx * .25; ctx.fillStyle = palette[colorIndex % 6]; ctx.fillText(part.text, x, y); ctx.shadowBlur = 0;
-          x += part.width; colorIndex += 1;
-        }
-      });
-    }
-    function drawOutputFrame() { if (!renderCtx) return; canvasDrawBackground(renderCtx); canvasDrawText(renderCtx); }
-    function ensureAudioGraph() {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) throw new Error('Web Audio API उपलब्ध नहीं है; audio recording track नहीं जोड़ा जा सकता।');
-      if (!audioContext) { audioContext = new AudioContextClass(); audioCaptureDestination = audioContext.createMediaStreamDestination(); }
-      if (audioContext.state === 'suspended') return audioContext.resume().then(() => wireMediaAudio()).then(() => audioCaptureDestination);
-      wireMediaAudio(); return Promise.resolve(audioCaptureDestination);
-    }
-    function wireMediaAudio() {
-      if (!audioContext || !audioCaptureDestination) return;
-      const mediaElements = [$('video-preview'), $('background-audio')];
-      for (const element of mediaElements) {
-        let node = mediaSourceNodes.get(element);
-        if (!node) {
-          try { node = audioContext.createMediaElementSource(element); mediaSourceNodes.set(element, node); }
-          catch (error) { if (!audioGraphWarningShown) { audioGraphWarningShown = true; setStatus($('record-status'), `Media audio capture की स्थापना नहीं हुई: ${error.message || error}. वीडियो रिकॉर्ड हो सकता है, audio track की गारंटी नहीं।`, 'warn'); } continue; }
-        }
-        if (!routedSources.has(node)) { node.connect(audioContext.destination); routedSources.add(node); }
-        if (!captureRoutedSources.has(node)) { try { node.connect(audioCaptureDestination); captureRoutedSources.add(node); } catch (_) {} }
-      }
-    }
-    async function startRecording() {
-      if (recording) return;
-      const capability = canMediaRecord();
-      if (!capability.ok) { setStatus($('record-status'), capability.reason, 'bad'); return; }
-      if (!renderCtx) { setStatus($('record-status'), 'Canvas 2D context उपलब्ध नहीं है; रिकॉर्डिंग नहीं हो सकती।', 'bad'); return; }
-      $('record-download').hidden = true;
-      if (lastRecordingUrl) { URL.revokeObjectURL(lastRecordingUrl); lastRecordingUrl = null; }
-      drawOutputFrame();
-      const fps = Number($('recording-fps').value) || 30;
-      const canvasStream = renderCanvas.captureStream(fps);
-      let audioIncluded = false;
-      try {
-        await ensureAudioGraph();
-        const audioTracksFromGraph = audioCaptureDestination?.stream?.getAudioTracks?.() || [];
-        audioTracksFromGraph.forEach(track => canvasStream.addTrack(track));
-        audioIncluded = audioTracksFromGraph.length > 0;
-      } catch (error) {
-        setStatus($('record-status'), `वीडियो रिकॉर्डिंग जारी रखी जा सकती है, पर audio track उपलब्ध नहीं: ${error.message || error}`, 'warn');
-      }
-      try {
-        recordingChunks = [];
-        const options = { mimeType: capability.mimeType };
-        try { recording = new MediaRecorder(canvasStream, options); }
-        catch (_) { recording = new MediaRecorder(canvasStream); }
-        recording.ondataavailable = (event) => { if (event.data && event.data.size > 0) recordingChunks.push(event.data); };
-        recording.onerror = (event) => setStatus($('record-status'), `MediaRecorder त्रुटि: ${event.error?.message || 'ब्राउज़र recording failure'}।`, 'bad');
-        recording.onstop = () => {
-          const actualType = recording?.mimeType || capability.mimeType || recordingChunks[0]?.type || 'video/webm';
-          const blob = new Blob(recordingChunks, { type: actualType });
-          canvasStream.getVideoTracks().forEach(track => track.stop());
-          if (blob.size === 0) {
-            setStatus($('record-status'), 'रिकॉर्डिंग बंद हुई, लेकिन output Blob खाली है। कोई डाउनलोड उपलब्ध नहीं।', 'bad');
-          } else {
-            lastRecordingUrl = URL.createObjectURL(blob);
-            const extension = actualType.includes('mp4') ? 'mp4' : 'webm';
-            $('record-download').href = lastRecordingUrl;
-            $('record-download').download = `swar-sadhika-${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
-            $('record-download').hidden = false;
-            setStatus($('record-status'), `रेंडर पूर्ण: ${(blob.size / (1024 * 1024)).toFixed(2)} MB, ${actualType}, ${formatSeconds((Date.now() - recordingStartedAt) / 1000)}। फ़ाइल तैयार है; download बटन दबाएँ। ${audioIncluded ? 'Web Audio track recording stream में जोड़ी गई थी; उसके सुनाई देने की अंतिम जाँच डाउनलोड की गई फ़ाइल में करें।' : 'Audio track शामिल नहीं हुआ; आउटपुट मौन हो सकता है।'}`, 'good');
-          }
-          if (recordingTick) clearInterval(recordingTick); recordingTick = null;
-          recording = null; recordingChunks = [];
-          refreshRecorderCapability(); $('record-stop-btn').disabled = true;
-        };
-        recordingStartedAt = Date.now();
-        recording.start(500);
-        $('record-start-btn').disabled = true; $('record-stop-btn').disabled = false;
-        setStatus($('record-status'), `वास्तविक MediaRecorder recording चल रही है (${recording.mimeType || capability.mimeType})। ${audioIncluded ? 'Audio track stream में जोड़ी गई है; सुनाई देने के लिए media source का चलना आवश्यक है।' : 'Audio track उपलब्ध नहीं; वीडियो मौन हो सकता है।'}`, 'good');
-        recordingTick = setInterval(() => { if (recording) setStatus($('record-status'), `रिकॉर्डिंग चल रही है — ${formatSeconds((Date.now() - recordingStartedAt) / 1000)}। रोकने पर output file तैयार होगी।`, 'good'); }, 500);
-      } catch (error) {
-        recording = null; canvasStream.getVideoTracks().forEach(track => track.stop());
-        setStatus($('record-status'), `रिकॉर्डिंग शुरू नहीं हो सकी: ${error.message || error}`, 'bad'); refreshRecorderCapability();
-      }
-    }
-    function stopRecording() {
-      if (!recording) return;
-      try { if (recording.state !== 'inactive') recording.stop(); else setStatus($('record-status'), 'Recorder पहले से बंद है।'); }
-      catch (error) { setStatus($('record-status'), `रिकॉर्डिंग रोकने में त्रुटि: ${error.message || error}`, 'bad'); }
-      $('record-stop-btn').disabled = true;
-    }
-    function formatSeconds(seconds) {
-      const value = Math.max(0, Math.floor(Number(seconds) || 0));
-      const h = Math.floor(value / 3600), m = Math.floor((value % 3600) / 60), s = value % 60;
-      return h ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    $('record-start-btn').addEventListener('click', startRecording);
-    $('record-stop-btn').addEventListener('click', stopRecording);
-    $('record-download').addEventListener('click', () => setStatus($('record-status'), 'डाउनलोड लिंक सक्रिय किया गया है। फ़ाइल आपके browser के download व्यवहार के अनुसार सहेजी जाएगी।', 'good'));
-
-    // AI परीक्षण पैनल अलग HTML पृष्ठ में खुलता है; मुख्य स्टूडियो iframe संदेशों पर निर्भर नहीं है.
-    // कोई model inference success यहाँ मानकर नहीं चलता.
-    $('ai-state-pill').textContent = 'अप्रमाणित';
-
-    // Render real frames only while an export is active; preview itself remains CSS/DOM based.
-    function renderLoop() {
-      if (recording && recording.state === 'recording') drawOutputFrame();
-      requestAnimationFrame(renderLoop);
-    }
-    requestAnimationFrame(renderLoop);
-    window.addEventListener('beforeunload', () => {
-      if (speechSupported) synth.cancel();
-      if (recording && recording.state !== 'inactive') { try { recording.stop(); } catch (_) {} }
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
-      videos.forEach(item => URL.revokeObjectURL(item.url));
-      audioTracks.forEach(item => URL.revokeObjectURL(item.url));
-      if (lastRecordingUrl) URL.revokeObjectURL(lastRecordingUrl);
-    });
-
-    // Initial UI sync.
-    refreshVoices();
-    refreshQueue();
-    renderVideoList();
-    renderAudioList();
-    refreshPreviewText();
-    refreshRecorderCapability();
-    if (speechSupported && !voices.length) setTimeout(refreshVoices, 800);
-  })();
-  </script>
+  window.addEventListener('beforeunload',()=>{if(synth)synth.cancel();if(recorder&&recorder.state!=='inactive'){try{recorder.stop();}catch(_){}}recorderStream?.getTracks().forEach(track=>track.stop());cancelAnimationFrame(raf);revoke(photoUrl);videoFiles.forEach(item=>revoke(item.url));audioFiles.forEach(item=>revoke(item.url));revoke(recordingUrl);});
+  refreshVoices();renderQueue();renderVideoList();renderAudioList();refreshStage();renderLoop();if(synth&&!voices.length)setTimeout(refreshVoices,800);
+})();
+</script>
 </body>
 </html>
