@@ -15,7 +15,12 @@
     main{padding:16px 12px 32px}.notice{padding:11px 13px;margin-bottom:14px;background:#fff;border:1px solid #cad8ed;border-left:5px solid var(--blue2);border-radius:11px;font-size:.88rem}.workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}.panel{min-width:0;overflow:hidden;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.panel-head{padding:14px 15px;border-bottom:1px solid #e8edf5}.panel-head h2{margin:0;font-size:1.05rem}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:.84rem}.panel-body{padding:14px}.field{display:grid;gap:6px;margin-bottom:13px}label,.field-label{font-size:.88rem;font-weight:750}.hint{font-size:.8rem;color:var(--muted)}textarea,input[type="text"],input[type="number"],select{width:100%;min-width:0;padding:10px;border:1px solid #c8d3e3;border-radius:9px;background:#fff;color:var(--ink)}textarea{min-height:145px;resize:vertical;line-height:1.8}input[type="file"]{width:100%;max-width:100%;padding:9px;border:1px dashed #b8c7dc;border-radius:9px;background:#f9fbff}input[type="range"]{width:100%;accent-color:var(--blue2)}input[type="checkbox"]{width:18px;height:18px}.check-row{display:flex;align-items:center;gap:8px;font-size:.88rem}.btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:42px;padding:9px 12px;border:1px solid transparent;border-radius:9px;text-align:center;text-decoration:none;font-weight:750;line-height:1.3}.primary{color:#fff;background:var(--blue);border-color:var(--blue)}.secondary{color:#173f7b;background:#edf3fc;border-color:#bfd0e8}.quiet{color:#45546c;background:#fff;border-color:#ccd6e5}.danger{color:#9c2727;background:#fff1f1;border-color:#e9bcbc}.btn.full{width:100%}.status{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#f3f6fb;color:#40506a;font-size:.85rem;overflow-wrap:anywhere}.status.good{color:var(--green);background:#e8f7ef}.status.warn{color:var(--amber);background:#fff4d8}.status.bad{color:var(--red);background:#fff0f0}
     /* 9:16 पूर्वावलोकन: दृश्य wrapping कभी भी वाचन-queue को नहीं बदलता। */
     .stage-wrap{padding:12px;background:#eaf0f8}.stage{position:relative;isolation:isolate;width:min(100%,390px);aspect-ratio:9/16;margin:0 auto;overflow:hidden;border-radius:12px;background:linear-gradient(145deg,#dce9ff,#687e9c);box-shadow:0 12px 28px #152a4b30}.stage-media{display:none;position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;background:#111827}.stage-media.active{display:block}.stage-empty{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;padding:20px;text-align:center;color:#243b5e}.stage-empty strong{font-size:1.1rem}.stage-empty p{font-size:.84rem}.stage-shade{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#0005,transparent 25%,transparent 66%,#0008)}.overlay-text{position:absolute;z-index:2;left:6%;right:6%;top:50%;transform:translateY(-50%);max-height:72%;overflow:hidden;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;font-size:28px;font-weight:850;line-height:1.55;text-shadow:0 2px 3px #000,0 0 9px #000;-webkit-text-stroke:.25px #000;pointer-events:none}.overlay-text .c1{color:#fff36b}.overlay-text .c2{color:#ff7887}.overlay-text .c3{color:#7dffb0}.overlay-text .c4{color:#7ed8ff}.overlay-text .c5{color:#ffa5ff}.overlay-text .c6{color:#fff}.stage-label{position:absolute;z-index:3;top:8px;left:8px;max-width:calc(100% - 16px);padding:5px 8px;border-radius:6px;color:#fff;background:#0d1c33bd;font-size:.7rem}.screen-actions{position:absolute;z-index:4;left:8px;right:8px;bottom:8px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.screen-actions button{min-height:34px;padding:5px 9px;border:1px solid #ffffff77;border-radius:8px;color:#fff;background:#102b55dc;font-size:.78rem}.screen-actions button:disabled{opacity:.55}.stage-controls{display:grid;gap:10px;margin-top:12px}.progress-track{height:9px;overflow:hidden;border-radius:99px;background:#e7edf5}.progress-bar{width:0;height:100%;background:#286ac3}.progress-meta{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:.79rem}.list{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}.list-item{padding:10px;border:1px solid #dae3ef;border-radius:9px}.item-title{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem}.item-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.small-btn{padding:5px 8px;min-height:32px;border:1px solid #cbd7e8;border-radius:7px;background:#f4f7fc;color:#214779}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}.media-player{width:100%;margin-top:10px}.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:10px;border:1px solid var(--line);border-radius:9px;background:#f8faff;font-size:.82rem}.metric strong{display:block}.footer{padding:0 12px 24px;color:#697588;font-size:.8rem}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    #stage:fullscreen{width:min(100vw,56.25dvh);height:min(100dvh,177.78vw);max-width:none;aspect-ratio:9/16;margin:auto;border-radius:0;box-shadow:none;background:#000}#stage:fullscreen .overlay-text{max-height:72%;font-size:clamp(22px,5.3vw,48px)}body:has(#stage:fullscreen){background:#000}
+    #stage:fullscreen{width:min(100vw,56.25dvh);height:min(100dvh,177.78vw);max-width:none;aspect-ratio:9/16;margin:auto;border-radius:0;box-shadow:none;background:#000}
+    #stage:fullscreen .overlay-text{max-height:72%;font-size:clamp(22px,5.3vw,48px)}
+    /* Fullscreen playback: the label and transport buttons must not cover the mantra. */
+    #stage:fullscreen .stage-label,#stage:fullscreen .screen-actions,
+    #stage:-webkit-full-screen .stage-label,#stage:-webkit-full-screen .screen-actions{display:none!important}
+    body:has(#stage:fullscreen){background:#000}
     @media(max-width:540px){main{padding:11px 8px 24px}.panel-body{padding:12px}.panel-head{padding:12px}.stage-wrap{padding:8px}.two-col{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}.btn-row>.btn{flex:1 1 auto}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
   </style>
@@ -237,7 +242,7 @@
     $('progress-caption').textContent = `${completed} / ${total} पंक्तियाँ पूर्ण`;
     $('current-caption').textContent = !running ? 'कोई वाचन सक्रिय नहीं' : paused ? 'वाचन रुका हुआ है' : `पंक्ति ${Math.min(itemIndex+1,total)} / ${total} चल रही है`;
     $('screen-pause').disabled = !running || paused; $('screen-resume').disabled = !running || !paused; $('screen-stop').disabled = !running;
-    $('play-fullscreen').disabled = running || !queue.length || !synth;
+    $('play-fullscreen').disabled = running || !queue.length || !synth || !selectedVoice();
     $('queue-clear').disabled = running; $('queue-add').disabled = running;
   }
   function renderQueue() {
@@ -256,16 +261,95 @@
     setStatus('queue-status',queue.length ? `${queue.length} मूल पंक्तियाँ कतार में हैं।` : 'कतार खाली है।',queue.length?'good':'warn');
     updateProgress();
   }
-  function refreshVoices() {
-    const select=$('voice-select');
-    if (!synth) { select.replaceChildren(new Option('Browser TTS उपलब्ध नहीं',''));setStatus('voice-status','इस browser में Speech Synthesis API उपलब्ध नहीं है।','bad');$('header-status').textContent='Browser TTS उपलब्ध नहीं';renderQueue();return; }
-    voices=synth.getVoices()||[];const previous=select.value;select.replaceChildren();
-    voices.forEach((voice,index)=>select.add(new Option(`${voice.name} — ${voice.lang}${voice.default?' (default)':''}`,String(index))));
-    if (!voices.length) {select.add(new Option('अभी कोई voice उपलब्ध नहीं',''));setStatus('voice-status','Voice सूची खाली है। Android/browser voice settings जाँचें।','warn');$('header-status').textContent='Voice की प्रतीक्षा';renderQueue();return;}
-    let index=Number(previous);if(!Number.isInteger(index)||index<0||index>=voices.length){index=voices.findIndex(v=>/^hi(?:-|$)/i.test(v.lang));if(index<0)index=0;}
-    select.value=String(index);setStatus('voice-status',`${voices.length} आवाज़ें उपलब्ध हैं। API महिला voice होने की गारंटी नहीं देती; उपयुक्त आवाज़ स्वयं चुनें।`,'good');$('header-status').textContent='Browser TTS उपलब्ध';renderQueue();
+  /*
+   * केवल संस्कृत और हिंदी की वास्तविक browser voices दिखाएँ।
+   * प्राथमिकता: Vedic-tagged Sanskrit > Sanskrit > Hindi.
+   * Vedic/Sanskrit का अंतर केवल तभी पहचाना जाता है जब browser की
+   * language tag या voice metadata उसे स्पष्ट रूप से पहचानता हो।
+   */
+  const VOICE_GROUPS = [
+    { key: 'vedic', label: '1. वैदिक संस्कृत — प्रथम प्राथमिकता' },
+    { key: 'sanskrit', label: '2. सामान्य संस्कृत — द्वितीय प्राथमिकता' },
+    { key: 'hindi', label: '3. हिंदी — तृतीय प्राथमिकता' }
+  ];
+  function classifyVoice(voice) {
+    const language = String(voice.lang || '').toLowerCase().replace(/_/g, '-');
+    const metadata = `${voice.name || ''} ${voice.voiceURI || ''}`.toLowerCase();
+    const isSanskrit = /^(sa|san)(?:-|$)/i.test(language);
+    const explicitVedicTag = /^(sa|san)-(?:vedic|vaidik|vaidika|veda)(?:-|$)/i.test(language);
+    const explicitVedicName = /(vedic|vaidik|vaidika|veda|वैदिक|वेदिक|वेदपाठ|संहिता)/iu.test(metadata);
+    if (isSanskrit && (explicitVedicTag || explicitVedicName)) return 'vedic';
+    if (isSanskrit) return 'sanskrit';
+    if (/^hi(?:-|$)/i.test(language)) return 'hindi';
+    return null;
   }
-  function selectedVoice(){const index=Number($('voice-select').value);return Number.isInteger(index)?voices[index]||null:null;}
+  function voiceKey(voice) {
+    return `${voice.voiceURI || ''}|${voice.name || ''}|${voice.lang || ''}`;
+  }
+  function refreshVoices() {
+    const select = $('voice-select');
+    if (!synth) {
+      voices = [];
+      select.replaceChildren(new Option('Browser TTS उपलब्ध नहीं', ''));
+      setStatus('voice-status', 'इस browser में Speech Synthesis API उपलब्ध नहीं है।', 'bad');
+      $('header-status').textContent = 'Browser TTS उपलब्ध नहीं';
+      renderQueue();
+      return;
+    }
+
+    const previousVoice = voices[Number(select.value)];
+    const previousKey = previousVoice ? voiceKey(previousVoice) : '';
+    const allVoices = synth.getVoices() || [];
+    const rank = new Map(VOICE_GROUPS.map((group, index) => [group.key, index]));
+    voices = allVoices
+      .map((voice, sourceIndex) => ({ voice, category: classifyVoice(voice), sourceIndex }))
+      .filter(entry => entry.category !== null)
+      .sort((a, b) => rank.get(a.category) - rank.get(b.category) || a.sourceIndex - b.sourceIndex)
+      .map(entry => entry.voice);
+
+    select.replaceChildren();
+    if (!voices.length) {
+      select.add(new Option('कोई संस्कृत/हिंदी voice उपलब्ध नहीं', ''));
+      setStatus('voice-status', 'डिवाइस की voice सूची में संस्कृत (sa) या हिंदी (hi) आवाज़ नहीं मिली। अन्य भाषाएँ जानबूझकर नहीं दिखाई गईं। Android की text-to-speech settings में Sanskrit/Hindi voice उपलब्ध हो तो उसे इंस्टॉल करके फिर जाँचें।', 'warn');
+      $('header-status').textContent = 'संस्कृत/हिंदी voice नहीं मिली';
+      renderQueue();
+      return;
+    }
+
+    let flatIndex = 0;
+    for (const groupInfo of VOICE_GROUPS) {
+      const groupVoices = voices
+        .map((voice, index) => ({ voice, index }))
+        .filter(entry => classifyVoice(entry.voice) === groupInfo.key);
+      if (!groupVoices.length) continue;
+      const group = document.createElement('optgroup');
+      group.label = groupInfo.label;
+      for (const entry of groupVoices) {
+        const voice = entry.voice;
+        const option = new Option(`${voice.name} — ${voice.lang}${voice.default ? ' (default)' : ''}`, String(entry.index));
+        option.dataset.voiceKey = voiceKey(voice);
+        group.append(option);
+        flatIndex++;
+      }
+      select.append(group);
+    }
+
+    const previousIndex = voices.findIndex(voice => voiceKey(voice) === previousKey);
+    select.value = String(previousIndex >= 0 ? previousIndex : 0);
+    const present = new Set(voices.map(classifyVoice));
+    const missing = VOICE_GROUPS.filter(group => !present.has(group.key)).map(group => group.label.split(' — ')[0]);
+    const filteredCount = Math.max(0, allVoices.length - voices.length);
+    const missingMessage = missing.length ? ` इस डिवाइस पर उपलब्ध नहीं: ${missing.join(', ')}.` : '';
+    setStatus('voice-status', `${voices.length} संस्कृत/हिंदी आवाज़ें मिलीं; अन्य ${filteredCount} गैर-लक्षित आवाज़ें सूची से हटाई गईं। क्रम वैदिक संस्कृत, सामान्य संस्कृत, हिंदी है।${missingMessage} ब्राउज़र metadata वैदिक उच्चारण या महिला स्वर की गुणवत्ता प्रमाणित नहीं करता।`, 'good');
+    $('header-status').textContent = 'संस्कृत/हिंदी TTS उपलब्ध';
+    renderQueue();
+  }
+  function selectedVoice() {
+    const value = $('voice-select').value;
+    if (value === '') return null;
+    const index = Number(value);
+    return Number.isInteger(index) ? voices[index] || null : null;
+  }
   function playMediaForRun(){
     if ($('pause-media').checked) audio.pause();
     if (currentVideo>=0) { video.loop=$('video-loop').checked; video.play().then(()=>setStatus('video-status','वीडियो चल रहा है।','good')).catch(error=>setStatus('video-status',`वीडियो शुरू नहीं हुआ: ${error.message||error}`,'warn')); }
@@ -304,14 +388,29 @@
     const newItems=lines.map(text=>({id:nextId++,text,state:'प्रतीक्षारत'}));const check=verifyQueuePreservesText(source,newItems);
     if(!check.ok){setStatus('preserve-test','विफल: कतार बनाने पर मूल पाठ बदल गया; पंक्तियाँ नहीं जोड़ी गईं।','bad');return;}
     const first=queue.length;queue.push(...newItems);selectedId=queue[first]?.id??null;draftPreview='';$('text-input').value='';
-    renderQueue();refreshStage();setStatus('preserve-test',`PASS: मूल और कतार के non-whitespace Unicode characters समान हैं (${check.originalCodePoints} code points).`,'good');setStatus('queue-status',`${lines.length} मूल पंक्तियाँ अक्षुण्ण कतार में जोड़ी गईं।`,'good');
+    renderQueue();refreshStage();setStatus('preserve-test',`PASS: मूल और कतार के non-whitespace Unicode characters समान हैं (${check.originalCodePoints} code points)।`,'good');setStatus('queue-status',`${lines.length} मूल पंक्तियाँ अक्षुण्ण कतार में जोड़ी गईं।`,'good');
   });
   $('queue-clear').addEventListener('click',()=>{if(running)return;queue=[];selectedId=null;draftPreview='';completed=0;renderQueue();refreshStage();setStatus('preserve-test','कतार साफ की गई। अगला जोड़ने पर पाठ-संरक्षण फिर जाँचा जाएगा।');});
   $('draft-preview').addEventListener('click',()=>{const lines=splitTextIntoQueueLines($('text-input').value);if(!lines.length){setStatus('queue-status','पहले पाठ लिखें।','warn');return;}selectedId=null;draftPreview=lines[0];refreshStage();setStatus('queue-status',`ड्राफ्ट की पहली मूल पंक्ति Preview में दिखाई गई (${lines.length} पंक्तियाँ)।`,'good');openPanel('studio');});
   $('text-input').addEventListener('input',()=>{if(running)return;if(!queue.some(item=>item.id===selectedId)){const lines=splitTextIntoQueueLines($('text-input').value);draftPreview=lines[0]||'';selectedId=null;refreshStage();}});
   $('play-fullscreen').addEventListener('click',startCombined);$('screen-pause').addEventListener('click',pauseRun);$('screen-resume').addEventListener('click',resumeRun);$('screen-stop').addEventListener('click',stopRun);
   $('fullscreen-only').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(stage.requestFullscreen)await stage.requestFullscreen();else setStatus('play-status','इस browser में Fullscreen API उपलब्ध नहीं है।','warn');}catch(error){setStatus('play-status',`Fullscreen नहीं खुला: ${error.message||error}`,'warn');}});
-  document.addEventListener('fullscreenchange',()=>{$('fullscreen-only').textContent=document.fullscreenElement?'⛶ Fullscreen बंद करें':'⛶ Fullscreen Preview';});
+  document.addEventListener('fullscreenchange',()=>{
+    const isStageFullscreen = document.fullscreenElement === stage || document.webkitFullscreenElement === stage;
+    $('fullscreen-only').textContent = isStageFullscreen ? '⛶ Fullscreen बंद करें' : '⛶ Fullscreen Preview';
+    /* Fullscreen CSS hides stage-label and screen-actions. When fullscreen ends, they return. */
+    if (isStageFullscreen) {
+      $('stage-label').setAttribute('aria-hidden', 'true');
+      $('screen-pause').setAttribute('aria-hidden', 'true');
+      $('screen-resume').setAttribute('aria-hidden', 'true');
+      $('screen-stop').setAttribute('aria-hidden', 'true');
+    } else {
+      $('stage-label').removeAttribute('aria-hidden');
+      $('screen-pause').removeAttribute('aria-hidden');
+      $('screen-resume').removeAttribute('aria-hidden');
+      $('screen-stop').removeAttribute('aria-hidden');
+    }
+  });
   $('voice-refresh').addEventListener('click',refreshVoices);if(synth){if(typeof synth.addEventListener==='function')synth.addEventListener('voiceschanged',refreshVoices);else synth.onvoiceschanged=refreshVoices;}
   $('voice-test').addEventListener('click',()=>{if(!synth)return;const voice=selectedVoice();if(!voice){setStatus('voice-status','पहले उपलब्ध voice चुनें।','warn');return;}synth.cancel();const utterance=new SpeechSynthesisUtterance('ॐ नमः शिवाय');utterance.voice=voice;utterance.lang=voice.lang||'hi-IN';utterance.rate=Number($('rate').value);utterance.pitch=Number($('pitch').value);utterance.volume=Number($('volume').value);utterance.onerror=event=>setStatus('voice-status',`Voice परीक्षण विफल: ${event.error||'अज्ञात त्रुटि'}`,'bad');utterance.onend=()=>setStatus('voice-status',`चुनी हुई voice ने परीक्षण वाक्य पूरा किया: ${voice.name}. यह महिला स्वर या मंत्र-शुद्धता का प्रमाण नहीं है।`,'good');synth.speak(utterance);});
   [['rate','rate-value',v=>`${Number(v).toFixed(1)}×`],['pitch','pitch-value',v=>Number(v).toFixed(1)],['volume','volume-value',v=>`${Math.round(Number(v)*100)}%`]].forEach(([id,out,format])=>$(id).addEventListener('input',()=>$(out).textContent=format($(id).value)));
@@ -323,13 +422,11 @@
   function renderVideoList(){const list=$('video-list');list.replaceChildren();videoFiles.forEach((item,index)=>{const li=document.createElement('li');li.className='list-item';const title=document.createElement('div');title.className='item-title';title.textContent=`${index+1}. ${item.file.name}`;const actions=document.createElement('div');actions.className='item-actions';const use=document.createElement('button');use.type='button';use.className='small-btn';use.textContent='यह क्लिप चुनें';use.addEventListener('click',()=>selectVideo(index));const remove=document.createElement('button');remove.type='button';remove.className='small-btn';remove.textContent='हटाएँ';remove.addEventListener('click',()=>{if(running)stopRun();const current=currentVideo===index;revoke(item.url);videoFiles.splice(index,1);if(!videoFiles.length){currentVideo=-1;video.pause();video.removeAttribute('src');video.load();video.dataset.active='false';}else if(current){currentVideo=-1;selectVideo(Math.min(index,videoFiles.length-1));}else if(index<currentVideo)currentVideo--;renderVideoList();refreshStage();});actions.append(use,remove);li.append(title,actions);list.append(li);});if(!videoFiles.length){const li=document.createElement('li');li.className='hint';li.textContent='कोई वीडियो क्लिप नहीं चुनी गई।';list.append(li);}setStatus('video-status',videoFiles.length?`${videoFiles.length} क्लिप उपलब्ध हैं।`: 'कोई वीडियो क्लिप नहीं चुनी गई।');}
   function selectVideo(index){if(index<0||index>=videoFiles.length)return;video.pause();currentVideo=index;video.src=videoFiles[index].url;video.loop=$('video-loop').checked;video.dataset.active='true';photo.dataset.active='false';video.load();refreshStage();setStatus('video-status',`चुनी गई क्लिप: ${videoFiles[index].file.name}`,'good');}
   $('video-input').addEventListener('change',()=>{for(const file of Array.from($('video-input').files||[])){if(file.type.startsWith('video/'))videoFiles.push({file,url:URL.createObjectURL(file)});} $('video-input').value='';if(videoFiles.length&&currentVideo<0)selectVideo(0);renderVideoList();});
-  $('video-play').addEventListener('click',()=>{if(currentVideo<0){setStatus('video-status','पहले वीडियो क्लिप चुनें।','warn');return;}openPanel('studio');video.loop=$('video-loop').checked;video.play().then(()=>setStatus('video-status','वीडियो Preview चल रहा है।','good')).catch(error=>setStatus('video-status',`वीडियो नहीं चला: ${error.message||error}`,'warn'));});$('video-pause').addEventListener('click',()=>video.pause());$('video-reset').addEventListener('click',()=>{video.pause();try{video.currentTime=0;}catch(_){}});
-  $('video-loop').addEventListener('change',()=>{video.loop=$('video-loop').checked;});video.addEventListener('error',()=>setStatus('video-status','वीडियो लोड/डिकोड नहीं हुआ। Codec compatibility जाँचें।','bad'));
+  $('video-play').addEventListener('click',()=>{if(currentVideo<0){setStatus('video-status','पहले वीडियो क्लिप चुनें।','warn');return;}openPanel('studio');video.loop=$('video-loop').checked;video.play().then(()=>setStatus('video-status','वीडियो Preview चल रहा है।','good')).catch(error=>setStatus('video-status',`वीडियो नहीं चला: ${error.message||error}`,'warn'));});$('video-pause').addEventListener('click',()=>video.pause());$('video-reset').addEventListener('click',()=>{video.pause();try{video.currentTime=0;}catch(_){}});$('video-loop').addEventListener('change',()=>{video.loop=$('video-loop').checked;});video.addEventListener('error',()=>setStatus('video-status','वीडियो लोड/डिकोड नहीं हुआ। Codec compatibility जाँचें।','bad'));
 
   function renderAudioList(){const list=$('audio-list');list.replaceChildren();audioFiles.forEach((item,index)=>{const li=document.createElement('li');li.className='list-item';const title=document.createElement('div');title.className='item-title';title.textContent=`${index+1}. ${item.file.name}`;const actions=document.createElement('div');actions.className='item-actions';const use=document.createElement('button');use.type='button';use.className='small-btn';use.textContent='ट्रैक चुनें';use.addEventListener('click',()=>selectAudio(index));const remove=document.createElement('button');remove.type='button';remove.className='small-btn';remove.textContent='हटाएँ';remove.addEventListener('click',()=>{audio.pause();const current=currentAudio===index;revoke(item.url);audioFiles.splice(index,1);if(current){currentAudio=-1;audio.removeAttribute('src');audio.hidden=true;if(audioFiles.length)selectAudio(Math.min(index,audioFiles.length-1));}else if(index<currentAudio)currentAudio--;renderAudioList();});actions.append(use,remove);li.append(title,actions);list.append(li);});if(!audioFiles.length){const li=document.createElement('li');li.className='hint';li.textContent='कोई ऑडियो ट्रैक नहीं।';list.append(li);}setStatus('audio-status',audioFiles.length?`${audioFiles.length} ऑडियो फाइलें उपलब्ध हैं।`:'कोई ऑडियो नहीं चुना गया।');}
   function selectAudio(index){if(index<0||index>=audioFiles.length)return;audio.pause();currentAudio=index;audio.src=audioFiles[index].url;audio.loop=$('audio-loop').checked;audio.hidden=false;audio.load();setStatus('audio-status',`चुना गया ट्रैक: ${audioFiles[index].file.name}`,'good');renderAudioList();}
-  $('audio-input').addEventListener('change',()=>{for(const file of Array.from($('audio-input').files||[])){if(file.type.startsWith('audio/')||/\.(mp3|wav|m4a|aac|ogg|webm)$/i.test(file.name))audioFiles.push({file,url:URL.createObjectURL(file)});} $('audio-input').value='';if(audioFiles.length&&currentAudio<0)selectAudio(0);renderAudioList();});
-  $('audio-loop').addEventListener('change',()=>audio.loop=$('audio-loop').checked);$('audio-play').addEventListener('click',()=>{if(currentAudio<0){setStatus('audio-status','पहले ऑडियो ट्रैक चुनें।','warn');return;}audio.play().then(()=>setStatus('audio-status','ऑडियो चल रहा है।','good')).catch(error=>setStatus('audio-status',`ऑडियो नहीं चला: ${error.message||error}`,'warn'));});$('audio-pause').addEventListener('click',()=>audio.pause());$('audio-stop').addEventListener('click',()=>{audio.pause();try{audio.currentTime=0;}catch(_){}});audio.addEventListener('error',()=>setStatus('audio-status','ऑडियो लोड/डिकोड नहीं हुआ। फाइल format जाँचें।','bad'));
+  $('audio-input').addEventListener('change',()=>{for(const file of Array.from($('audio-input').files||[])){if(file.type.startsWith('audio/')||/\.(mp3|wav|m4a|aac|ogg|webm)$/i.test(file.name))audioFiles.push({file,url:URL.createObjectURL(file)});} $('audio-input').value='';if(audioFiles.length&&currentAudio<0)selectAudio(0);renderAudioList();});$('audio-loop').addEventListener('change',()=>audio.loop=$('audio-loop').checked);$('audio-play').addEventListener('click',()=>{if(currentAudio<0){setStatus('audio-status','पहले ऑडियो ट्रैक चुनें।','warn');return;}audio.play().then(()=>setStatus('audio-status','ऑडियो चल रहा है।','good')).catch(error=>setStatus('audio-status',`ऑडियो नहीं चला: ${error.message||error}`,'warn'));});$('audio-pause').addEventListener('click',()=>audio.pause());$('audio-stop').addEventListener('click',()=>{audio.pause();try{audio.currentTime=0;}catch(_){}});audio.addEventListener('error',()=>setStatus('audio-status','ऑडियो लोड/डिकोड नहीं हुआ। फाइल format जाँचें।','bad'));
 
   function cover(source,sw,sh,dw,dh){const sourceRatio=sw/sh,destRatio=dw/dh;let sx=0,sy=0,cw=sw,ch=sh;if(sourceRatio>destRatio){cw=sh*destRatio;sx=(sw-cw)/2;}else{ch=sw/destRatio;sy=(sh-ch)/2;}ctx.drawImage(source,sx,sy,cw,ch,0,0,dw,dh);}
   function drawFrame(){const w=canvas.width,h=canvas.height;const gradient=ctx.createLinearGradient(0,0,w,h);gradient.addColorStop(0,'#e5efff');gradient.addColorStop(1,'#526985');ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
