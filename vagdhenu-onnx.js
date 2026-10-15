@@ -1,30 +1,29 @@
 /**
- * Swar-Sadhika — Vāgdhenu browser-runtime adapter
+ * Swar-Sadhika — Vāgdhenu browser-runtime adapter (source fallback v1.1)
+ *
+ * File: vagdhenu-onnx.js
  *
  * This file adapts the official Vāgdhenu browser engine to the API expected by
  * Swar-Sadhika's index.js. Neural inference is performed by the official
  * engine in this browser tab; model weights may be downloaded from the
  * official Hugging Face model repository. No cloud TTS/inference API is used.
  *
- * IMPORTANT: This adapter does not reimplement the model graph math.
- * It loads the public browser implementation from official static-source
+ * IMPORTANT: This adapter does not reimplement the neural model graph math.
+ * It loads the public browser implementation from candidate static-source
  * locations. If those locations are blocked/unavailable, it fails explicitly
  * instead of returning fake audio.
  */
 
 const VAGDHENU_SOURCE_CANDIDATES = Object.freeze([
-  // Official hosted application origin; relative imports can resolve at-source.
-  'https://h3manth.com/ai/sanskrit-tts/vagdhenu-onnx.js',
-  // Official GitHub Pages source, followed by CDN mirrors.
   'https://hemanth.github.io/sanskrit-tts-web/vagdhenu-onnx.js',
   'https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
   'https://fastly.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
   'https://gcore.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
+  'https://esm.sh/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
+  'https://h3manth.com/ai/sanskrit-tts/vagdhenu-onnx.js',
   'https://raw.githubusercontent.com/hemanth/sanskrit-tts-web/main/vagdhenu-onnx.js'
 ]);
 
-// The Swar-Sadhika facade calls the WebGPU path "onnx". Translate that
-// facade-specific name before forwarding to the upstream Vāgdhenu runtime.
 const BACKEND_ALIASES = Object.freeze({
   wasm: 'wasm',
   webgpu: 'webgpu',
@@ -35,6 +34,7 @@ const VAGDHENU_BACKENDS = new Set(Object.keys(BACKEND_ALIASES));
 
 function asErrorMessage(error) {
   if (error instanceof Error) return error.message;
+
   try {
     return String(error);
   } catch {
@@ -48,7 +48,8 @@ function normalizeBackend(value) {
 
   if (!backend || !VAGDHENU_BACKENDS.has(requested)) {
     throw new TypeError(
-      `Unsupported Vāgdhenu backend "${requested}". Use "wasm", "webgpu", or the Swar-Sadhika alias "onnx".`
+      `Unsupported Vāgdhenu backend "${requested}". ` +
+      'Use "wasm", "webgpu", or the Swar-Sadhika alias "onnx".'
     );
   }
 
@@ -72,7 +73,7 @@ function pcmToWavBlob(samples, sampleRate = 24000, channels = 1) {
 
   const pcm = samples instanceof Float32Array
     ? samples
-    : Float32Array.from(samples, (sample) => Number(sample));
+    : Float32Array.from(samples, sample => Number(sample));
 
   if (!pcm.length) {
     throw new Error('The engine returned empty PCM audio.');
@@ -104,7 +105,7 @@ function pcmToWavBlob(samples, sampleRate = 24000, channels = 1) {
   writeString(8, 'WAVE');
   writeString(12, 'fmt ');
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
+  view.setUint16(20, 1, true);
   view.setUint16(22, safeChannels, true);
   view.setUint32(24, safeRate, true);
   view.setUint32(
@@ -120,7 +121,10 @@ function pcmToWavBlob(samples, sampleRate = 24000, channels = 1) {
   let offset = 44;
 
   for (let i = 0; i < pcm.length; i += 1) {
-    const value = Math.max(-1, Math.min(1, Number(pcm[i]) || 0));
+    const value = Math.max(
+      -1,
+      Math.min(1, Number(pcm[i]) || 0)
+    );
 
     view.setInt16(
       offset,
@@ -143,7 +147,7 @@ function getEngineConstructor(moduleNamespace) {
   ];
 
   return candidates.find(
-    (candidate) => typeof candidate === 'function'
+    candidate => typeof candidate === 'function'
   ) || null;
 }
 
@@ -160,8 +164,6 @@ function getEngineConstructor(moduleNamespace) {
  */
 export class VagdhenuWebEngine {
   constructor(canvas = null, backendMode = 'wasm', config = {}) {
-    // Also allow:
-    // new VagdhenuWebEngine({ backend: 'wasm', ... })
     if (
       canvas &&
       typeof canvas === 'object' &&
@@ -171,7 +173,9 @@ export class VagdhenuWebEngine {
       config = canvas;
       canvas = config.canvas || null;
       backendMode =
-        config.backendMode || config.backend || backendMode;
+        config.backendMode ||
+        config.backend ||
+        backendMode;
     }
 
     this.canvas = canvas;
@@ -216,7 +220,6 @@ export class VagdhenuWebEngine {
     ) {
       await this._engine.setBackendMode(this.backendMode);
 
-      // A backend switch may invalidate the existing runtime sessions.
       this._initialized = false;
       this._initPromise = null;
     }
@@ -241,8 +244,6 @@ export class VagdhenuWebEngine {
 
       for (const sourceUrl of this.sourceUrls) {
         try {
-          // Import, rather than fetch/eval, so relative imports in the
-          // upstream ES module keep the correct source origin.
           const moduleNamespace = await import(
             /* webpackIgnore: true */ sourceUrl
           );
@@ -273,8 +274,9 @@ export class VagdhenuWebEngine {
         .join('\n');
 
       throw new Error(
-        'Vāgdhenu का आधिकारिक browser engine किसी उपलब्ध स्रोत से लोड नहीं हुआ। ' +
-        'यह नेटवर्क/CORS/स्रोत-उपलब्धता की विफलता है; अभी मॉडल inference नहीं चला।\n' +
+        'Vāgdhenu का आधिकारिक browser engine किसी उपलब्ध स्रोत से ' +
+        'लोड नहीं हुआ। यह नेटवर्क/CORS/स्रोत-उपलब्धता की विफलता है; ' +
+        'अभी मॉडल inference नहीं चला।\n' +
         details
       );
     })();
@@ -299,7 +301,6 @@ export class VagdhenuWebEngine {
       );
     }
 
-    // Expected upstream constructor shape: (canvas, backend).
     const engine = new this._OfficialEngine(
       this.canvas,
       this.backendMode
@@ -357,7 +358,7 @@ export class VagdhenuWebEngine {
             backend: this.backendMode
           });
         } catch {
-          // Keep the engine running if a progress observer fails.
+          // Keep the engine running if the progress callback fails.
         }
       }
 
@@ -373,7 +374,7 @@ export class VagdhenuWebEngine {
             backend: this.backendMode
           });
         } catch {
-          // Keep the engine running if a progress observer fails.
+          // Keep the engine running if the progress callback fails.
         }
       }
 
@@ -429,13 +430,12 @@ export class VagdhenuWebEngine {
       ...options
     };
 
-    // Keep callbacks explicit and do not mutate the caller's options object.
     const callerChunk =
       typeof synthesisOptions.onChunk === 'function'
         ? synthesisOptions.onChunk
         : null;
 
-    synthesisOptions.onChunk = (chunk) => {
+    synthesisOptions.onChunk = chunk => {
       if (callerChunk) {
         try {
           callerChunk(chunk);
@@ -448,7 +448,7 @@ export class VagdhenuWebEngine {
       }
     };
 
-    const reportProgress = (value) => {
+    const reportProgress = value => {
       if (typeof progressCallback !== 'function') {
         return;
       }
@@ -475,7 +475,9 @@ export class VagdhenuWebEngine {
       reportProgress
     );
 
-    const normalized = await this._normalizeAudioResult(rawResult);
+    const normalized = await this._normalizeAudioResult(
+      rawResult
+    );
 
     this._lastResult = normalized;
 
@@ -520,9 +522,6 @@ export class VagdhenuWebEngine {
       };
     }
 
-    // Do not wrap arbitrary bytes as WAV: raw PCM needs an explicit sample
-    // format and a real WAV header. The upstream engine should normally return
-    // a URL/Blob or a named PCM field with metadata.
     if (
       result instanceof ArrayBuffer ||
       isTypedArray(result)
@@ -579,7 +578,6 @@ export class VagdhenuWebEngine {
       };
     }
 
-    // Support engines that return a Web Audio AudioBuffer.
     const audioBuffer =
       result.audioBuffer || result.buffer;
 
@@ -643,7 +641,9 @@ export class VagdhenuWebEngine {
 
     if (isTypedArray(pcm) || Array.isArray(pcm)) {
       const sampleFormat = String(
-        result.format || result.audioFormat || 'float32'
+        result.format ||
+        result.audioFormat ||
+        'float32'
       ).toLowerCase();
 
       if (
@@ -676,7 +676,9 @@ export class VagdhenuWebEngine {
     throw new Error(
       'Vāgdhenu का synthesis call पूरा हुआ, लेकिन परिणाम में ' +
       'पहचाना जाने वाला ऑडियो URL/Blob/PCM नहीं मिला। ' +
-      `वापस मिली properties: ${Object.keys(result).join(', ') || '(none)'}`
+      `वापस मिली properties: ${
+        Object.keys(result).join(', ') || '(none)'
+      }`
     );
   }
 
