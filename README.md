@@ -1,233 +1,178 @@
+स्वर-साधिका (Swar-Sadhika)
 
-# स्वर-साधिका (Swar-Sadhika) — Test Repository
+संस्कृत, श्लोक, मंत्र, स्तोत्र एवं वैदिक पाठ के लिए स्थानीय AI गायन ऐप — विकास एवं परीक्षण परियोजना
 
-This repository is the testing environment for Swar-Sadhika, a browser-based
-application intended to help generate clear, melodious Sanskrit vocal output.
+"ऐप खोलें — GitHub Pages" (https://shreevidyamatabhuvanesvari-gif.github.io/swar-sadhika-test/)
 
-**This is a test repository.** Do not copy its changes into the separate
-`anujadha` main application without an independent review.
+1. परियोजना का उद्देश्य
 
-## 1. Project objective
+स्वर-साधिका का उद्देश्य एक ऐसा Android-अनुकूल, ब्राउज़र-आधारित ऐप विकसित करना है, जिसमें संस्कृत और देवनागरी पाठ को स्पष्ट, मधुर, सुरीले तथा स्त्री-स्वर के अनुकूल गायन में परिवर्तित किया जा सके।
 
-The long-term objective is to support clear pronunciation and melodious,
-rhythmic vocal rendering of Sanskrit shlokas, mantras, stotras, Vedic passages,
-and other Sanskrit texts.
+इसके लक्षित उपयोग में शामिल हैं:
 
-The intended experience includes:
+- संस्कृत श्लोक
+- मंत्र एवं स्तोत्र
+- ऋग्वेद की ऋचाएँ और अन्य वैदिक पाठ
+- धार्मिक एवं पारंपरिक संस्कृत रचनाएँ
 
-- Sanskrit text input and playback controls.
-- Better handling of Devanagari characters and conjunct consonants.
-- Browser-based execution suitable for Android devices.
-- Real audio generation and playback when a compatible engine is available.
-- Local model/runtime use where technically and legally feasible.
-- Offline operation only after complete end-to-end verification.
+मुख्य लक्ष्य: उपयोगकर्ता के दिए हुए पाठ से वास्तविक ऑडियो उत्पन्न करने वाली अपनी आभासी गायन-आवाज़ विकसित करना।
 
-Ordinary text-to-speech, rhythmic recitation, and independent melodic singing
-are different capabilities. The application must not claim that an engine
-supports melodic singing unless actual output demonstrates that capability.
+केवल पाठ का विश्लेषण, किसी बाहरी वेबसाइट को खोलना या पहले से मौजूद ऑडियो चलाना इस लक्ष्य की पूर्ति नहीं है।
 
-## 2. Current AI engine status
+2. परीक्षण रिपॉज़िटरी
 
-**Status: NOT VERIFIED — successful real synthesis has not been established.**
+- GitHub repository: https://github.com/shreevidyamatabhuvanesvari-gif/swar-sadhika-test
+- GitHub Pages: https://shreevidyamatabhuvanesvari-gif.github.io/swar-sadhika-test/
 
-The application contains an engine adapter and model-cache logic. However,
-the presence of these modules does not establish that all required upstream
-engine code, runtime assets, model weights, and dependencies are available.
+सभी विकास एवं परीक्षण इसी परीक्षण रिपॉज़िटरी में किए जाएँ।
 
-The adapter in `vagdhenu-onnx.js` attempts to load the upstream browser engine.
-External imports may still be required.
+"anujadha" नामक अलग मुख्य ऐप में कोई बदलाव न किया जाए।
 
-The supplied ZIP did not contain a complete, verified local engine/runtime/model
-package. The repository must not be described as fully self-contained or
-offline-ready on this evidence.
+3. तकनीकी लक्ष्य
 
-A successful page load, module import, HTTP response, model download, cache
-entry, or initialization message is not proof of successful inference.
+परियोजना की प्रस्तावित तकनीकी दिशा निम्नलिखित है:
 
-The AI panel must not be considered passing until all of the following have
-been tested:
+1. Android-अनुकूल मोबाइल ब्राउज़र में संचालन।
+2. ब्राउज़र के भीतर AI inference।
+3. आवश्यक मॉडल एवं रनटाइम फ़ाइलों का वैध स्रोत से डाउनलोड।
+4. डाउनलोड की गई आवश्यक फ़ाइलों को स्थानीय रूप से कैश करना।
+5. वास्तविक ऑडियो निर्माण और ब्राउज़र में प्लेबैक।
+6. इंटरनेट के बिना संचालन की संभावना का वास्तविक परीक्षण।
+7. त्रुटियों और असफलताओं की स्पष्ट रिपोर्टिंग।
 
-1. Required engine modules and runtime assets load.
-2. A compatible backend initializes successfully.
-3. Real Sanskrit input is accepted by the engine.
-4. Actual inference completes without an error.
-5. Non-empty, valid audio data is returned.
-6. The generated audio can be played and heard.
-7. The target Android browser is tested.
-8. Offline synthesis is repeated successfully with the network disconnected,
-   if offline operation is claimed.
+पहली बार आवश्यक मॉडल या रनटाइम फ़ाइलें डाउनलोड करने के लिए इंटरनेट की आवश्यकता हो सकती है।
 
-See `AI-ENGINE-IMPLEMENTATION-STATUS.md` for the detailed verification
-checklist. That file must be kept consistent with actual repository and test
-evidence.
+ऑफ़लाइन संचालन तभी प्रमाणित माना जाएगा जब इंटरनेट बंद करके ऐप का आरंभ, मॉडल initialization, नया ऑडियो निर्माण और ऑडियो प्लेबैक सफलतापूर्वक जाँचे जाएँ।
 
-## 3. Backend contract
+4. वर्तमान तकनीकी स्थिति
 
-The reviewed application interface uses the public backend names:
+परियोजना की उपलब्ध फ़ाइलों की समीक्षा से निम्नलिखित स्थिति सामने आई है:
 
-- `wasm`
-- `onnx`
+घटक| स्थिति
+संस्कृत पाठ-विश्लेषण मॉड्यूल| उपलब्ध
+"vagdhenu-onnx.js" adapter| उपलब्ध; बाहरी upstream इंजन आयात करने का प्रयास करता है
+"vagdhenu-text.js"| पाठ-विश्लेषण संबंधी उपयोगिताएँ
+"model-cache.js"| मॉडल फ़ाइलों को डाउनलोड एवं कैश करने की सुविधा
+"service-worker.js"| कैशिंग एवं ऑफ़लाइन समर्थन के लिए मौजूद
+पूर्ण स्थानीय AI इंजन| अभी प्रमाणित नहीं
+वास्तविक AI inference| स्वतंत्र रूप से सत्यापित नहीं
+वास्तविक ऑडियो निर्माण एवं प्लेबैक| लक्ष्य डिवाइस पर सत्यापित नहीं
+पूर्ण ऑफ़लाइन गायन| सत्यापित नहीं
+Android संगतता| परीक्षण प्रमाण उपलब्ध होने तक अप्रमाणित
+उत्पादन के लिए तत्परता| अभी स्थापित नहीं
 
-The adapter contains a mapping from the public `onnx` value to an upstream
-`webgpu` label. This mapping must be verified against the actual upstream
-engine and execution provider.
+यह तालिका उपलब्ध समीक्षा-संदर्भ पर आधारित है। नवीनतम GitHub commit और प्रकाशित ऐप की अलग से जाँच आवश्यक है।
 
-Do not assume that a backend works because its name appears in the UI or
-because an adapter accepts the value.
+5. AI इंजन और मॉडल स्रोत
 
-Record initialization failures and unsupported-backend errors accurately.
-Never return fabricated success or fabricated audio after a failure.
+परियोजना में निम्नलिखित संभावित मॉडल स्रोत संदर्भित किए गए हैं:
 
-## 4. Local pronunciation-reference panel
+- ONNX मॉडल: https://huggingface.co/gnumanth/sanskrit-tts-onnx
+- WASM मॉडल: https://huggingface.co/gnumanth/sanskrit-tts-wasm
+- Upstream browser engine: https://github.com/hemanth/sanskrit-tts-web
 
-The AI testing panel includes a local pronunciation-reference workflow.
+इन स्रोतों का उल्लेख यह प्रमाणित नहीं करता कि सभी आवश्यक फ़ाइलें डाउनलोड, एकीकृत, लाइसेंस-सत्यापित या ऑफ़लाइन उपयोग के लिए तैयार हैं।
 
-The documented workflow is:
+मॉडल फ़ाइलों का लाइसेंस, upstream JavaScript इंजन के लाइसेंस से अलग हो सकता है। प्रत्येक घटक के अधिकारों और शर्तों की स्वतंत्र जाँच आवश्यक है।
 
-1. The user explicitly selects an audio or video file from the device.
-2. The user enters or validates the corresponding Sanskrit text.
-3. Audio files can be analyzed locally, subject to browser decoding support.
-   The implemented analysis includes approximate RMS, quiet-frame ratio,
-   peak amplitude, and a sampled autocorrelation-based pitch estimate.
-4. Video files are sampled locally for limited audio descriptors.
-5. Text and derived descriptors can be stored in IndexedDB.
-6. Stored records can be listed, deleted individually, cleared, or exported
-   as JSON where those controls are available.
+6. लाइसेंस संबंधी महत्वपूर्ण अवरोध
 
-This workflow is local analysis and reference storage, **not AI training**.
+Upstream इंजन को रिपॉज़िटरी में लाने के लिए बनाई गई GitHub Actions प्रक्रिया में यह त्रुटि आई थी:
 
-The collected records must not be described as improving generated singing
-unless an actual learning or conditioning mechanism consumes them and the
-improvement is evaluated.
+"ERROR: No top-level upstream license file was found. Do not vendor the source until its license or written permission is verified."
 
-Browser codec support, storage quota, and browser eviction can affect this
-feature. Verify actual behavior on the target Android browser.
+इसका अर्थ है कि स्रोत को कॉपी करने से पहले आवश्यक लाइसेंस या लिखित अनुमति का प्रमाण नहीं मिला।
 
-## 5. Model download and caching
+आवश्यक कार्रवाई:
 
-The application includes model-cache functionality intended to download
-selected model artifacts and store them in browser Cache Storage.
+1. उपयोग किए जाने वाले upstream स्रोत का सटीक revision निर्धारित करना।
+2. लागू लाइसेंस या पर्याप्त लिखित अनुमति सत्यापित करना।
+3. प्रतिलिपि बनाने, संशोधन करने और वितरण की अनुमति जाँचना।
+4. अनुमति सत्यापित होने के बाद ही engine vendoring प्रक्रिया आगे बढ़ाना।
 
-Downloading or caching a model is not proof that:
+इस सुरक्षा-जाँच को केवल workflow सफल बनाने के लिए हटाया या निष्क्रिय नहीं किया जाना चाहिए।
 
-- The downloaded file is the correct model.
-- Its integrity has been verified.
-- The runtime can load it.
-- The selected backend is compatible.
-- Inference succeeds.
-- Audio playback works.
-- All required files are available offline.
+7. लागत और बाहरी सेवाओं के संबंध में नीति
 
-Model size, content type, HTTP status, redirects, cross-origin restrictions,
-browser storage limits, and cache eviction must be checked against actual
-downloads and runtime behavior.
+परियोजना का निर्धारित लक्ष्य ब्राउज़र में स्थानीय inference है।
 
-Do not claim verified model integrity unless a trusted expected digest or
-equivalent integrity check has actually been applied.
+परियोजना के स्वामी की स्पष्ट अनुमति के बिना निम्नलिखित को अनिवार्य निर्भरता के रूप में नहीं जोड़ा जाए:
 
-## 6. Service worker and offline behavior
+- सशुल्क AI API
+- अनिवार्य API Key
+- सदस्यता शुल्क
+- अलग inference server
+- क्लाउड-आधारित गायन सेवा
 
-`service-worker.js` is responsible for caching selected application resources
-and, where configured, selected runtime or model requests.
+पहली बार मॉडल डाउनलोड करने में इंटरनेट और डेटा की आवश्यकता हो सकती है। स्थानीय संचालन की वास्तविक सीमा उपलब्ध इंजन, मॉडल और रनटाइम पर निर्भर करेगी।
 
-The actual committed service-worker code must be inspected before describing
-its cache strategy or claiming that an update is deployed.
+8. ऐप का परीक्षण कैसे करें
 
-The following are separate verification states:
+GitHub Pages पर उपलब्ध ऐप खोलें:
 
-- Application shell cached.
-- JavaScript modules cached.
-- Runtime and WASM assets cached.
-- Model weights cached.
-- All required dependencies available.
-- Real inference successful.
-- Audio playback successful.
-- Full synthesis workflow successful without a network connection.
+https://shreevidyamatabhuvanesvari-gif.github.io/swar-sadhika-test/
 
-Service-worker registration and cache inspection alone do not establish
-offline inference.
+परीक्षण करते समय निम्नलिखित बिंदुओं की जाँच करें:
 
-When testing an updated deployment, record the actual commit, browser,
-cache state, network conditions, and observed result. A stale cached file can
-make an older application version appear to remain active.
+1. ऐप बिना गंभीर JavaScript त्रुटियों के खुलता है या नहीं।
+2. आवश्यक इंजन और मॉडल फ़ाइलें उपलब्ध हैं या नहीं।
+3. इंजन initialization सफल होता है या नहीं।
+4. संस्कृत पाठ से नया ऑडियो वास्तव में बनता है या नहीं।
+5. ऑडियो प्लेयर में वास्तविक ध्वनि सुनाई देती है या नहीं।
+6. देवनागरी वर्ण, संयुक्ताक्षर, विराम-चिह्न और वैदिक चिह्न सुरक्षित रहते हैं या नहीं।
+7. इंटरनेट बंद करके ऐप नया ऑडियो बना और चला सकता है या नहीं।
+8. विफलता होने पर ऐप सही त्रुटि दिखाता है या झूठी सफलता।
 
-## 7. Local development
+परीक्षण रिपोर्ट में डिवाइस, ब्राउज़र, परीक्षण की तारीख, परिणाम और संबंधित त्रुटियाँ दर्ज की जानी चाहिए।
 
-Serve the repository over HTTPS or localhost so native ES modules and
-IndexedDB can operate in a suitable browser origin.
+9. परीक्षण परिणाम दर्ज करने के मानक
 
-For example:
+प्रत्येक परीक्षण के लिए निम्नलिखित में से उपयुक्त स्थिति दर्ज करें:
 
-```sh
-python3 -m http.server 8000
-```
+- "NOT TESTED" — परीक्षण नहीं किया गया।
+- "PASS" — निर्धारित परिणाम वास्तविक परीक्षण में मिला।
+- "FAIL" — परीक्षण किया गया, लेकिन अपेक्षित परिणाम नहीं मिला।
+- "BLOCKED" — किसी आवश्यक अनुमति या निर्भरता के अभाव में परीक्षण रुका।
+- "PARTIAL" — केवल कुछ अपेक्षित परिणाम सत्यापित हुए।
 
-Then open:
+केवल कोड लिख देना, मॉडल डाउनलोड कर लेना या पेज खोल लेना सफल AI गायन का प्रमाण नहीं है।
 
-```text
-http://localhost:8000/
-```
+10. योगदान और बदलाव संबंधी नियम
 
-This command only serves the local files. It does not install the upstream
-engine, download model weights, or prove successful audio generation.
+किसी फ़ाइल को बदलने से पहले उसकी वर्तमान सामग्री और उससे संबंधित निर्भरताओं की जाँच करें।
 
-## 8. Upstream engine and dependency requirements
+- केवल आवश्यक बदलाव करें।
+- असंबंधित कार्यशील सुविधाएँ सुरक्षित रखें।
+- बदलावों का वास्तविक Git diff जाँचें।
+- उपयुक्त परीक्षण चलाएँ।
+- GitHub commit और GitHub Pages deployment की स्थिति अलग-अलग सत्यापित करें।
+- परीक्षण के प्रमाण के बिना किसी सुविधा को पूर्ण न घोषित करें।
 
-Before packaging upstream source code or runtime assets:
+11. अधिकार और तृतीय-पक्ष सामग्री
 
-1. Verify the upstream repository and exact revision.
-2. Review its license and applicable redistribution requirements.
-3. Inspect every nested JavaScript import.
-4. Identify the actual runtime JavaScript and WASM files.
-5. Identify the required model weights and their source.
-6. Verify paths and MIME types on GitHub Pages.
-7. Check for external network dependencies.
-8. Test the complete engine in the intended browser.
+परियोजना के स्वामी के मूल कार्य पर लागू अधिकारों और तृतीय-पक्ष सामग्री के अधिकारों को अलग-अलग समझा जाए।
 
-The archive contains a vendor-fetch script and a GitHub Actions workflow, but
-their presence does not prove that the workflow ran successfully or that the
-upstream engine has been included in the deployed repository.
+"RIGHTS-NOTICE.md" जैसे अधिकार-सूचना दस्तावेज़ का होना किसी बाहरी इंजन, लाइब्रेरी या मॉडल को कॉपी करने की स्वतः अनुमति नहीं देता।
 
-Do not execute an unverified vendor workflow or overwrite repository files
-without checking the target repository and intended changes.
+सभी तृतीय-पक्ष घटकों के लागू लाइसेंस, अनुमतियों और आवश्यक सूचनाओं का पालन करना अनिवार्य है।
 
-All testing and changes described here must remain confined to
-`swar-sadhika-test`. Do not modify `anujadha`.
+12. पूर्णता की शर्तें
 
-## 9. Required test evidence
+स्वर-साधिका को सफल तभी माना जाए जब वास्तविक परीक्षण से यह प्रमाणित हो कि:
 
-Maintain a record of:
+1. आवश्यक इंजन और मॉडल वैध रूप से उपयोग किए जा सकते हैं।
+2. मॉडल लक्ष्य डिवाइस पर सफलतापूर्वक initialize होता है।
+3. दिए गए संस्कृत पाठ से वास्तविक ऑडियो उत्पन्न होता है।
+4. उपयोगकर्ता उस ऑडियो को सुन सकता है।
+5. लक्षित मधुर एवं स्त्री-स्वर के अनुकूल गायन-गुणवत्ता को वास्तविक ऑडियो से परखा गया है।
+6. Android पर व्यवहार सत्यापित किया गया है।
+7. ऑफ़लाइन संचालन का दावा करने पर पूरा ऑफ़लाइन परीक्षण सफल हुआ है।
+8. परीक्षण परिणाम और त्रुटियाँ दस्तावेज़ित हैं।
 
-- Exact Git commit tested.
-- Browser and device.
-- Network availability.
-- Console and network errors.
-- Runtime and backend initialization results.
-- Actual Sanskrit input used.
-- Whether inference completed.
-- Audio format, non-zero size, and duration.
-- Whether the generated audio was actually heard.
-- Pronunciation and singing-quality observations.
-- Offline test procedure and outcome, if applicable.
-- Remaining failures and limitations.
+13. अंतिम लक्ष्य
 
-Mark a test PASS only when the required evidence exists. Tests that have not
-been executed must remain NOT VERIFIED.
+स्वर-साधिका का मुख्य उद्देश्य संस्कृत पाठ के लिए उपयोगकर्ता की अपनी आभासी गायन-आवाज़ विकसित करना है।
 
-## 10. Release policy
+इस लक्ष्य की पूर्ति का दावा तभी किया जाएगा जब वास्तविक AI inference, ऑडियो निर्माण, प्लेबैक और आवश्यक ऑफ़लाइन व्यवहार के प्रमाण उपलब्ध हों।
 
-The following claims are not established merely by the current code or UI:
-
-- Successful real AI inference.
-- Correct Sanskrit pronunciation across all supported texts.
-- Independent melodic singing.
-- Reliable Android audio playback.
-- Complete offline operation.
-- Zero known defects.
-- Production readiness.
-
-The objective is a genuinely useful voice-generation application. Prefer
-small, reviewed changes and preserve existing functionality. Never replace
-working modules merely to make the repository appear complete.
-
-**Current release decision: NOT VERIFIED.**
+वर्तमान स्थिति: परियोजना विकास एवं सत्यापन के चरण में है। पूर्ण स्थानीय AI गायन और ऑफ़लाइन संचालन अभी प्रमाणित नहीं हैं।
