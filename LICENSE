@@ -1,0 +1,26 @@
+SWAR-SADHIKA TEST REPOSITORY — SOURCE RIGHTS NOTICE
+
+Copyright © 2026 Swar-Sadhika project owner. All rights reserved.
+
+SCOPE
+This notice applies only to original source code, text, user interface, project documentation, and other project materials that were created for the Swar-Sadhika test repository and are owned by its project owner, except where a file or third-party notice states otherwise.
+
+PERMISSION
+Unless the project owner gives separate written permission, no license is granted to copy, modify, redistribute, sublicense, sell, or create derivative works from the project-owner-owned materials covered by this notice. Public visibility on GitHub or GitHub Pages does not, by itself, grant those permissions.
+
+THIRD-PARTY MATERIALS — EXCLUDED FROM THIS NOTICE
+1. Vāgdhenu browser-engine source: https://github.com/hemanth/sanskrit-tts-web
+   During the project audit, no upstream top-level LICENSE file or written redistribution permission had been verified. This notice does NOT license that source, does NOT claim to be authored by its maintainer, and does NOT grant permission to copy or vendor it. Do not add a fabricated LICENSE file to an upstream copy.
+
+2. Vāgdhenu model assets:
+   https://huggingface.co/gnumanth/sanskrit-tts-wasm
+   https://huggingface.co/gnumanth/sanskrit-tts-onnx
+   These model repositories identify their model assets as MIT-licensed. The license attached to the exact model repository revision and its individual files governs those assets, not this project notice.
+
+3. ONNX Runtime Web, WASM binaries, external libraries, fonts, and any other third-party assets are governed by their respective copyright notices and license terms. Their licenses must be reviewed separately before redistribution.
+
+IMPORTANT LIMITATION
+This file is a rights notice for original Swar-Sadhika project materials. It is not an upstream Vāgdhenu license, is not a substitute for written permission from another author, and cannot make an unlicensed third-party source safe to redistribute. It will not satisfy a workflow that checks for a license inside the upstream repository itself.
+
+AI / MODEL DISCLAIMER
+The presence of model download files, browser caches, or an adapter does not prove that real inference, audio playback, or offline operation has passed. Those claims require separate recorded tests.
