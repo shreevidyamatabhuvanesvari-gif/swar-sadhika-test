@@ -1,4 +1,3 @@
-
 /**
  * Swar-Sadhika — Sanskrit / Devanagari text utilities
  * File: swar-sadhika-test/vagdhenu-text.js
@@ -802,7 +801,7 @@ export function runTextModuleSelfTests() {
   tests.push({ name: 'detects Udatta sign', pass: detectVedicMarks('अग्निमीळे॑').marks.some(m => m.codePoint === 'U+0951') });
   tests.push({ name: 'rejects empty input', pass: validateSanskritText('').valid === false });
   const report = analyzeVerse('वागर्थाविव संपृक्तौ वागर्थप्रतिपत्तये ।\nजगतः पितरौ वन्दे पार्वतीपरमेश्वरौ ॥');
-  tests.push({ name: 'analyzeVerse returns compatible meter field', pass: Boolean(report && report.meter && Array.isArray(report.padas)) });
+  tests.push({ name: 'analyzeVerse returns compatible meter field', pass: Boolean(report && report.meter && Array.isArray(report.padas) });
   tests.push({ name: 'all nine compatibility exports are callable', pass: [preparePieces, splitPadas, toDeva, nAksharas, aksharas, repDepths, endsHalant, alignSlp1, detectMeterKey].every(fn => typeof fn === 'function') });
   tests.push({ name: 'SLP1 transliteration of namaste', pass: toDeva('namaste') === 'नमस्ते' });
   tests.push({ name: 'Devanagari input is preserved by toDeva', pass: toDeva('अग्निमीळे॑') === 'अग्निमीळे॑' });
