@@ -106,8 +106,8 @@ function addAiControls() {
         <div class="field">
           <label for="ss-ai-backend">Inference backend</label>
           <select id="ss-ai-backend">
-            <option value="wasm">WASM</option>
-            <option value="webgpu">WebGPU</option>
+            <option value="wasm">WASM (CPU)</option>
+            <option value="onnx">ONNX / WebGPU</option>
           </select>
         </div>
 
@@ -151,6 +151,9 @@ function addAiControls() {
         <button class="btn secondary" id="ss-ai-copy-studio" type="button">
           Studio पाठ यहाँ लाएँ
         </button>
+        <button class="btn secondary" id="ss-ai-cache-models" type="button">
+          मॉडल डाउनलोड / कैश करें
+        </button>
         <button class="btn secondary" id="ss-ai-init" type="button">
           इंजन आरम्भ करें
         </button>
@@ -160,6 +163,10 @@ function addAiControls() {
         <button class="btn danger" id="ss-ai-stop" type="button" disabled>
           परिणाम / Playback रोकें
         </button>
+      </div>
+
+      <div id="ss-ai-cache-status" class="status warn" role="status" aria-live="polite" style="margin:8px 0">
+        मॉडल कैश अभी जाँचा नहीं गया। पहली डाउनलोड में लगभग 280 MB डेटा और पर्याप्त स्थानीय स्टोरेज की आवश्यकता हो सकती है।
       </div>
 
       <div
@@ -419,8 +426,8 @@ async function ensureEngine() {
     $('#ss-ai-backend')?.value || 'wasm'
   ).toLowerCase();
 
-  if (!['wasm', 'webgpu'].includes(selectedBackend)) {
-    throw new TypeError(`असमर्थित backend: ${selectedBackend}`);
+  if (!['wasm', 'onnx'].includes(selectedBackend)) {
+    throw new TypeError(`असमर्थित backend: ${selectedBackend}. केवल wasm या onnx मान्य हैं।`);
   }
 
   if (!appState.engine) {
@@ -900,84 +907,246 @@ function stopResultOrPendingInference() {
 }
 
 let pronunciationModulePromise = null;
+
 function pronunciationModule() {
-  if (!pronunciationModulePromise) pronunciationModulePromise = import(new URL('./pronunciation-learning.js', import.meta.url).href);
+  if (!pronunciationModulePromise) {
+    pronunciationModulePromise = import(
+      new URL('./pronunciation-learning.js', import.meta.url).href
+    );
+  }
+
   return pronunciationModulePromise;
 }
+
 function pronunciationStatus(message, kind = 'warn') {
   const node = $('#ss-pronunciation-status');
   if (!node) return;
+
   node.className = `status ${kind}`;
   node.textContent = message;
 }
+
 async function refreshPronunciationReferences() {
   const list = $('#ss-pronunciation-list');
   if (!list) return;
+
   try {
     const mod = await pronunciationModule();
     const records = await mod.listReferences();
+
     list.replaceChildren();
-    if (!records.length) { list.textContent = 'कोई संदर्भ सहेजा नहीं गया।'; return; }
+
+    if (!records.length) {
+      list.textContent = 'कोई संदर्भ सहेजा नहीं गया।';
+      return;
+    }
+
     for (const record of records.slice().reverse()) {
       const item = document.createElement('article');
       item.className = 'status';
       item.style.marginTop = '8px';
+
       const title = document.createElement('strong');
       title.textContent = `${record.fileName} — ${record.mediaKind}`;
+
       const detail = document.createElement('p');
       detail.textContent = `${record.createdAt}
 पाठ: ${record.text.slice(0, 240)}${record.text.length > 240 ? '…' : ''}
 माप: ${JSON.stringify(record.features)}`;
-      const remove = element('button', { type: 'button', className: 'btn quiet' }, 'यह संदर्भ मिटाएँ');
+
+      const remove = element(
+        'button',
+        { type: 'button', className: 'btn quiet' },
+        'यह संदर्भ मिटाएँ'
+      );
+
       remove.addEventListener('click', async () => {
-        try { await mod.deleteReference(record.id); pronunciationStatus('संदर्भ स्थानीय डेटाबेस से मिटा दिया गया।', 'good'); await refreshPronunciationReferences(); }
-        catch (error) { pronunciationStatus(`मिटाना विफल: ${error.message || error}`, 'bad'); }
+        try {
+          await mod.deleteReference(record.id);
+          pronunciationStatus('संदर्भ स्थानीय डेटाबेस से मिटा दिया गया।', 'good');
+          await refreshPronunciationReferences();
+        } catch (error) {
+          pronunciationStatus(`मिटाना विफल: ${error.message || error}`, 'bad');
+        }
       });
-      item.append(title, detail, remove); list.append(item);
+
+      item.append(title, detail, remove);
+      list.append(item);
     }
-  } catch (error) { pronunciationStatus(`स्थानीय डेटाबेस उपलब्ध नहीं: ${error.message || error}`, 'bad'); }
+  } catch (error) {
+    pronunciationStatus(`स्थानीय डेटाबेस उपलब्ध नहीं: ${error.message || error}`, 'bad');
+  }
 }
+
 async function analyzePronunciationReference() {
   const file = $('#ss-pronunciation-file')?.files?.[0];
   const text = $('#ss-pronunciation-text')?.value ?? '';
   const button = $('#ss-pronunciation-analyze');
-  if (!file) { pronunciationStatus('पहले ऑडियो/वीडियो फ़ाइल चुनें।', 'warn'); return; }
-  if (!String(text).trim()) { pronunciationStatus('रिकॉर्डिंग का सही संस्कृत पाठ भरें।', 'warn'); return; }
+
+  if (!file) {
+    pronunciationStatus('पहले ऑडियो/वीडियो फ़ाइल चुनें।', 'warn');
+    return;
+  }
+
+  if (!String(text).trim()) {
+    pronunciationStatus('रिकॉर्डिंग का सही संस्कृत पाठ भरें।', 'warn');
+    return;
+  }
+
   if (button) button.disabled = true;
+
   $('#ss-pronunciation-results').textContent = '';
   pronunciationStatus('फ़ाइल का विश्लेषण इस डिवाइस पर हो रहा है। कृपया पृष्ठ खुला रखें…', 'warn');
+
   try {
     const mod = await pronunciationModule();
-    const record = await mod.analyzeSelectedFile(file, text, progress => pronunciationStatus(`वीडियो विश्लेषण: ${progress}%`, 'warn'));
+
+    const record = await mod.analyzeSelectedFile(
+      file,
+      text,
+      progress => pronunciationStatus(`वीडियो विश्लेषण: ${progress}%`, 'warn')
+    );
+
     const id = await mod.saveReference(record);
     const saved = { ...record, id };
+
     $('#ss-pronunciation-results').textContent = JSON.stringify(saved, null, 2);
-    pronunciationStatus(`स्थानीय विश्लेषण पूरा और सहेजा गया (संदर्भ ID ${id})। यह मॉडल training या गायन-सुधार का प्रमाण नहीं है।`, 'good');
+
+    pronunciationStatus(
+      `स्थानीय विश्लेषण पूरा और सहेजा गया (संदर्भ ID ${id})। यह मॉडल training या गायन-सुधार का प्रमाण नहीं है।`,
+      'good'
+    );
+
     await refreshPronunciationReferences();
   } catch (error) {
     pronunciationStatus(`विश्लेषण असफल: ${error.message || error}`, 'bad');
-  } finally { if (button) button.disabled = false; }
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
+
 function bindPronunciationEvents() {
-  $('#ss-pronunciation-analyze')?.addEventListener('click', analyzePronunciationReference);
-  $('#ss-pronunciation-refresh')?.addEventListener('click', refreshPronunciationReferences);
+  $('#ss-pronunciation-analyze')?.addEventListener(
+    'click',
+    analyzePronunciationReference
+  );
+
+  $('#ss-pronunciation-refresh')?.addEventListener(
+    'click',
+    refreshPronunciationReferences
+  );
+
   $('#ss-pronunciation-export')?.addEventListener('click', async () => {
     try {
-      const mod = await pronunciationModule(); const blob = await mod.exportReferences();
-      const url = URL.createObjectURL(blob); const a = document.createElement('a');
-      a.href = url; a.download = `swar-sadhika-pronunciation-references-${new Date().toISOString().slice(0,10)}.json`;
-      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const mod = await pronunciationModule();
+      const blob = await mod.exportReferences();
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+
+      a.href = url;
+      a.download = `swar-sadhika-pronunciation-references-${new Date().toISOString().slice(0,10)}.json`;
+
+      document.body.append(a);
+      a.click();
+      a.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
       pronunciationStatus('स्थानीय संदर्भों की JSON export फ़ाइल तैयार की गई।', 'good');
-    } catch (error) { pronunciationStatus(`Export विफल: ${error.message || error}`, 'bad'); }
+    } catch (error) {
+      pronunciationStatus(`Export विफल: ${error.message || error}`, 'bad');
+    }
   });
+
   $('#ss-pronunciation-clear')?.addEventListener('click', async () => {
     if (!confirm('क्या आप इस डिवाइस पर सहेजे गए सभी उच्चारण-संदर्भ स्थायी रूप से मिटाना चाहती/चाहते हैं?')) return;
-    try { const mod = await pronunciationModule(); await mod.clearReferences(); $('#ss-pronunciation-results').textContent = ''; await refreshPronunciationReferences(); pronunciationStatus('सभी स्थानीय संदर्भ मिटा दिए गए।', 'good'); }
-    catch (error) { pronunciationStatus(`डेटा मिटाना विफल: ${error.message || error}`, 'bad'); }
+
+    try {
+      const mod = await pronunciationModule();
+      await mod.clearReferences();
+
+      $('#ss-pronunciation-results').textContent = '';
+
+      await refreshPronunciationReferences();
+
+      pronunciationStatus('सभी स्थानीय संदर्भ मिटा दिए गए।', 'good');
+    } catch (error) {
+      pronunciationStatus(`डेटा मिटाना विफल: ${error.message || error}`, 'bad');
+    }
   });
 }
 
+async function cacheAiModels() {
+  const button = $('#ss-ai-cache-models');
+  const status = $('#ss-ai-cache-status');
+  const chosenBackend = String($('#ss-ai-backend')?.value || 'wasm').toLowerCase();
+
+  if (!window.confirm(`चयनित ${chosenBackend.toUpperCase()} मॉडल फ़ाइलें डाउनलोड करने में लगभग 270–280 MB डेटा लग सकता है और स्थानीय संग्रहण उपयोग होगा। डाउनलोड केवल इस डिवाइस के ब्राउज़र Cache Storage में होगा। क्या जारी रखें?`)) return;
+
+  if (button) button.disabled = true;
+
+  try {
+    const backend = String($('#ss-ai-backend')?.value || 'wasm').toLowerCase();
+    const moduleUrl = new URL('./model-cache.js', import.meta.url).href;
+    const mod = await import(moduleUrl);
+
+    const report = await mod.cacheVagdhenuModelAssets(backend, info => {
+      if (!status) return;
+
+      status.className = 'status warn';
+      status.textContent = info?.message || `मॉडल कैश हो रहा है (${info?.completed || 0}/${info?.total || 0})…`;
+    });
+
+    if (status) {
+      status.className = report.ok ? 'status good' : 'status warn';
+      status.textContent = report.message;
+    }
+  } catch (error) {
+    if (status) {
+      status.className = 'status bad';
+      status.textContent = `मॉडल डाउनलोड/कैश विफल: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function refreshAiModelCacheStatus() {
+  const status = $('#ss-ai-cache-status');
+  if (!status) return;
+
+  try {
+    const backend = String($('#ss-ai-backend')?.value || 'wasm').toLowerCase();
+    const mod = await import(new URL('./model-cache.js', import.meta.url).href);
+    const report = await mod.getVagdhenuModelCacheStatus(backend);
+
+    status.className = report.complete ? 'status good' : 'status warn';
+    status.textContent = `${backend.toUpperCase()} मॉडल कैश: ${report.cachedCount}/${report.total} फ़ाइलें उपलब्ध। कैश स्थिति, सफल inference का प्रमाण नहीं है।`;
+  } catch (error) {
+    status.className = 'status warn';
+    status.textContent = `मॉडल कैश की स्थिति नहीं पढ़ी जा सकी: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function registerOfflineWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  const localHost = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (location.protocol !== 'https:' && !localHost) return;
+
+  navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+    .then(registration => {
+      console.info('[Swar-Sadhika] Offline asset cache worker registered.', registration.scope);
+    })
+    .catch(error => {
+      console.warn('[Swar-Sadhika] Offline worker registration failed:', error);
+    });
+}
+
 function bindAiEvents() {
+  $('#ss-ai-cache-models')?.addEventListener('click', cacheAiModels);
+
   $('#ss-ai-init')?.addEventListener(
     'click',
     onInitialize
@@ -1035,6 +1204,7 @@ function bindAiEvents() {
     );
 
     updateButtons();
+    refreshAiModelCacheStatus();
   });
 
   $('#ss-ai-copy-studio')?.addEventListener('click', () => {
@@ -1077,7 +1247,9 @@ function bindAiEvents() {
 function boot() {
   if (!addAiControls()) return;
 
+  registerOfflineWorker();
   bindAiEvents();
+  refreshAiModelCacheStatus();
   bindPronunciationEvents();
   updateButtons();
   refreshPronunciationReferences();
