@@ -1,44 +1,107 @@
-/* Swar-Sadhika test-only service worker. Cache Storage is device/browser-local. */
-const SHELL_CACHE = 'swar-sadhika-shell-v2';
+/* Swar-Sadhika test-only service worker.
+   Never copy these changes to anujadha. */
+
+const SHELL_CACHE = 'swar-sadhika-shell-v3';
 const REMOTE_CACHE = 'swar-sadhika-remote-runtime-v1';
 const MODEL_CACHE = 'swar-sadhika-vagdhenu-models-v1';
+
 const SHELL_FILES = [
-  './', './index.html', './app.js', './index.js', './vagdhenu-onnx.js',
-  './vagdhenu-text.js', './pronunciation-learning.js', './model-cache.js'
+  './',
+  './index.html',
+  './app.js',
+  './index.js',
+  './vagdhenu-onnx.js',
+  './vagdhenu-text.js',
+  './pronunciation-learning.js',
+  './model-cache.js'
 ];
 
 function isModelRequest(url) {
   return url.hostname === 'huggingface.co' &&
-    /^\/gnumanth\/sanskrit-tts-(wasm|onnx)\/resolve\/main\//.test(url.pathname);
+    /^\/gnumanth\/sanskrit-tts-(wasm|onnx)\/resolve\/main\//
+      .test(url.pathname);
 }
 
 function isRuntimeRequest(url) {
   const host = url.hostname.toLowerCase();
   const path = url.pathname;
 
-  if (host === 'h3manth.com' && path.startsWith('/ai/sanskrit-tts/')) return true;
-  if (host === 'hemanth.github.io' && path.startsWith('/sanskrit-tts-web/')) return true;
-  if (host === 'raw.githubusercontent.com' && path.startsWith('/hemanth/sanskrit-tts-web/')) return true;
+  if (
+    host === 'h3manth.com' &&
+    path.startsWith('/ai/sanskrit-tts/')
+  ) return true;
 
   if (
-    ['cdn.jsdelivr.net', 'fastly.jsdelivr.net', 'gcore.jsdelivr.net'].includes(host) &&
+    host === 'hemanth.github.io' &&
+    path.startsWith('/sanskrit-tts-web/')
+  ) return true;
+
+  if (
+    host === 'raw.githubusercontent.com' &&
+    path.startsWith('/hemanth/sanskrit-tts-web/')
+  ) return true;
+
+  if (
+    ['cdn.jsdelivr.net', 'fastly.jsdelivr.net', 'gcore.jsdelivr.net']
+      .includes(host) &&
     (
       path.includes('/gh/hemanth/sanskrit-tts-web/') ||
-      /\/npm\/onnxruntime-web(?:@[^/]+)?\//.test(path)
+      /\/npm\/onnxruntime-web(?:@[^/]+)?\//
+        .test(path)
     )
-  ) {
-    return true;
-  }
+  ) return true;
 
-  if (host === 'esm.sh' && path.startsWith('/gh/hemanth/sanskrit-tts-web')) return true;
+  if (
+    host === 'esm.sh' &&
+    path.startsWith('/gh/hemanth/sanskrit-tts-web')
+  ) return true;
 
   return false;
+}
+
+function isCacheableResponse(request, response) {
+  if (
+    !response ||
+    !response.ok ||
+    response.status !== 200 ||
+    response.type === 'opaque'
+  ) return false;
+
+  const type = String(
+    response.headers.get('content-type') || ''
+  ).toLowerCase();
+
+  const path = new URL(request.url).pathname;
+
+  if (
+    type.includes('text/html') &&
+    /\.(js|mjs|wasm|onnx|bin)$/.test(path)
+  ) return false;
+
+  return true;
+}
+
+async function cacheResponse(cache, request, response) {
+  if (!isCacheableResponse(request, response)) return;
+
+  try {
+    await cache.put(request, response.clone());
+  } catch (error) {
+    console.warn(
+      '[Swar-Sadhika SW] Cache write failed:',
+      request.url,
+      error
+    );
+  }
 }
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
+
+    // Install only after the required local app shell is available.
     await cache.addAll(SHELL_FILES);
+
     await self.skipWaiting();
   })());
 });
@@ -47,9 +110,13 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
 
+    // Retire old shell versions, but preserve model/runtime caches.
     await Promise.all(
       keys
-        .filter(key => key.startsWith('swar-sadhika-shell-') && key !== SHELL_CACHE)
+        .filter(key =>
+          key.startsWith('swar-sadhika-shell-') &&
+          key !== SHELL_CACHE
+        )
         .map(key => caches.delete(key))
     );
 
@@ -60,26 +127,69 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
 
-  if (request.method !== 'GET' || request.headers.has('range')) return;
+  if (
+    request.method !== 'GET' ||
+    request.headers.has('range')
+  ) return;
 
   const url = new URL(request.url);
 
   if (url.origin === self.location.origin) {
+    // Network-first: show updated GitHub Pages files.
+    // Use the cached copy when the network is unavailable.
     event.respondWith((async () => {
       const cache = await caches.open(SHELL_CACHE);
-      const cached = await cache.match(request, { ignoreSearch: true });
+
+      try {
+        const response = await fetch(request);
+
+        await cacheResponse(cache, request, response);
+
+        return response;
+      } catch (error) {
+        const cached = await cache.match(request);
+
+        if (cached) return cached;
+
+        if (request.mode === 'navigate') {
+          const root = new URL(
+            './',
+            self.registration.scope
+          ).href;
+
+          const index = new URL(
+            './index.html',
+            self.registration.scope
+          ).href;
+
+          const fallback =
+            await cache.match(root) ||
+            await cache.match(index);
+
+          if (fallback) return fallback;
+        }
+
+        throw error;
+      }
+    })());
+
+    return;
+  }
+
+  if (isModelRequest(url)) {
+    // Large model weights: cache-first to avoid repeat downloads.
+    event.respondWith((async () => {
+      const cache = await caches.open(MODEL_CACHE);
+
+      const cached = await cache.match(request, {
+        ignoreSearch: true
+      });
 
       if (cached) return cached;
 
       const response = await fetch(request);
 
-      if (response.ok && response.status === 200) {
-        try {
-          await cache.put(request, response.clone());
-        } catch (_) {
-          // A failed cache write must not prevent the network response.
-        }
-      }
+      await cacheResponse(cache, request, response);
 
       return response;
     })());
@@ -87,52 +197,43 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (!isModelRequest(url) && !isRuntimeRequest(url)) return;
+  if (isRuntimeRequest(url)) {
+    // Refresh runtime source online; use cached source offline.
+    event.respondWith((async () => {
+      const cache = await caches.open(REMOTE_CACHE);
 
-  event.respondWith((async () => {
-    const cacheName = isModelRequest(url) ? MODEL_CACHE : REMOTE_CACHE;
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(request, { ignoreSearch: true });
-
-    if (cached) return cached;
-
-    const response = await fetch(request);
-    const type = String(response.headers.get('content-type') || '').toLowerCase();
-
-    const wrongHtml =
-      type.includes('text/html') &&
-      /\.(js|mjs|wasm|onnx|bin)$/.test(url.pathname);
-
-    if (
-      response.ok &&
-      response.status === 200 &&
-      response.type !== 'opaque' &&
-      !wrongHtml
-    ) {
       try {
-        await cache.put(request, response.clone());
-      } catch (error) {
-        console.warn(
-          '[Swar-Sadhika SW] Runtime/model cache failed:',
-          url.href,
-          error
-        );
-      }
-    }
+        const response = await fetch(request);
 
-    return response;
-  })());
+        await cacheResponse(cache, request, response);
+
+        return response;
+      } catch (error) {
+        const cached = await cache.match(request, {
+          ignoreSearch: true
+        });
+
+        if (cached) return cached;
+
+        throw error;
+      }
+    })());
+  }
 });
 
 self.addEventListener('message', event => {
-  if (event.data?.type !== 'SWAR_SADHIKA_CACHE_STATUS') return;
+  if (
+    event.data?.type !== 'SWAR_SADHIKA_CACHE_STATUS'
+  ) return;
 
   event.waitUntil((async () => {
     const keys = await caches.keys();
 
     event.ports?.[0]?.postMessage({
       type: 'SWAR_SADHIKA_CACHE_STATUS_RESULT',
-      caches: keys.filter(key => key.startsWith('swar-sadhika-'))
+      caches: keys.filter(key =>
+        key.startsWith('swar-sadhika-')
+      )
     });
   })());
 });
