@@ -1,0 +1,45 @@
+name: Vendor Vagdhenu Engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type TEST to confirm this workflow is for the test repository"
+        required: true
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  vendor-engine:
+    if: ${{ github.event.inputs.confirmation == 'TEST' && github.repository == 'shreevidyamatabhuvanesvari-gif/swar-sadhika-test' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out test repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch verified upstream browser engine
+        run: bash scripts/fetch-vagdhenu-engine.sh
+
+      - name: Check fetched files
+        run: |
+          test -s vendor/vagdhenu-upstream/vagdhenu-onnx.js
+          test -s vendor/VAGDHENU_UPSTREAM_COMMIT.txt
+          test -s vendor/VAGDHENU_VENDOR_STATUS.md
+
+      - name: Commit vendored source to test repository
+        run: |
+          git add vendor/
+          if git diff --cached --quiet; then
+            echo "No vendor changes to commit."
+          else
+            git commit -m "Vendor upstream Vagdhenu browser engine source"
+            git push
+          fi
