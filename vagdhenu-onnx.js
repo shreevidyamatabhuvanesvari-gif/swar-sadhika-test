@@ -15,6 +15,9 @@
  */
 
 const VAGDHENU_SOURCE_CANDIDATES = Object.freeze([
+  // Vendored upstream checkout installed by scripts/fetch-vagdhenu-engine.sh.
+  new URL('./vendor/vagdhenu-upstream/vagdhenu-onnx.js', import.meta.url).href,
+  // Network fallbacks remain available until the upstream source has been vendored.
   'https://hemanth.github.io/sanskrit-tts-web/vagdhenu-onnx.js',
   'https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
   'https://fastly.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
@@ -24,13 +27,16 @@ const VAGDHENU_SOURCE_CANDIDATES = Object.freeze([
   'https://raw.githubusercontent.com/hemanth/sanskrit-tts-web/main/vagdhenu-onnx.js'
 ]);
 
+// Public app/index.js contract is "wasm" or "onnx". The upstream
+// browser engine labels its ONNX/WebGPU provider "webgpu". Translate only
+// at this adapter boundary so the UI never passes an unsupported value to index.js.
 const BACKEND_ALIASES = Object.freeze({
   wasm: 'wasm',
-  webgpu: 'webgpu',
-  onnx: 'webgpu'
+  onnx: 'webgpu',
+  webgpu: 'webgpu'
 });
 
-const VAGDHENU_BACKENDS = new Set(Object.keys(BACKEND_ALIASES));
+const VAGDHENU_BACKENDS = new Set(['wasm', 'onnx', 'webgpu']);
 
 function asErrorMessage(error) {
   if (error instanceof Error) return error.message;
@@ -49,7 +55,7 @@ function normalizeBackend(value) {
   if (!backend || !VAGDHENU_BACKENDS.has(requested)) {
     throw new TypeError(
       `Unsupported Vāgdhenu backend "${requested}". ` +
-      'Use "wasm", "webgpu", or the Swar-Sadhika alias "onnx".'
+      'Use the public backend names "wasm" or "onnx".'
     );
   }
 
@@ -206,6 +212,7 @@ export class VagdhenuWebEngine {
       backend: this.backendMode,
       initialized: this._initialized,
       sourceUrl: this._moduleSourceUrl,
+      sourceLoadedLocally: Boolean(this._moduleSourceUrl && typeof location !== 'undefined' && new URL(this._moduleSourceUrl).origin === location.origin),
       localInference: true,
       cloudInferenceApi: false
     };
