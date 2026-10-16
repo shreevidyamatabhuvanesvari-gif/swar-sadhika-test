@@ -222,6 +222,36 @@ function addAiControls() {
   `;
 
   panelBody.appendChild(wrapper);
+
+  const learning = element('section', { id: 'ss-pronunciation-learning', className: 'panel' });
+  learning.style.marginTop = '14px';
+  learning.innerHTML = `
+    <div class="panel-head">
+      <h2>स्थानीय उच्चारण-अध्ययन / संदर्भ-संग्रह</h2>
+      <p>चुनी गई रिकॉर्डिंग का सीमित acoustic analysis और स्थानीय IndexedDB संग्रह। यह AI मॉडल को train नहीं करता।</p>
+    </div>
+    <div class="panel-body">
+      <div class="field">
+        <label for="ss-pronunciation-file">मोबाइल से ऑडियो या वीडियो चुनें</label>
+        <input id="ss-pronunciation-file" type="file" accept="audio/*,video/*,.wav,.mp3,.m4a,.aac,.ogg,.webm,.mp4,.mov,.m4v" />
+        <p class="hint">फ़ाइल केवल आपके स्पष्ट चयन के बाद पढ़ी जाती है। ऑडियो विश्लेषण अधिक विस्तृत है; वीडियो में अधिकतम 20 सेकंड का RMS नमूना लिया जाता है।</p>
+      </div>
+      <div class="field">
+        <label for="ss-pronunciation-text">रिकॉर्डिंग का सही संस्कृत पाठ</label>
+        <textarea id="ss-pronunciation-text" lang="sa-Deva" spellcheck="false" maxlength="200000" placeholder="रिकॉर्डिंग में बोले गए मंत्र/श्लोक का शुद्ध पाठ यहाँ लिखें…"></textarea>
+      </div>
+      <div class="btn-row" style="margin:10px 0">
+        <button class="btn primary" id="ss-pronunciation-analyze" type="button">स्थानीय विश्लेषण व सहेजें</button>
+        <button class="btn secondary" id="ss-pronunciation-refresh" type="button">सहेजे संदर्भ दिखाएँ</button>
+        <button class="btn secondary" id="ss-pronunciation-export" type="button">संदर्भ Export करें</button>
+        <button class="btn danger" id="ss-pronunciation-clear" type="button">सभी संदर्भ मिटाएँ</button>
+      </div>
+      <div id="ss-pronunciation-status" class="status warn" role="status" aria-live="polite">अभी कोई स्थानीय विश्लेषण नहीं किया गया।</div>
+      <div id="ss-pronunciation-results" class="hint" style="white-space:pre-wrap;overflow-wrap:anywhere"></div>
+      <div id="ss-pronunciation-list"></div>
+      <p class="hint">सीमा: संग्रहीत माप अभी गायन इंजन को नहीं भेजे जाते। उनसे AI गायन में सुधार तभी माना जाएगा जब इंजन स्पष्ट रूप से इनका उपयोग करे और तुलनात्मक परीक्षण में सुधार दिखे।</p>
+    </div>`;
+  panelBody.appendChild(learning);
   return true;
 }
 
@@ -869,6 +899,84 @@ function stopResultOrPendingInference() {
   updateButtons();
 }
 
+let pronunciationModulePromise = null;
+function pronunciationModule() {
+  if (!pronunciationModulePromise) pronunciationModulePromise = import(new URL('./pronunciation-learning.js', import.meta.url).href);
+  return pronunciationModulePromise;
+}
+function pronunciationStatus(message, kind = 'warn') {
+  const node = $('#ss-pronunciation-status');
+  if (!node) return;
+  node.className = `status ${kind}`;
+  node.textContent = message;
+}
+async function refreshPronunciationReferences() {
+  const list = $('#ss-pronunciation-list');
+  if (!list) return;
+  try {
+    const mod = await pronunciationModule();
+    const records = await mod.listReferences();
+    list.replaceChildren();
+    if (!records.length) { list.textContent = 'कोई संदर्भ सहेजा नहीं गया।'; return; }
+    for (const record of records.slice().reverse()) {
+      const item = document.createElement('article');
+      item.className = 'status';
+      item.style.marginTop = '8px';
+      const title = document.createElement('strong');
+      title.textContent = `${record.fileName} — ${record.mediaKind}`;
+      const detail = document.createElement('p');
+      detail.textContent = `${record.createdAt}
+पाठ: ${record.text.slice(0, 240)}${record.text.length > 240 ? '…' : ''}
+माप: ${JSON.stringify(record.features)}`;
+      const remove = element('button', { type: 'button', className: 'btn quiet' }, 'यह संदर्भ मिटाएँ');
+      remove.addEventListener('click', async () => {
+        try { await mod.deleteReference(record.id); pronunciationStatus('संदर्भ स्थानीय डेटाबेस से मिटा दिया गया।', 'good'); await refreshPronunciationReferences(); }
+        catch (error) { pronunciationStatus(`मिटाना विफल: ${error.message || error}`, 'bad'); }
+      });
+      item.append(title, detail, remove); list.append(item);
+    }
+  } catch (error) { pronunciationStatus(`स्थानीय डेटाबेस उपलब्ध नहीं: ${error.message || error}`, 'bad'); }
+}
+async function analyzePronunciationReference() {
+  const file = $('#ss-pronunciation-file')?.files?.[0];
+  const text = $('#ss-pronunciation-text')?.value ?? '';
+  const button = $('#ss-pronunciation-analyze');
+  if (!file) { pronunciationStatus('पहले ऑडियो/वीडियो फ़ाइल चुनें।', 'warn'); return; }
+  if (!String(text).trim()) { pronunciationStatus('रिकॉर्डिंग का सही संस्कृत पाठ भरें।', 'warn'); return; }
+  if (button) button.disabled = true;
+  $('#ss-pronunciation-results').textContent = '';
+  pronunciationStatus('फ़ाइल का विश्लेषण इस डिवाइस पर हो रहा है। कृपया पृष्ठ खुला रखें…', 'warn');
+  try {
+    const mod = await pronunciationModule();
+    const record = await mod.analyzeSelectedFile(file, text, progress => pronunciationStatus(`वीडियो विश्लेषण: ${progress}%`, 'warn'));
+    const id = await mod.saveReference(record);
+    const saved = { ...record, id };
+    $('#ss-pronunciation-results').textContent = JSON.stringify(saved, null, 2);
+    pronunciationStatus(`स्थानीय विश्लेषण पूरा और सहेजा गया (संदर्भ ID ${id})। यह मॉडल training या गायन-सुधार का प्रमाण नहीं है।`, 'good');
+    await refreshPronunciationReferences();
+  } catch (error) {
+    pronunciationStatus(`विश्लेषण असफल: ${error.message || error}`, 'bad');
+  } finally { if (button) button.disabled = false; }
+}
+function bindPronunciationEvents() {
+  $('#ss-pronunciation-analyze')?.addEventListener('click', analyzePronunciationReference);
+  $('#ss-pronunciation-refresh')?.addEventListener('click', refreshPronunciationReferences);
+  $('#ss-pronunciation-export')?.addEventListener('click', async () => {
+    try {
+      const mod = await pronunciationModule(); const blob = await mod.exportReferences();
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = `swar-sadhika-pronunciation-references-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      pronunciationStatus('स्थानीय संदर्भों की JSON export फ़ाइल तैयार की गई।', 'good');
+    } catch (error) { pronunciationStatus(`Export विफल: ${error.message || error}`, 'bad'); }
+  });
+  $('#ss-pronunciation-clear')?.addEventListener('click', async () => {
+    if (!confirm('क्या आप इस डिवाइस पर सहेजे गए सभी उच्चारण-संदर्भ स्थायी रूप से मिटाना चाहती/चाहते हैं?')) return;
+    try { const mod = await pronunciationModule(); await mod.clearReferences(); $('#ss-pronunciation-results').textContent = ''; await refreshPronunciationReferences(); pronunciationStatus('सभी स्थानीय संदर्भ मिटा दिए गए।', 'good'); }
+    catch (error) { pronunciationStatus(`डेटा मिटाना विफल: ${error.message || error}`, 'bad'); }
+  });
+}
+
 function bindAiEvents() {
   $('#ss-ai-init')?.addEventListener(
     'click',
@@ -970,7 +1078,9 @@ function boot() {
   if (!addAiControls()) return;
 
   bindAiEvents();
+  bindPronunciationEvents();
   updateButtons();
+  refreshPronunciationReferences();
 
   window.addEventListener('beforeunload', () => {
     const audio = $('#ss-ai-audio');
