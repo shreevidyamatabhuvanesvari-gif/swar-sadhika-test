@@ -1,212 +1,511 @@
-Swar-Sadhika — Modification and Verification Report
+# SWAR-SADHIKA — MODIFICATION REPORT
 
-1. Report purpose
+**Project:** Swar-Sadhika  
+**Report date:** 2026-10-17  
+**Report version:** 1.0  
+**Repository:** https://github.com/shreevidyamatabhuvanesvari-gif/swar-sadhika-test  
+**Published application:** https://shreevidyamatabhuvanesvari-gif.github.io/swar-sadhika-test/  
+**Overall status:** INCOMPLETE — ENGINE LICENSING AND REAL INFERENCE VERIFICATION PENDING
 
-This report documents the scope, known implementation state, verification limits, and outstanding work for the Swar-Sadhika test repository.
+---
 
-Repository: "shreevidyamatabhuvanesvari-gif/swar-sadhika-test"
+## 1. PURPOSE OF THIS REPORT
 
-Deployment: "https://shreevidyamatabhuvanesvari-gif.github.io/swar-sadhika-test/"
+This report records the known implementation state, reviewed files,
+identified issues, workflow failure, licensing concerns, and required next
+steps for Swar-Sadhika.
 
-Protected application: "anujadha" — must not be modified as part of this work.
+It is intended to prevent repeated work, undocumented changes, unsupported
+claims, and accidental modification of unrelated applications.
 
-Overall status: NOT VERIFIED for real AI synthesis and offline operation.
+This report is based on the project information and files available for
+review as of the report date. It is not a verified Git commit history or
+a substitute for inspecting the repository's actual Git diff.
 
-This report is a documentation and audit record. It is not, by itself, proof that every listed change is present in the current GitHub commit or deployed website. Confirm actual file contents and commit history before treating a change as verified.
+A file described as reviewed, proposed, or planned in this report must not be
+treated as committed or deployed unless the repository confirms that fact.
 
-2. Source archive identity
+## 2. PROJECT OBJECTIVE
 
-The inspected input archive was:
+Swar-Sadhika is intended to be an Android-friendly, browser-based Sanskrit
+AI singing application.
 
-- Filename: "swar-sadhika-test-patched-2.zip"
-- SHA-256: "b21f65e2e3663757cf2075c71e106ce62c74cb1a93bce4d1516b361fd82840a4"
-- Archive root: "swar-sadhika-test-main/"
-- File and directory entries: 27
-- File entries: 23
+The central objective is to let the project owner use a personal virtual
+singing voice to generate clear, melodious, feminine-friendly singing from
+Sanskrit and Devanagari texts.
 
-The archive passed a ZIP structural-integrity check.
+Intended text categories include:
 
-The older report embedded in the archive identified a different ZIP filename and SHA-256. Those older identity values do not identify the archive listed above and must not be reused as its checksum.
+- Sanskrit shlokas.
+- Mantras.
+- Stotras.
+- Rgvedic hymns and other Vedic texts.
+- Devotional and traditional Sanskrit compositions.
 
-Archive integrity confirms that the ZIP can be read. It does not establish that the application builds, that its dependencies load, or that its AI features work.
+The goal is actual audio generation from the user's text, followed by
+playback in the browser.
 
-3. Intended changes and implementation areas
+Text analysis, an external demonstration, an audio player without newly
+generated audio, or ordinary speech synthesis alone does not meet this goal.
 
-The following areas are present in the inspected package or described by its existing project documentation. Their exact state in the current GitHub commit must be confirmed against the repository files.
+## 3. NON-NEGOTIABLE PROJECT RULES
 
-3.1 "app.js"
+1. All development and testing must take place in the Swar-Sadhika testing
+   repository identified in this report.
 
-The documented implementation includes:
+2. The separate main application named `anujadha` must not be modified.
 
-- A public backend interface using "wasm" and "onnx".
-- Model download/cache controls and status reporting.
-- Storage-related warnings.
-- Service-worker registration.
+3. Do not introduce a paid AI API, mandatory API key, subscription, cloud
+   inference service, or separate inference server without the project
+   owner's explicit approval.
 
-A UI control or status message is not evidence of successful model loading or audio synthesis.
+4. The intended architecture is browser-local inference on a compatible
+   Android device.
 
-3.2 "vagdhenu-onnx.js"
+5. An initial internet connection may be necessary to obtain permitted model
+   files and runtime dependencies.
 
-The adapter is documented as attempting to load the upstream browser engine, including external static URLs.
+6. Subsequent offline inference must be demonstrated through a real offline
+   test. It must not be inferred from the existence of a service worker,
+   cached page, or model download button.
 
-The public backend contract uses "wasm" and "onnx". The adapter reportedly maps public "onnx" to an upstream "webgpu" backend label.
+7. Do not present placeholder audio, prerecorded results, ordinary TTS,
+   or fabricated success messages as successful neural singing.
 
-This mapping must be checked against the exact upstream revision, its supported execution providers, and the actual browser. Accepting a backend name is not proof that the backend initializes or performs inference.
+8. Do not remove a license check merely to make a GitHub Actions workflow pass.
 
-3.3 "model-cache.js"
+9. Do not select MIT as the project's chosen license.
 
-The package includes model-cache logic intended to download selected artifacts and store them in browser Cache Storage.
+10. Respect the independent licenses and permissions of third-party source
+    code, JavaScript libraries, model weights, runtime files, and other assets.
 
-Cache presence alone does not prove:
+11. Preserve the original Sanskrit text unless the user explicitly requests
+    a clearly identified transformation.
 
-- That the artifact is authentic or correct.
-- That the file is complete and compatible.
-- That the runtime can load it.
-- That all required dependencies are available.
-- That inference or playback succeeds.
+12. Do not claim successful inference, correct Vedic pronunciation, offline
+    readiness, or production readiness without supporting evidence.
 
-Do not claim cryptographic integrity verification unless a trusted expected digest is checked against the downloaded file.
+## 4. FILES REVIEWED OR IDENTIFIED
 
-3.4 "service-worker.js"
+The following file descriptions reflect available source information.
+They do not certify that every file is currently committed to GitHub Pages
+or that the published application executes it successfully.
 
-The package includes a service worker intended to cache application resources and selected remote resources.
+### 4.1 `index.js`
 
-The exact cache names, cache policies, URL allowlists, and fallback behavior must be verified from the currently committed file. Do not infer the deployed cache strategy from an older copy or from a commit message alone.
+**Role:** Main engine integration and inference orchestration.
 
-Service-worker installation and successful cache writes do not establish offline AI synthesis.
+Available source information indicates that this file references:
 
-3.5 Upstream vendor workflow
+- `vagdhenu-onnx.js`
+- `vagdhenu-text.js`
 
-The package includes:
+It attempts to initialize the selected engine, synthesize text in the
+browser, validate audio output, and support playback.
 
-- "scripts/fetch-vagdhenu-engine.sh"
-- ".github/workflows/vendor-vagdhenu-engine.yml"
+The available implementation also identifies inference as not independently
+verified.
 
-These files are intended to support fetching and packaging upstream engine code in the test repository.
+**Known limitation:** Presence of integration code does not establish that
+the upstream engine, runtime dependencies, or compatible model weights are
+fully available locally.
 
-Their presence does not establish that the workflow has run successfully or that a complete local engine has been committed. Before execution, review the workflow permissions, branch and commit behavior, upstream revision, license requirements, and all files it may create or modify.
+**Required next action:** Verify the current file against the actual adapter
+API, run initialization and inference on the published application, and
+record the real audio result.
 
-Do not execute or merge the workflow solely because it exists.
+### 4.2 `vagdhenu-onnx.js`
 
-3.6 Documentation and audit files
+**Role:** Compatibility adapter for the upstream Vāgdhenu browser engine.
 
-The package includes project documentation and audit pages, including:
+The reviewed adapter attempts to import an upstream implementation through
+multiple external static-source URLs.
 
-- "README.md"
-- "AI-ENGINE-IMPLEMENTATION-STATUS.md"
-- "MODIFICATION-REPORT.md"
-- "PRONUNCIATION-LEARNING-AUDIT.md"
-- "model-audit.html"
-- "vagdhenu-inference-audit.html"
-- "vagdhenu-inference-audit-cdn.html"
-- "vagdhenu-runtime-audit.html"
-- "vagdhenu-source-audit.html"
-- "module-audit-anjali.html"
-- "soulx-mobile-audit.html"
+**Known limitations:**
 
-An audit page is a test instrument, not proof of a passing result. Each test result must be supported by observable evidence.
+- The adapter does not itself contain the complete upstream engine.
+- External imports can fail because of network, CORS, availability, MIME type,
+  module-export, or dependency problems.
+- The reviewed source does not establish that all runtime assets are bundled
+  locally.
+- The use of external source URLs does not establish offline availability.
+- Upstream source licensing must be resolved before that source is copied
+  into the repository.
 
-4. Local pronunciation-reference workflow
+**Required next action:** Do not vendor upstream source until its license
+or sufficient written permission has been verified. Once cleared, use a
+specific reviewed source revision and document the required dependencies.
 
-The package documentation describes a local reference workflow that can involve:
+### 4.3 `vagdhenu-text.js`
 
-1. Explicitly selecting an audio or video file.
-2. Entering or validating the corresponding Sanskrit text.
-3. Computing approximate audio descriptors, subject to browser support.
-4. Storing text and derived descriptors in IndexedDB.
-5. Listing, deleting, or exporting saved records where the relevant controls are implemented.
+**Role:** Sanskrit and Devanagari text-processing utilities.
 
-The described analysis includes approximate RMS, quiet-frame ratio, peak amplitude, and a sampled autocorrelation-based pitch estimate.
+The reviewed source includes text normalization and analysis functionality
+and documents limitations around meter and related analysis.
 
-This is local analysis and reference storage. It must not be described as AI training or as improving generated singing unless an implemented learning or conditioning mechanism actually consumes the records and its effect is evaluated.
+**Important distinction:** This is a text utility module, not an AI singing
+model and not proof of neural inference.
 
-Actual behavior must be tested in the target Android browser.
+**Required next action:** Preserve the documented limits of text analysis.
+Test preservation of conjuncts, punctuation, Vedic marks, and original text
+with representative input.
 
-5. Files deliberately not changed
+### 4.4 `model-cache.js`
 
-The protected "anujadha" application must remain untouched.
+**Role:** Browser-side model-download and cache functionality.
 
-No change to "anujadha" is authorized by this report.
+Available source information indicates that this file can download and
+cache model assets.
 
-Any claim that a specific file was not changed must be supported by the relevant repository history or a verified before-and-after comparison. A statement in a report alone is not sufficient proof.
+**Known limitations:**
 
-6. Verification record
+- A download control does not prove every asset is downloaded correctly.
+- A cache entry does not prove that a model can initialize.
+- A successful download does not prove that inference works.
+- Cache availability does not prove that the application can run offline.
+- The actual model size and required dependency inventory must be measured.
 
-6.1 Verified from the inspected archive
+**Required next action:** Verify every required asset, its source, its size,
+its integrity, and its compatibility with the chosen runtime. Then run an
+actual offline inference test.
 
-- The ZIP file is readable.
-- The ZIP structural-integrity check passed.
-- The archive contains project JavaScript, HTML, documentation, service-worker, model-cache, and vendor-workflow files.
-- The archive does not contain a complete, verified local package of all upstream engine code, runtime assets, and model weights.
+### 4.5 `service-worker.js`
 
-These findings apply to the inspected archive. They do not automatically establish the contents of the latest GitHub commit or GitHub Pages deployment.
+**Role:** Intended application resource caching and offline support.
 
-6.2 Not independently established by this report
+**Known limitation:** The existence of a service worker is not proof that all
+required JavaScript modules, model weights, runtime dependencies, and other
+assets are available offline.
 
-The following remain NOT VERIFIED unless supported by new, reproducible test evidence:
+**Required next action:** Test a fresh reload with the device disconnected
+from the internet, including initialization, inference, and playback.
 
-- Current GitHub files exactly match the inspected archive.
-- The latest GitHub Pages deployment serves the intended commit.
-- All upstream engine modules and runtime assets load correctly.
-- A compatible inference backend initializes successfully.
-- Real Sanskrit input completes inference.
-- The engine returns valid, non-empty audio data.
-- Generated audio plays successfully and is actually audible.
-- Sanskrit pronunciation is accurate across the intended text range.
-- The output supports independent melodic singing rather than ordinary speech or recitation.
-- The complete workflow works on the intended Android device and browser.
-- All required resources are available and functional without a network connection.
-- The application is production-ready or free of known defects.
+### 4.6 `singing-engine-prototype.html`
 
-Earlier test notes included in a package are historical records unless their exact inputs, environment, results, and evidence can be reproduced or independently reviewed.
+**Role:** Engine testing and diagnostic interface.
 
-7. Required end-to-end acceptance tests
+The available source information identifies this as a test interface for
+Vāgdhenu-related browser inference.
 
-Record the exact Git commit and test environment for each test.
+**Known limitation:** A successful prototype test would not independently
+prove that the main application is integrated correctly or that a separate
+AI system capable of freely composing melodies in a feminine voice exists.
 
-Test| Required evidence| Status
-Repository identity| Repository URL and commit SHA| NOT VERIFIED
-Deployment identity| Deployed files matched to intended commit| NOT VERIFIED
-Module loading| Console and network evidence for required modules| NOT VERIFIED
-Backend initialization| Actual initialization result and error record| NOT VERIFIED
-Real inference| A real Sanskrit input and successful inference result| NOT VERIFIED
-Audio output| Valid audio data with non-zero size and duration| NOT VERIFIED
-Audible playback| Playback confirmed on the target device| NOT VERIFIED
-Pronunciation quality| Recorded examples and human evaluation| NOT VERIFIED
-Melodic singing| Audio evidence showing the intended singing capability| NOT VERIFIED
-Android compatibility| Device, OS, browser version, and observed results| NOT VERIFIED
-Offline synthesis| Successful inference and playback with network disconnected| NOT VERIFIED
-Regression checks| Relevant existing features tested after changes| NOT VERIFIED
+**Required next action:** Keep prototype evidence distinct from tests of the
+published main application.
 
-Change a status to PASS only after the stated evidence has been collected and reviewed. If a test has not been performed, keep its status as NOT VERIFIED. If a test fails, record FAIL with the observed behavior and reproduction steps.
+### 4.7 Diagnostic HTML files
 
-8. Evidence to preserve
+The project contains diagnostic pages for source loading, runtime behavior,
+and inference testing.
 
-For each test run, record:
+These pages are useful for collecting evidence, but their existence alone
+does not establish a passing result.
 
-- Test date and time.
-- Exact repository commit SHA.
-- Deployment URL and browser version.
-- Device and Android version, where applicable.
-- Network conditions.
-- Console errors and relevant network requests.
-- Backend selected and actual initialization result.
-- Sanskrit input used.
-- Whether inference completed.
-- Audio format, byte size, and duration.
-- Whether playback was actually audible.
-- Pronunciation and singing-quality observations.
-- Offline procedure and result, if tested.
-- Remaining failures and limitations.
+Each diagnostic must report the actual outcome and relevant error details.
+A successful page load or module import is not equivalent to successful
+audio synthesis.
 
-Do not publish private credentials, access tokens, or other secrets in logs or screenshots.
+### 4.8 Other identified project files
 
-9. Release decision
+The project has also included files such as:
 
-The current evidence does not establish successful real AI synthesis, independently melodic singing, complete Android compatibility, or offline-first operation.
+- `index.html`
+- `app.js`
+- `AI-ENGINE-IMPLEMENTATION-STATUS.md`
+- `PRONUNCIATION-LEARNING-AUDIT.md`
+- `README.md`
+- `MODIFICATION-REPORT.md`
+- `model-audit.html`
+- `module-audit-anjali.html`
+- `neural-studio.html`
+- `pronunciation-learning.js`
+- `soulx-mobile-audit.html`
+- `vagdhenu-inference-audit.html`
+- `vagdhenu-inference-audit-cdn.html`
+- `vagdhenu-runtime-audit.html`
+- `vagdhenu-source-audit.html`
 
-The release decision is therefore:
+The existence, exact current contents, and deployment status of every item
+must be confirmed against the actual repository before making file-by-file
+claims about the latest committed build.
 
-NOT VERIFIED — do not describe the AI engine as production-ready or offline-ready.
+An external studio link or diagnostic page must not be described as the
+integrated local AI engine.
 
-The project goal remains to deliver a useful Sanskrit vocal-generation application through small, reviewable changes and evidence-based testing. Keep all development and verification confined to "swar-sadhika-test". Never modify "anujadha" as part of this workflow.
+## 5. GITHUB ACTIONS WORKFLOW FAILURE
+
+The repository contains or has included this workflow:
+
+`.github/workflows/vendor-vagdhenu-engine.yml`
+
+The attempted manual workflow execution used the `main` branch and the
+confirmation value `TEST`.
+
+The workflow failed at the step:
+
+`Fetch verified upstream browser engine`
+
+The reported error was:
+
+`ERROR: No top-level upstream license file was found. Do not vendor the source until its license or written permission is verified.`
+
+### Interpretation
+
+The workflow reached the source-fetch stage but refused to copy the upstream
+engine because the required licensing evidence was not found.
+
+This is a licensing safeguard, not proof that model inference itself failed
+during that workflow run. That workflow run did not establish successful
+inference or offline operation.
+
+### Required resolution
+
+1. Identify the precise upstream source repository and intended revision.
+2. Verify the applicable source-code license or obtain written permission
+   from the appropriate rights holder.
+3. Confirm that the permission covers the intended copying, modification,
+   packaging, and redistribution.
+4. Record the exact source revision and license evidence.
+5. Review the workflow and all files it downloads before changing the
+   vendor procedure.
+6. Run the workflow again only after its legal prerequisites have been met.
+
+Do not delete, bypass, or weaken the licensing safeguard to obtain a green
+workflow result.
+
+The previous failure must not be recorded as a successful vendor operation.
+
+## 6. THIRD-PARTY MODEL AND RUNTIME ASSETS
+
+The project has referenced these model repositories:
+
+- https://huggingface.co/gnumanth/sanskrit-tts-onnx
+- https://huggingface.co/gnumanth/sanskrit-tts-wasm
+
+The applicable license for the exact revision of each model and the runtime
+requirements must be checked before use or redistribution.
+
+A model repository's license does not automatically license a separate
+upstream JavaScript engine.
+
+Before bundling third-party assets, document:
+
+- Repository and exact revision.
+- File names and required dependencies.
+- Applicable license and conditions.
+- Required attribution or notices.
+- File sizes and integrity hashes where practical.
+- Intended runtime and compatible backend.
+- Whether redistribution and local browser execution are permitted.
+
+Do not state that all third-party material is cleared until the relevant
+evidence has been reviewed.
+
+## 7. PROJECT RIGHTS NOTICE
+
+A rights notice has been drafted for the original work owned by the project
+owner.
+
+The proposed file name is:
+
+`RIGHTS-NOTICE.md`
+
+The intended notice reserves rights in the project owner's original work
+while expressly distinguishing third-party materials.
+
+**Repository state:** The available conversation establishes that the file
+content was proposed. It does not independently prove that the file has
+been committed to the repository.
+
+**Important legal distinction:**
+
+- A rights notice is not a substitute for verifying third-party licenses.
+- A repository rights notice cannot grant permission to redistribute
+  someone else's code or model assets.
+- All-rights-reserved wording applies only to material for which the
+  project owner holds the relevant rights.
+- No external code may be treated as owned by the project owner merely
+  because it is present in the repository.
+
+Do not add a license declaration that misrepresents the ownership or
+licensing status of third-party components.
+
+## 8. IMPLEMENTATION STATUS
+
+| Item | Current known status |
+|---|---|
+| Main application interface | File identified; current deployment behavior not independently verified |
+| Sanskrit text utility | Source available for review |
+| Engine adapter | Source available; external upstream imports attempted |
+| Complete local upstream engine | Not established |
+| Required model and runtime assets | Complete inventory and compatibility not verified |
+| Upstream JavaScript license | Blocked pending verification |
+| Model and asset license review | Exact revisions and conditions require verification |
+| Real inference | Not independently verified |
+| Generated audio playback | Not independently verified on the target Android device |
+| Feminine-friendly singing quality | Not evaluated with a verified output recording |
+| Offline engine initialization | Not verified |
+| Offline audio generation and playback | Not verified |
+| Android compatibility | Not verified through documented device testing |
+| GitHub Actions vendor workflow | Last reported attempt failed at licensing safeguard |
+| Production readiness | Not established |
+
+These statuses must be updated only when supported by new evidence.
+
+## 9. REQUIRED TEST PLAN
+
+### Test 1 — Published application
+
+Open the application from the official testing GitHub Pages URL on a target
+Android device.
+
+Record the tested commit, browser, date, console errors, and actual result.
+
+### Test 2 — Runtime initialization
+
+Confirm that all required modules load and that the chosen runtime initializes
+without missing exports, dependency failures, or unsupported APIs.
+
+### Test 3 — Model compatibility
+
+Confirm that the selected model files are complete, permitted for use,
+compatible with the runtime, and available at the required locations.
+
+### Test 4 — Real audio generation
+
+Enter a Sanskrit verse and execute actual model inference.
+
+Verify that a valid, non-empty audio result is generated. Do not count a
+text-analysis result, status-message change, or fabricated audio object as
+evidence of successful synthesis.
+
+### Test 5 — Playback
+
+Play the newly generated audio on the target Android device.
+
+Record whether audible output occurs and whether the audio is complete,
+non-empty, and free of playback errors.
+
+### Test 6 — Sanskrit text preservation
+
+Test Devanagari characters, conjuncts, punctuation, and applicable Vedic marks.
+
+Confirm that the application does not silently corrupt the supplied text.
+Do not equate text preservation with verified pronunciation accuracy.
+
+### Test 7 — Offline operation
+
+After required assets have been downloaded and cached:
+
+1. Disconnect the device from the internet.
+2. Reload or reopen the published application.
+3. Initialize the engine.
+4. Generate a new audio result.
+5. Play that result.
+6. Record any failed network requests, missing assets, initialization errors,
+   inference errors, or playback failures.
+
+A cached page alone does not pass the offline test.
+
+### Test 8 — Failure handling
+
+Test missing assets, initialization errors, inference errors, and invalid
+or empty audio responses.
+
+The application must report failures honestly rather than display a success
+state when synthesis has failed.
+
+## 10. EVIDENCE REQUIREMENTS
+
+For every test, record:
+
+- Test identifier.
+- Date and time.
+- Exact commit tested.
+- Published page or file tested.
+- Device and browser where applicable.
+- Test input, where appropriate.
+- Observed result.
+- Relevant console or runtime error.
+- Evidence location.
+- Final status.
+
+Use only these result values:
+
+- `NOT TESTED`
+- `PASS`
+- `FAIL`
+- `BLOCKED`
+- `PARTIAL`
+
+Do not invent logs, screenshots, audio recordings, test results, or commit IDs.
+
+Do not declare zero defects, 100% test success, or production readiness
+without evidence that supports the specific claim.
+
+## 11. CHANGE MANAGEMENT RULES
+
+Before changing an existing file:
+
+1. Inspect its current committed contents.
+2. Identify the exact defect or requirement.
+3. Preserve unrelated working functionality.
+4. Make the smallest justified change.
+5. Review the complete resulting file.
+6. Run relevant validation and functional tests.
+7. Record the actual diff and test results.
+8. Commit only the intended files.
+
+After each change, distinguish between:
+
+- Source code edited locally.
+- Changes committed to GitHub.
+- Changes deployed to GitHub Pages.
+- Tests executed successfully.
+- Capabilities still unverified.
+
+These states are not interchangeable.
+
+Do not assume that saving a file in an editor automatically updates the
+published application.
+
+## 12. IMMEDIATE NEXT ACTIONS
+
+Perform the following work in order:
+
+1. Confirm which proposed documentation files have actually been committed.
+2. Inspect the current workflow and retain its upstream license safeguard.
+3. Resolve the upstream JavaScript engine licensing blocker.
+4. Inventory the complete engine, runtime dependencies, and model assets.
+5. Verify the compatibility between the integration code, adapter, model,
+   and selected backend.
+6. Build the lawful local runtime integration without adding a paid API
+   or a separate inference server.
+7. Run real inference and audio playback on the published testing application.
+8. Test the intended Android browser.
+9. Test offline initialization, generation, and playback.
+10. Update this report with the exact tested commit and actual evidence.
+
+Do not modify `anujadha`.
+
+Do not mark a step complete simply because its code or documentation has
+been written.
+
+## 13. FINAL DECLARATION
+
+The central goal of Swar-Sadhika is a usable personal virtual singing voice
+for Sanskrit texts.
+
+The currently available implementation evidence does not establish that a
+complete, licensed, local AI singing engine is integrated and operating
+offline.
+
+The immediate blocker is the need to verify the upstream engine's rights
+before copying it. After that, the required runtime and model assets must be
+integrated and actual audio generation, playback, Android behavior, and
+offline operation must be tested.
+
+All progress must be reported honestly. The project is not complete until
+the intended singing capability has been demonstrated with reproducible
+evidence.
