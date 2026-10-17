@@ -24,7 +24,7 @@
 
 import * as TextModule from '../../vagdhenu-text.js';
 
-export const VAGDHENU_ENGINE_VERSION = '1.0.0-original-bridge';
+export const VAGDHENU_ENGINE_VERSION = '1.0.1-original-bridge-ort-cors';
 export const VAGDHENU_SAMPLE_RATE = 24000;
 export const VAGDHENU_ASSET_FILES = Object.freeze({
   conditioner: 'vagdhenu_cond_q8.onnx',
@@ -83,52 +83,125 @@ function getModelBase(backend) {
 }
 
 function isHtmlResponse(response) {
-  return String(response.headers.get('content-type') || '').toLowerCase().includes('text/html');
+  return String(response?.headers?.get('content-type') || '')
+    .toLowerCase()
+    .includes('text/html');
+}
+
+function isUsableAssetResponse(response) {
+  return Boolean(
+    response &&
+    response.status === 200 &&
+    response.ok &&
+    response.type !== 'opaque' &&
+    !isHtmlResponse(response)
+  );
 }
 
 async function fetchChecked(url, label, { cache = 'default' } = {}) {
-  let response;
-  try {
-    // Cache Storage lookup is explicit as a second chance when a caller is not
-    // yet controlled by the service worker. Exact original URL is preferred.
-    if (typeof caches !== 'undefined') {
-      try {
-        const modelCache = await caches.open(MODEL_CACHE_NAME);
-        response = await modelCache.match(url, { ignoreSearch: true });
-      } catch { /* browser storage may be unavailable; try network */ }
-      if (!response) {
-        try {
-          const runtimeCache = await caches.open(RUNTIME_CACHE_NAME);
-          response = await runtimeCache.match(url, { ignoreSearch: true });
-        } catch { /* continue to network */ }
+  const parsedUrl = new URL(url);
+  const isModelHost = /(^|\.)huggingface\.co$/i.test(parsedUrl.hostname);
+  const cacheName = isModelHost ? MODEL_CACHE_NAME : RUNTIME_CACHE_NAME;
+  let response = null;
+
+  // Validate cached entries before using them. A stale opaque response, an
+  // HTML error page, or a non-200 response is not a usable model/runtime file.
+  if (typeof caches !== 'undefined' && !isModelHost) {
+    try {
+      const assetCache = await caches.open(cacheName);
+      const cached = await assetCache.match(url, { ignoreSearch: true });
+      if (cached && isUsableAssetResponse(cached)) {
+        response = cached;
+      } else if (cached) {
+        console.warn(
+          `[Swar-Sadhika] Invalid cached ${label}; deleting and retrying network:`,
+          url,
+          {
+            status: cached.status,
+            type: cached.type,
+            contentType: cached.headers?.get('content-type') || ''
+          }
+        );
+        try { await assetCache.delete(url); } catch { /* best-effort cleanup */ }
       }
+    } catch (error) {
+      console.warn(
+        `[Swar-Sadhika] Cache lookup for ${label} failed; trying network:`,
+        error
+      );
     }
-    if (!response) response = await fetch(url, { method: 'GET', mode: 'cors', credentials: 'omit', cache });
-  } catch (error) {
-    throwCoded(`${label}: फ़ाइल प्राप्त नहीं हुई। नेटवर्क या पहले से भरा हुआ स्थानीय cache जाँचें। (${messageOf(error)})`, 'ASSET_FETCH_FAILED', { url, label }, error);
-  }
-  if (!response || !response.ok || response.status !== 200) {
-    throwCoded(`${label}: HTTP ${response?.status ?? 'unknown'}; अपेक्षित HTTP 200।`, 'ASSET_HTTP_ERROR', { url, status: response?.status ?? null, label });
-  }
-  if (isHtmlResponse(response)) {
-    throwCoded(`${label}: सर्वर ने फ़ाइल के बजाय HTML लौटाया; मॉडल/runtime लोड नहीं हुआ।`, 'ASSET_CONTENT_TYPE_ERROR', { url, label, contentType: response.headers.get('content-type') });
+  } else if (isModelHost) {
+    // Do not bypass model-cache.js integrity metadata by reading model bytes
+    // directly from Cache Storage. A controlling service worker may return a
+    // verified cached response; otherwise this request goes to the network.
   }
 
-  // Persist successful same-origin/CORS responses explicitly. Relying only on
-  // the service worker is insufficient on a first visit before it controls the
-  // page. Cache failure must not discard a valid network response, so it is
-  // logged and separately remains an offline-verification issue.
-  if (typeof caches !== 'undefined' && response?.type !== 'opaque') {
-    const cacheName = /(^|\.)huggingface\.co$/i.test(new URL(url).hostname)
-      ? MODEL_CACHE_NAME
-      : RUNTIME_CACHE_NAME;
+  if (!response) {
     try {
-      const cache = await caches.open(cacheName);
-      await cache.put(url, response.clone());
+      response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        cache
+      });
     } catch (error) {
-      console.warn(`[Swar-Sadhika] ${label} डाउनलोड हुआ, लेकिन local Cache Storage में नहीं लिखा जा सका:`, error);
+      throwCoded(
+        `${label}: फ़ाइल प्राप्त नहीं हुई। नेटवर्क, CORS या पहले से भरा हुआ स्थानीय cache जाँचें। (${messageOf(error)})`,
+        'ASSET_FETCH_FAILED',
+        { url, label },
+        error
+      );
     }
   }
+
+  if (response?.type === 'opaque') {
+    throwCoded(
+      `${label}: प्रतिक्रिया Opaque है; HTTP स्थिति और headers सत्यापित नहीं किए जा सकते। CORS अनुरोध जाँचें।`,
+      'ASSET_OPAQUE_RESPONSE',
+      { url, label, responseType: response.type }
+    );
+  }
+
+  if (!response || !response.ok || response.status !== 200) {
+    throwCoded(
+      `${label}: HTTP ${response?.status ?? 'unknown'}; अपेक्षित HTTP 200।`,
+      'ASSET_HTTP_ERROR',
+      {
+        url,
+        status: response?.status ?? null,
+        responseType: response?.type ?? null,
+        label
+      }
+    );
+  }
+
+  if (isHtmlResponse(response)) {
+    throwCoded(
+      `${label}: सर्वर ने फ़ाइल के बजाय HTML लौटाया; मॉडल/runtime लोड नहीं हुआ।`,
+      'ASSET_CONTENT_TYPE_ERROR',
+      {
+        url,
+        label,
+        contentType: response.headers.get('content-type')
+      }
+    );
+  }
+
+  // Persist validated CORS-readable responses explicitly. If the first visit
+  // is not yet controlled by the service worker, this still attempts to cache
+  // a response. A cache-write failure does not invalidate a valid network file.
+  if (typeof caches !== 'undefined' && !isModelHost) {
+    try {
+      const assetCache = await caches.open(cacheName);
+      await assetCache.put(url, response.clone());
+    } catch (error) {
+      console.warn(
+        `[Swar-Sadhika] ${label} डाउनलोड हुआ, लेकिन local Cache Storage में नहीं लिखा जा सका:`,
+        error
+      );
+    }
+  }
+
   return response;
 }
 
@@ -140,40 +213,144 @@ async function loadOrtRuntime() {
   if (runtimePromise) return runtimePromise;
 
   runtimePromise = new Promise((resolve, reject) => {
-    if (typeof document === 'undefined') {
-      reject(new Error('ONNX Runtime Web को browser document चाहिए।')); return;
-    }
-    const existing = document.querySelector(`script[data-swar-ort="${ORT_VERSION}"]`);
-    const finish = () => {
-      if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
-        configureOrt(globalThis.ort);
-        resolve(globalThis.ort);
-      } else reject(new Error('ONNX Runtime script मिला, लेकिन window.ort API उपलब्ध नहीं है।'));
-    };
-    if (existing) {
-      existing.addEventListener('load', finish, { once: true });
-      existing.addEventListener('error', () => reject(new Error('ONNX Runtime script load विफल हुआ।')), { once: true });
-      // If it completed before the listeners were added, check immediately.
-      queueMicrotask(() => { if (globalThis.ort?.InferenceSession) finish(); });
+    if (typeof document === 'undefined' || !document.head) {
+      reject(new Error('ONNX Runtime Web को browser document/head चाहिए।'));
       return;
     }
-    const script = document.createElement('script');
+
+    const runtimeUrl = `${ORT_BASE}ort.all.min.js`;
+    let existing = document.querySelector(
+      `script[data-swar-ort="${ORT_VERSION}"]`
+    );
+
+    // A script element created by an older bridge version has no recorded
+    // loading state, so its request mode cannot be trusted. Recreate it rather
+    // than accidentally reusing a no-cors request already in progress.
+    if (existing && !existing.dataset.swarOrtState && existing.src &&
+        !(globalThis.ort?.InferenceSession && globalThis.ort?.Tensor)) {
+      existing.remove();
+      existing = null;
+    }
+
+    let settled = false;
+    let timeoutId = null;
+
+    const cleanup = script => {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      if (script) {
+        script.removeEventListener('load', onLoad);
+        script.removeEventListener('error', onError);
+      }
+    };
+
+    const fail = (error, script) => {
+      if (settled) return;
+      settled = true;
+      if (script) {
+        script.dataset.swarOrtState = 'error';
+        // A failed element would otherwise poison every retry on this page.
+        try { script.remove(); } catch { /* best-effort cleanup */ }
+      }
+      cleanup(script);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    };
+
+    const finish = script => {
+      if (settled) return;
+      if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
+        settled = true;
+        if (script) script.dataset.swarOrtState = 'loaded';
+        cleanup(script);
+        try {
+          configureOrt(globalThis.ort);
+          resolve(globalThis.ort);
+        } catch (error) {
+          reject(error);
+        }
+        return;
+      }
+      fail(
+        new Error(
+          'ONNX Runtime script का load event आया, लेकिन आवश्यक ort.InferenceSession और ort.Tensor APIs उपलब्ध नहीं हैं।'
+        ),
+        script
+      );
+    };
+
+    function onLoad(event) {
+      finish(event.currentTarget);
+    }
+
+    function onError(event) {
+      const script = event.currentTarget;
+      fail(
+        new Error(
+          `ONNX Runtime Web ${ORT_VERSION} लोड नहीं हुआ: ${runtimeUrl}. ` +
+          'जाँचें कि अनुरोध CORS mode में है, CDN उपलब्ध है और Service Worker वास्तविक प्रतिक्रिया लौटा रहा है।'
+        ),
+        script
+      );
+    }
+
+    const script = existing || document.createElement('script');
     script.async = true;
     script.dataset.swarOrt = ORT_VERSION;
-    // Use a CORS-enabled request. Without this, a cross-origin classic script
-    // uses no-cors mode and a controlling service worker can receive an opaque
-    // response that it cannot inspect or safely cache.
+
+    // This must be set BEFORE src. It makes the cross-origin classic-script
+    // request use CORS mode rather than no-cors, allowing the Service Worker
+    // to inspect and cache a readable CDN response. The CDN must still provide
+    // a valid Access-Control-Allow-Origin response header.
     script.crossOrigin = 'anonymous';
-    script.src = `${ORT_BASE}ort.all.min.js`;
-    script.onload = finish;
-    script.onerror = () => reject(new Error(
-      `ONNX Runtime Web ${ORT_VERSION} लोड नहीं हुआ: ${script.src}. ` +
-      'CORS, CDN नेटवर्क अनुरोध और Service Worker प्रतिक्रिया की जाँच करें।'
-    ));
-    document.head.appendChild(script);
+
+    // Mark the state on our script so subsequent initialization attempts can
+    // diagnose an already failed/loaded element instead of waiting forever.
+    const previousState = script.dataset.swarOrtState || '';
+    if (previousState === 'error') {
+      fail(new Error(`पहले का ONNX Runtime script load विफल था: ${runtimeUrl}`), script);
+      return;
+    }
+    if (previousState === 'loaded') {
+      finish(script);
+      return;
+    }
+
+    script.addEventListener('load', onLoad);
+    script.addEventListener('error', onError);
+
+    // A script may have completed before listeners were attached. Check the
+    // global immediately; if it is absent, the timeout below prevents a
+    // permanently pending initialization promise.
+    if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
+      finish(script);
+      return;
+    }
+
+    timeoutId = setTimeout(() => {
+      fail(
+        new Error(
+          `ONNX Runtime Web ${ORT_VERSION} के load की प्रतीक्षा समय-सीमा समाप्त हुई। ` +
+          'Network/CORS त्रुटि, Service Worker और CDN request जाँचें।'
+        ),
+        script
+      );
+    }, 45000);
+
+    if (!existing) {
+      script.src = runtimeUrl;
+      script.dataset.swarOrtState = 'loading';
+      document.head.appendChild(script);
+    }
   }).catch(error => {
     runtimePromise = null;
-    throwCoded(`ONNX Runtime शुरू नहीं हुआ: ${messageOf(error)}`, 'ORT_RUNTIME_UNAVAILABLE', { url: `${ORT_BASE}ort.all.min.js`, version: ORT_VERSION }, error);
+    throwCoded(
+      `ONNX Runtime शुरू नहीं हुआ: ${messageOf(error)}`,
+      'ORT_RUNTIME_UNAVAILABLE',
+      {
+        url: `${ORT_BASE}ort.all.min.js`,
+        version: ORT_VERSION
+      },
+      error
+    );
   });
 
   return runtimePromise;
