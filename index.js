@@ -65,7 +65,9 @@ function assertObject(value, name) {
 }
 
 function normalizeBackend(value) {
-  const backend = value == null ? 'wasm' : String(value).toLowerCase();
+  const backend = value == null
+    ? 'wasm'
+    : String(value).trim().toLowerCase();
 
   if (!VALID_BACKENDS.has(backend)) {
     throw new SwarSadhikaEngineError(
@@ -121,6 +123,15 @@ function normalizeText(text) {
   }
 
   return normalized;
+}
+
+/**
+ * The public facade accepts arrays of verses/pādas, while the current
+ * Vāgdhenu adapter/upstream API accepts a single string. Join array parts
+ * with a line break only at the engine boundary; no punctuation is added.
+ */
+function toEngineInputText(text) {
+  return Array.isArray(text) ? text.join('\n') : text;
 }
 
 function normalizeSynthesisOptions(options = {}) {
@@ -461,12 +472,67 @@ async function loadRuntimeModules({ retry = false } = {}) {
   }
 }
 
-function createResultUrl(result) {
+async function validateWavContainer(value) {
+  let size;
+  let headerBuffer;
+
+  if (typeof Blob !== 'undefined' && value instanceof Blob) {
+    size = value.size;
+    headerBuffer = await value.slice(0, 12).arrayBuffer();
+  } else if (value instanceof ArrayBuffer) {
+    size = value.byteLength;
+    headerBuffer = value.slice(0, 12);
+  } else if (ArrayBuffer.isView(value)) {
+    size = value.byteLength;
+    headerBuffer = value.buffer.slice(
+      value.byteOffset,
+      value.byteOffset + Math.min(value.byteLength, 12)
+    );
+  } else {
+    throw new SwarSadhikaEngineError(
+      'The engine result contains an unsupported WAV representation.',
+      'INVALID_WAV_RESULT'
+    );
+  }
+
+  if (size < 44 || headerBuffer.byteLength < 12) {
+    throw new SwarSadhikaEngineError(
+      `The engine returned an audio buffer too small to be a WAV file (${size} bytes).`,
+      'INVALID_WAV_RESULT'
+    );
+  }
+
+  const header = new Uint8Array(headerBuffer, 0, 12);
+  const riff = String.fromCharCode(...header.slice(0, 4));
+  const wave = String.fromCharCode(...header.slice(8, 12));
+
+  if (riff !== 'RIFF' || wave !== 'WAVE') {
+    throw new SwarSadhikaEngineError(
+      'The engine returned raw samples or non-WAV bytes instead of a WAV file; no fake WAV wrapper was created.',
+      'INVALID_WAV_RESULT'
+    );
+  }
+}
+
+async function createResultUrl(result) {
   if (
     result &&
     typeof result.url === 'string' &&
     result.url.trim()
   ) {
+    // The lower-level adapter returns { url, blob, audioUrl }. Inspect the
+    // attached WAV bytes before trusting its already-created playback URL;
+    // otherwise an arbitrary Blob could bypass this facade's WAV validation.
+    const wavPayload = result.blob || result.audioBlob || result.wavBlob || result.wav;
+
+    if (
+      (typeof Blob !== 'undefined' && wavPayload instanceof Blob) ||
+      wavPayload instanceof ArrayBuffer ||
+      ArrayBuffer.isView(wavPayload)
+    ) {
+      await validateWavContainer(wavPayload);
+    }
+
     return {
       url: result.url,
       owned: false
@@ -475,7 +541,9 @@ function createResultUrl(result) {
 
   const wav = result && result.wav;
 
-  if (wav instanceof Blob) {
+  if (typeof Blob !== 'undefined' && wav instanceof Blob) {
+    await validateWavContainer(wav);
+
     return {
       url: URL.createObjectURL(wav),
       owned: true
@@ -483,30 +551,14 @@ function createResultUrl(result) {
   }
 
   if (wav instanceof ArrayBuffer || ArrayBuffer.isView(wav)) {
+    await validateWavContainer(wav);
+
     const bytes = wav instanceof ArrayBuffer
       ? wav
       : wav.buffer.slice(
           wav.byteOffset,
           wav.byteOffset + wav.byteLength
         );
-
-    if (bytes.byteLength < 44) {
-      throw new SwarSadhikaEngineError(
-        'The engine returned an audio buffer too small to be a WAV file.',
-        'INVALID_WAV_RESULT'
-      );
-    }
-
-    const header = new Uint8Array(bytes, 0, 12);
-    const riff = String.fromCharCode(...header.slice(0, 4));
-    const wave = String.fromCharCode(...header.slice(8, 12));
-
-    if (riff !== 'RIFF' || wave !== 'WAVE') {
-      throw new SwarSadhikaEngineError(
-        'The engine returned raw samples or non-WAV bytes instead of a WAV file; no fake WAV wrapper was created.',
-        'INVALID_WAV_RESULT'
-      );
-    }
 
     const blob = new Blob([bytes], {
       type: 'audio/wav'
@@ -653,14 +705,28 @@ export class VagdhenuWebEngine {
       return this._impl;
     }
 
+    if (
+      this.customBaseUrl !== null &&
+      this.customBaseUrl !== undefined &&
+      String(this.customBaseUrl).trim() !== ''
+    ) {
+      throw new SwarSadhikaEngineError(
+        'A custom baseUrl is not supported by the current browser adapter. Leave baseUrl null; passing it as the adapter canvas would be incorrect.',
+        'UNSUPPORTED_OPTION',
+        { details: { option: 'baseUrl', supplied: String(this.customBaseUrl) } }
+      );
+    }
+
     const modules = await loadRuntimeModules();
 
     this.lastDependencyReport = modules.dependencyReport;
 
     const ActualEngine = modules.engineModule.VagdhenuWebEngine;
 
+    // The imported browser adapter's first constructor parameter is canvas,
+    // not baseUrl. The supported configuration uses no canvas.
     this._impl = new ActualEngine(
-      this.customBaseUrl,
+      null,
       this.backendMode
     );
 
@@ -791,7 +857,12 @@ export class VagdhenuWebEngine {
 
     const forwardProgress = (info) => {
       invokeSafely(onProgress, info);
-      invokeSafely(settings.onProgress, info);
+
+      // Avoid invoking the same callback twice if passed through both channels.
+      if (settings.onProgress !== onProgress) {
+        invokeSafely(settings.onProgress, info);
+      }
+
       this._emit('progress', info);
       this._emit('status', info);
     };
@@ -812,7 +883,7 @@ export class VagdhenuWebEngine {
      * exists here.
      */
     const rawResult = await impl.synthesizeInBrowser(
-      normalizedText,
+      toEngineInputText(normalizedText),
       {
         meter: settings.meter || 'auto',
         nfe: settings.nfe,
@@ -835,7 +906,7 @@ export class VagdhenuWebEngine {
       );
     }
 
-    const output = createResultUrl(rawResult);
+    const output = await createResultUrl(rawResult);
     const safeUrl = ensureSafePlaybackUrl(output.url);
 
     if (this._impl.provider) {
@@ -945,10 +1016,12 @@ export async function sanskritTts(
   let options = {};
 
   if (typeof sourceOrOptions === 'string') {
-    if (VALID_BACKENDS.has(sourceOrOptions.toLowerCase())) {
+    const selectedString = sourceOrOptions.trim().toLowerCase();
+
+    if (VALID_BACKENDS.has(selectedString)) {
       options = {
         ...maybeOptions,
-        backend: sourceOrOptions.toLowerCase()
+        backend: selectedString
       };
     } else {
       baseUrl = sourceOrOptions;
@@ -1017,7 +1090,7 @@ export async function sanskritTts(
     let scansion = null;
 
     try {
-      scansion = textTools.analyzeVerse(input);
+      scansion = textTools.analyzeVerse(toEngineInputText(input));
     } catch (error) {
       /*
        * Analysis failure must not mutate the user's text or be represented
@@ -1042,10 +1115,9 @@ export async function sanskritTts(
         speed: merged.speed,
         seed: merged.seed,
         noSandhi: merged.noSandhi,
-        onProgress: merged.onProgress,
         onChunk: merged.onChunk
       },
-      notifyProgress
+      value => invokeSafely(merged.onProgress, value)
     );
 
     return Object.freeze({
