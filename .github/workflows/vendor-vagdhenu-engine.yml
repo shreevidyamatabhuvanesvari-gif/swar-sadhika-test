@@ -1,93 +1,177 @@
-
-name: Vendor Vagdhenu Engine
+name: Vendor Vāgdhenu Engine (Swar-Sadhika Test Only)
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Type TEST to run the licensing and vendor checks'
+        description: 'Type TEST to authorize changes in swar-sadhika-test only'
         required: true
         type: string
+        default: 'NO'
+      upstream_commit:
+        description: 'Required: exact 40-character upstream Git commit SHA reviewed for this vendoring run'
+        required: true
+        type: string
+      engine_entry:
+        description: 'Optional: confirmed upstream module path, relative to upstream repository root; leave empty for unique-export detection'
+        required: false
+        type: string
+        default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: vendor-vagdhenu-engine
+  group: vendor-vagdhenu-engine-test-only
   cancel-in-progress: false
 
 jobs:
   verify-and-vendor:
-    name: Verify license and vendor engine
+    name: Verify, fetch and vendor pinned engine source
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
 
     steps:
-      - name: Check manual confirmation
+      - name: Validate repository, branch and human confirmation
+        shell: bash
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
+          UPSTREAM_COMMIT: ${{ inputs.upstream_commit }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
         run: |
-          if [ "$CONFIRMATION" != "TEST" ]; then
-            echo "::error::Confirmation must be exactly TEST."
+          set -Eeuo pipefail
+          [[ "$CONFIRMATION" == 'TEST' ]] || {
+            echo '::error::Cancelled: enter TEST exactly to authorize this run.'
             exit 1
-          fi
+          }
+          [[ "$GITHUB_REPOSITORY" == 'shreevidyamatabhuvanesvari-gif/swar-sadhika-test' ]] || {
+            echo '::error::Safety stop: this workflow may run only in shreevidyamatabhuvanesvari-gif/swar-sadhika-test.'
+            exit 1
+          }
+          [[ "$GITHUB_REF" == 'refs/heads/main' ]] || {
+            echo '::error::Safety stop: run this workflow from the main branch of the test repository.'
+            exit 1
+          }
+          [[ "$UPSTREAM_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo '::error::upstream_commit must be the full 40-character commit SHA; branches and tags are not accepted.'
+            exit 1
+          }
+          echo 'Preflight passed for the test repository and an immutable commit input.'
 
-      - name: Check out test repository
-        uses: actions/checkout@v4
+      - name: Check out the test repository main branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout v4.2.2, pinned to a full commit SHA
         with:
           ref: main
+          fetch-depth: 0
           persist-credentials: true
 
-      - name: Check upstream license
-        id: license
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Verify repository origin and required fetch-script version
         shell: bash
         run: |
-          set -euo pipefail
-
-          API_URL="https://api.github.com/repos/hemanth/sanskrit-tts-web/license"
-
-          HTTP_CODE="$(curl -sS \
-            -o /tmp/upstream-license.json \
-            -w '%{http_code}' \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "$API_URL")"
-
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "verified=true" >> "$GITHUB_OUTPUT"
-            echo "A GitHub-detected upstream license was found."
-            echo "This is a preliminary check, not proof that every file is covered."
-          elif [ "$HTTP_CODE" = "404" ]; then
-            echo "verified=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No detectable top-level upstream license was found."
-            {
-              echo "## Vagdhenu engine vendor check"
-              echo
-              echo "**Status: BLOCKED — upstream license not verified.**"
-              echo
-              echo "The workflow completed its check, but did not copy upstream engine code."
-              echo "Obtain and verify the applicable license or written permission before vendoring."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::error::GitHub license API returned HTTP $HTTP_CODE."
-            cat /tmp/upstream-license.json
+          set -Eeuo pipefail
+          EXPECTED_ORIGIN='https://github.com/shreevidyamatabhuvanesvari-gif/swar-sadhika-test'
+          ACTUAL_ORIGIN="$(git remote get-url origin)"
+          ACTUAL_ORIGIN="${ACTUAL_ORIGIN%.git}"
+          [[ "$ACTUAL_ORIGIN" == "$EXPECTED_ORIGIN" ]] || {
+            echo "::error::Unexpected Git origin: $ACTUAL_ORIGIN"
             exit 1
+          }
+          [[ "$(git branch --show-current)" == 'main' ]] || {
+            echo '::error::Checkout is not on main; refusing to modify any files.'
+            exit 1
+          }
+          [[ -s scripts/fetch-vagdhenu-engine.sh ]] || {
+            echo '::error::scripts/fetch-vagdhenu-engine.sh is missing.'
+            exit 1
+          }
+          grep -Fq "readonly SCRIPT_VERSION='2.0.0'" scripts/fetch-vagdhenu-engine.sh || {
+            echo '::error::The matching guarded fetch script v2.0.0 is not committed on main. Update that script before running this workflow.'
+            exit 1
+          }
+          command -v node >/dev/null
+          node --version
+          bash -n scripts/fetch-vagdhenu-engine.sh
+
+      - name: Fetch and validate the pinned upstream engine
+        shell: bash
+        env:
+          VAGDHENU_UPSTREAM_COMMIT: ${{ inputs.upstream_commit }}
+          VAGDHENU_ENGINE_ENTRY: ${{ inputs.engine_entry }}
+          VAGDHENU_PERMISSION_EVIDENCE_FILE: docs/VAGDHENU-UPSTREAM-PERMISSION.md
+        run: |
+          set -Eeuo pipefail
+          bash scripts/fetch-vagdhenu-engine.sh
+
+      - name: Verify vendor outputs and provenance record
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ inputs.upstream_commit }}
+        run: |
+          set -Eeuo pipefail
+          EXPECTED_COMMIT="${EXPECTED_COMMIT,,}"
+          [[ -s vendor/vagdhenu-upstream/vagdhenu-onnx.js ]] || {
+            echo '::error::Engine bridge missing; refusing to report success.'
+            exit 1
+          }
+          [[ -s vendor/VAGDHENU_UPSTREAM_COMMIT.txt ]] || {
+            echo '::error::Pinned-commit provenance file missing.'
+            exit 1
+          }
+          RECORDED_COMMIT="$(tr '[:upper:]' '[:lower:]' < vendor/VAGDHENU_UPSTREAM_COMMIT.txt | tr -d '[:space:]')"
+          [[ "$RECORDED_COMMIT" == "$EXPECTED_COMMIT" ]] || {
+            echo "::error::Recorded upstream commit ($RECORDED_COMMIT) does not match requested commit ($EXPECTED_COMMIT)."
+            exit 1
+          }
+          [[ -s vendor/VAGDHENU_VENDOR_STATUS.md ]] || {
+            echo '::error::Vendor status report missing.'
+            exit 1
+          }
+          [[ -s vendor/UPSTREAM_RUNTIME_IMPORT_AUDIT.md ]] || {
+            echo '::error::Runtime import audit missing.'
+            exit 1
+          }
+          grep -Fq 'Not certified by this script' vendor/VAGDHENU_VENDOR_STATUS.md || {
+            echo '::error::Expected explicit inference/offline limitation statement is missing.'
+            exit 1
+          }
+          node --input-type=module --check < vendor/vagdhenu-upstream/vagdhenu-onnx.js
+          echo 'PASS: pinned source/vendor artifacts and required provenance records verified.'
+          echo 'NOT TESTED: real ONNX inference, generated audio, Android playback and network-offline synthesis.'
+
+      - name: Commit verified vendor files to the test repository only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            vendor/vagdhenu-upstream \
+            vendor/VAGDHENU_UPSTREAM_COMMIT.txt \
+            vendor/VAGDHENU_VENDOR_STATUS.md \
+            vendor/UPSTREAM_RUNTIME_IMPORT_AUDIT.md
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No vendor changes to commit; the pinned source already matches the repository.'
+          else
+            SOURCE_SHA="$(tr -d '[:space:]' < vendor/VAGDHENU_UPSTREAM_COMMIT.txt)"
+            git commit -m "Vendor Vāgdhenu source at ${SOURCE_SHA:0:12}"
+            git push origin HEAD:main
+            echo 'Verified vendor files pushed to swar-sadhika-test/main.'
           fi
 
-      - name: Fetch verified upstream browser engine
-        if: steps.license.outputs.verified == 'true'
+      - name: Publish honest workflow summary
+        if: always()
         shell: bash
         run: |
-          set -euo pipefail
-
-          echo "::error::A license API match alone is insufficient to authorize copying."
-          echo "Review the license text and confirm that it covers the engine files."
-          echo "No upstream code has been copied by this guarded step."
-          exit 1
-
-      - name: Explain vendor block
-        if: steps.license.outputs.verified != 'true'
-        run: |
-          echo "Engine vendoring was safely skipped."
-          echo "This green workflow run does NOT mean AI inference is ready."
+          {
+            echo '## Vāgdhenu vendor workflow result'
+            echo
+            echo '- This workflow runs only for the swar-sadhika-test repository main branch.'
+            echo '- Vendoring must stop with a failed run if the pinned commit, expected source/API, source license or written permission, or static runtime checks fail.'
+            echo '- A successful run means only that the guarded source-vendoring checks passed and provenance files were verified.'
+            echo '- It does **not** prove real model inference, audible Sanskrit output, Android playback, or offline synthesis.'
+            echo '- The main app `anujadha` is outside this workflow and is not modified.'
+          } >> "$GITHUB_STEP_SUMMARY"
