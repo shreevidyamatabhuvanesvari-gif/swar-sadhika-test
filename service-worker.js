@@ -429,18 +429,46 @@ self.addEventListener('fetch', event => {
       try {
         const response = await fetch(request);
 
-        if (!isCacheableResponse(request, response)) {
-          return offlineUnavailableResponse(
-            'ONNX Runtime Web resource की HTTP response वैध नहीं है।',
-            502
+        // A no-cors cross-origin script request can produce an opaque response.
+        // Never replace that actual network response with a fabricated HTTP 502:
+        // return it to the browser, but do not inspect or cache it. The engine
+        // bridge sets script.crossOrigin = 'anonymous', so normal requests should
+        // be CORS-readable and take the cacheable path below.
+        if (response?.type === 'opaque') {
+          console.warn(
+            '[Swar-Sadhika SW] ORT response is opaque; passing through without caching:',
+            request.url
           );
+          return response;
+        }
+
+        // Preserve the real HTTP response (including a genuine 404/403 or an
+        // unexpected HTML body) so the browser's network diagnostics show the
+        // actual result. Cache only validated HTTP 200 runtime assets.
+        if (!isCacheableResponse(request, response)) {
+          console.warn(
+            '[Swar-Sadhika SW] ORT response is not cacheable; passing through:',
+            request.url,
+            { status: response?.status, type: response?.type,
+              contentType: response?.headers?.get('content-type') || '' }
+          );
+          return response;
         }
 
         await cacheResponse(cache, request, response);
         return response;
-      } catch {
+      } catch (error) {
+        console.error(
+          '[Swar-Sadhika SW] ORT network fetch failed:',
+          request.url,
+          error
+        );
+        const reason = error instanceof Error && error.message
+          ? error.message
+          : String(error || 'Unknown network error');
         return offlineUnavailableResponse(
-          'ONNX Runtime Web की आवश्यक JS/WASM फ़ाइल कैश में नहीं है। पहली बार runtime डाउनलोड करें।',
+          `ONNX Runtime Web network fetch विफल हुआ: ${reason}. ` +
+          'यदि पहली बार उपयोग कर रहे हैं, तो नेटवर्क उपलब्ध होने पर Runtime डाउनलोड करें।',
           503
         );
       }
