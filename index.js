@@ -7,18 +7,26 @@
  * IMPORTANT:
  * This file is an adapter/API layer, not an AI model by itself. Actual local
  * inference requires compatible, real implementations of:
- *   - ./vagdhenu-onnx.js
- *   - ./vagdhenu-text.js
+ *   - ./vagdhenu-onnx.js (Swar-Sadhika compatibility adapter)
+ *   - ./vagdhenu-text.js (text-analysis utilities)
+ *   - ./vendor/vagdhenu-upstream/vagdhenu-onnx.js (required engine source)
  * and the model artifacts/runtime those modules expect.
  *
- * There is no cloud TTS or API-key fallback. If a dependency is absent, the
- * operation fails explicitly instead of pretending to generate audio.
+ * The engine-source adapter is configured with the single local vendored
+ * engine URL; external CDN/GitHub engine-source fallbacks are not allowed.
+ * Model assets may still require an intentional first-run download. If a
+ * required dependency is absent, the operation fails explicitly.
  */
 
 const MODULE_DIRECTORY_URL = new URL('./', import.meta.url);
 const ENGINE_MODULE_FILE = 'vagdhenu-onnx.js';
 const TEXT_MODULE_FILE = 'vagdhenu-text.js';
+const VENDORED_ENGINE_MODULE_FILE = 'vendor/vagdhenu-upstream/vagdhenu-onnx.js';
 const VALID_BACKENDS = new Set(['wasm', 'onnx']);
+const JAVASCRIPT_MIME_MARKERS = Object.freeze([
+  'javascript',
+  'ecmascript'
+]);
 
 const DEFAULT_OPTIONS = Object.freeze({
   backend: 'wasm',
@@ -254,43 +262,20 @@ async function inspectLocalModule(fileName) {
   let response;
 
   try {
+    // GET is deliberate: the engine source must be real content, not only a
+    // successful HEAD response or an HTML fallback page from GitHub Pages.
     response = await fetch(url.href, {
-      method: 'HEAD',
+      method: 'GET',
       cache: 'no-store',
       credentials: 'same-origin'
     });
-
-    /*
-     * A few static hosts do not implement HEAD.
-     * Fall back to GET in that case.
-     */
-    if (response.status === 405 || response.status === 501) {
-      response = await fetch(url.href, {
-        method: 'GET',
-        cache: 'no-store',
-        credentials: 'same-origin'
-      });
-
-      if (
-        response.body &&
-        typeof response.body.cancel === 'function'
-      ) {
-        await response.body.cancel().catch(() => {});
-      }
-    }
   } catch (error) {
     throw new SwarSadhikaEngineError(
       `Could not check required local file ${fileName}: ${
         error instanceof Error ? error.message : String(error)
       }`,
       'DEPENDENCY_CHECK_FAILED',
-      {
-        cause: error,
-        details: {
-          file: fileName,
-          url: url.href
-        }
-      }
+      { cause: error, details: { file: fileName, url: url.href } }
     );
   }
 
@@ -298,17 +283,11 @@ async function inspectLocalModule(fileName) {
     response.headers.get('content-type') || ''
   ).toLowerCase();
 
-  if (!response.ok) {
+  if (!response.ok || response.status !== 200) {
     throw new SwarSadhikaEngineError(
       `Required file ${fileName} is not available (HTTP ${response.status}). Expected URL: ${url.href}`,
       'MISSING_DEPENDENCY',
-      {
-        details: {
-          file: fileName,
-          url: url.href,
-          httpStatus: response.status
-        }
-      }
+      { details: { file: fileName, url: url.href, httpStatus: response.status } }
     );
   }
 
@@ -316,27 +295,83 @@ async function inspectLocalModule(fileName) {
     throw new SwarSadhikaEngineError(
       `${fileName} returned HTML instead of a JavaScript module. Check the GitHub Pages path/deployment. URL: ${url.href}`,
       'INVALID_DEPENDENCY_CONTENT',
-      {
-        details: {
-          file: fileName,
-          url: url.href,
-          contentType
-        }
-      }
+      { details: { file: fileName, url: url.href, contentType } }
     );
+  }
+
+  const looksLikeJavaScript = JAVASCRIPT_MIME_MARKERS.some(marker =>
+    contentType.includes(marker)
+  );
+
+  if (!looksLikeJavaScript) {
+    throw new SwarSadhikaEngineError(
+      `${fileName} is not served with a JavaScript/ECMAScript MIME type (received "${contentType || 'missing'}"). The file may be a placeholder or incorrectly deployed. URL: ${url.href}`,
+      'INVALID_DEPENDENCY_CONTENT',
+      { details: { file: fileName, url: url.href, contentType } }
+    );
+  }
+
+  let sourceText;
+  try {
+    sourceText = await response.text();
+  } catch (error) {
+    throw new SwarSadhikaEngineError(
+      `Could not read required JavaScript file ${fileName}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      'DEPENDENCY_READ_FAILED',
+      { cause: error, details: { file: fileName, url: url.href } }
+    );
+  }
+
+  if (!sourceText.trim()) {
+    throw new SwarSadhikaEngineError(
+      `Required JavaScript file ${fileName} is empty.`,
+      'EMPTY_DEPENDENCY',
+      { details: { file: fileName, url: url.href } }
+    );
+  }
+
+  if (fileName === VENDORED_ENGINE_MODULE_FILE) {
+    const requiredMarkers = [
+      'VagdhenuWebEngine',
+      'initOnnxSessions',
+      'synthesizeInBrowser'
+    ];
+    const missingMarkers = requiredMarkers.filter(marker =>
+      !sourceText.includes(marker)
+    );
+
+    if (missingMarkers.length) {
+      throw new SwarSadhikaEngineError(
+        `The vendored Vāgdhenu file does not contain the expected browser-engine API markers (${missingMarkers.join(', ')}). It may be a placeholder or the wrong upstream file.`,
+        'ENGINE_SOURCE_NOT_VERIFIED',
+        {
+          details: {
+            file: fileName,
+            url: url.href,
+            missingMarkers
+          }
+        }
+      );
+    }
   }
 
   return Object.freeze({
     file: fileName,
     url: url.href,
     status: response.status,
-    contentType
+    contentType,
+    bytes: new TextEncoder().encode(sourceText).byteLength,
+    sourceMarkersChecked: fileName === VENDORED_ENGINE_MODULE_FILE
   });
 }
 
 /**
- * Checks required first-party module URLs without loading model weights.
- * It does not claim that the model can run; that requires a separate inference.
+ * Checks all first-party modules and the pinned vendored engine entry point.
+ * This verifies static file delivery and expected API markers only. It does
+ * not prove transitive runtime availability, model compatibility, inference,
+ * pronunciation quality, or offline operation.
  */
 export async function checkLocalDependencies() {
   const results = [];
@@ -344,15 +379,13 @@ export async function checkLocalDependencies() {
 
   for (const fileName of [
     ENGINE_MODULE_FILE,
-    TEXT_MODULE_FILE
+    TEXT_MODULE_FILE,
+    VENDORED_ENGINE_MODULE_FILE
   ]) {
     try {
       results.push(await inspectLocalModule(fileName));
     } catch (error) {
-      failures.push({
-        file: fileName,
-        error
-      });
+      failures.push({ file: fileName, error });
     }
   }
 
@@ -360,16 +393,65 @@ export async function checkLocalDependencies() {
     ok: failures.length === 0,
     checkedAt: new Date().toISOString(),
     files: results,
-
     failures: failures.map(({ file, error }) => ({
       file,
-      code: error instanceof SwarSadhikaEngineError
-        ? error.code
-        : 'UNKNOWN',
-      message: error instanceof Error
-        ? error.message
-        : String(error)
+      code: error instanceof SwarSadhikaEngineError ? error.code : 'UNKNOWN',
+      message: error instanceof Error ? error.message : String(error)
     }))
+  });
+}
+
+function verifyVendoredEngineRuntime(implementation) {
+  if (!implementation || typeof implementation.getRuntimeInfo !== 'function') {
+    throw new SwarSadhikaEngineError(
+      'The local engine adapter does not expose getRuntimeInfo(); the selected upstream source cannot be verified.',
+      'RUNTIME_PROVENANCE_UNAVAILABLE'
+    );
+  }
+
+  let runtimeInfo;
+  try {
+    runtimeInfo = implementation.getRuntimeInfo();
+  } catch (error) {
+    throw new SwarSadhikaEngineError(
+      `Could not read engine runtime information: ${error instanceof Error ? error.message : String(error)}`,
+      'RUNTIME_INFO_FAILED',
+      { cause: error }
+    );
+  }
+
+  const expectedUrl = new URL(
+    VENDORED_ENGINE_MODULE_FILE,
+    MODULE_DIRECTORY_URL
+  ).href;
+  let actualUrl = null;
+
+  try {
+    if (typeof runtimeInfo?.sourceUrl === 'string' && runtimeInfo.sourceUrl) {
+      actualUrl = new URL(runtimeInfo.sourceUrl, MODULE_DIRECTORY_URL).href;
+    }
+  } catch {
+    actualUrl = null;
+  }
+
+  if (actualUrl !== expectedUrl || runtimeInfo?.sourceLoadedLocally !== true) {
+    throw new SwarSadhikaEngineError(
+      'The engine source provenance check failed. Only the exact same-origin vendor/vagdhenu-upstream/vagdhenu-onnx.js entry is permitted; external engine-source fallbacks are disabled by index.js.',
+      'REMOTE_ENGINE_SOURCE_REFUSED',
+      {
+        details: {
+          expectedSourceUrl: expectedUrl,
+          actualSourceUrl: actualUrl,
+          sourceLoadedLocally: runtimeInfo?.sourceLoadedLocally ?? null
+        }
+      }
+    );
+  }
+
+  return Object.freeze({
+    sourceUrl: actualUrl,
+    sourceLoadedLocally: true,
+    runtimeInfo: Object.freeze({ ...runtimeInfo })
   });
 }
 
@@ -474,19 +556,22 @@ async function loadRuntimeModules({ retry = false } = {}) {
 
 async function validateWavContainer(value) {
   let size;
-  let headerBuffer;
+  let prefix;
 
   if (typeof Blob !== 'undefined' && value instanceof Blob) {
     size = value.size;
-    headerBuffer = await value.slice(0, 12).arrayBuffer();
+    prefix = new Uint8Array(
+      await value.slice(0, Math.min(size, 65536)).arrayBuffer()
+    );
   } else if (value instanceof ArrayBuffer) {
     size = value.byteLength;
-    headerBuffer = value.slice(0, 12);
-  } else if (ArrayBuffer.isView(value)) {
+    prefix = new Uint8Array(value.slice(0, Math.min(size, 65536)));
+  } else if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
     size = value.byteLength;
-    headerBuffer = value.buffer.slice(
+    prefix = new Uint8Array(
+      value.buffer,
       value.byteOffset,
-      value.byteOffset + Math.min(value.byteLength, 12)
+      Math.min(value.byteLength, 65536)
     );
   } else {
     throw new SwarSadhikaEngineError(
@@ -495,16 +580,23 @@ async function validateWavContainer(value) {
     );
   }
 
-  if (size < 44 || headerBuffer.byteLength < 12) {
+  if (size < 44 || prefix.byteLength < 12) {
     throw new SwarSadhikaEngineError(
       `The engine returned an audio buffer too small to be a WAV file (${size} bytes).`,
       'INVALID_WAV_RESULT'
     );
   }
 
-  const header = new Uint8Array(headerBuffer, 0, 12);
-  const riff = String.fromCharCode(...header.slice(0, 4));
-  const wave = String.fromCharCode(...header.slice(8, 12));
+  const readFourCC = (offset) => String.fromCharCode(
+    prefix[offset], prefix[offset + 1], prefix[offset + 2], prefix[offset + 3]
+  );
+  const riff = readFourCC(0);
+  const declaredRiffBytes = new DataView(
+    prefix.buffer,
+    prefix.byteOffset,
+    prefix.byteLength
+  ).getUint32(4, true) + 8;
+  const wave = readFourCC(8);
 
   if (riff !== 'RIFF' || wave !== 'WAVE') {
     throw new SwarSadhikaEngineError(
@@ -512,68 +604,198 @@ async function validateWavContainer(value) {
       'INVALID_WAV_RESULT'
     );
   }
+
+  if (declaredRiffBytes > size || declaredRiffBytes < 44) {
+    throw new SwarSadhikaEngineError(
+      'The WAV RIFF length is inconsistent with the returned audio buffer.',
+      'INVALID_WAV_RESULT'
+    );
+  }
+
+  const view = new DataView(
+    prefix.buffer,
+    prefix.byteOffset,
+    prefix.byteLength
+  );
+  let offset = 12;
+  let formatCode = null;
+  let channels = null;
+  let sampleRate = null;
+  let bitsPerSample = null;
+  let dataBytes = null;
+
+  while (offset + 8 <= prefix.byteLength && offset + 8 <= declaredRiffBytes) {
+    const chunkId = readFourCC(offset);
+    const chunkSize = view.getUint32(offset + 4, true);
+    const chunkDataOffset = offset + 8;
+    const chunkEnd = chunkDataOffset + chunkSize;
+
+    if (chunkEnd > declaredRiffBytes || chunkEnd > size) {
+      throw new SwarSadhikaEngineError(
+        `The WAV ${chunkId} chunk length exceeds the declared audio buffer.`,
+        'INVALID_WAV_RESULT'
+      );
+    }
+
+    if (chunkId === 'fmt ') {
+      if (chunkSize < 16 || chunkDataOffset + 16 > prefix.byteLength) {
+        throw new SwarSadhikaEngineError(
+          'The WAV format chunk is incomplete or invalid.',
+          'INVALID_WAV_RESULT'
+        );
+      }
+      formatCode = view.getUint16(chunkDataOffset, true);
+      channels = view.getUint16(chunkDataOffset + 2, true);
+      sampleRate = view.getUint32(chunkDataOffset + 4, true);
+      bitsPerSample = view.getUint16(chunkDataOffset + 14, true);
+    } else if (chunkId === 'data') {
+      dataBytes = chunkSize;
+      if (chunkSize < 1) {
+        throw new SwarSadhikaEngineError(
+          'The WAV data chunk is empty.',
+          'INVALID_WAV_RESULT'
+        );
+      }
+    }
+
+    const nextOffset = chunkEnd + (chunkSize % 2);
+    if (nextOffset <= offset) break;
+    offset = nextOffset;
+  }
+
+  if (
+    formatCode === null ||
+    channels === null ||
+    sampleRate === null ||
+    bitsPerSample === null ||
+    dataBytes === null
+  ) {
+    throw new SwarSadhikaEngineError(
+      'The audio result does not contain a complete WAV fmt/data chunk pair.',
+      'INVALID_WAV_RESULT'
+    );
+  }
+
+  if (![1, 3, 0xfffe].includes(formatCode)) {
+    throw new SwarSadhikaEngineError(
+      `Unsupported WAV encoding format ${formatCode}.`,
+      'INVALID_WAV_RESULT'
+    );
+  }
+
+  if (
+    channels < 1 || channels > 8 ||
+    sampleRate < 8000 || sampleRate > 192000 ||
+    ![8, 16, 24, 32].includes(bitsPerSample)
+  ) {
+    throw new SwarSadhikaEngineError(
+      'The WAV channel count, sample rate, or bit depth is outside the supported validation range.',
+      'INVALID_WAV_RESULT',
+      { details: { channels, sampleRate, bitsPerSample } }
+    );
+  }
+
+  return Object.freeze({
+    container: 'RIFF/WAVE',
+    bytes: size,
+    declaredRiffBytes,
+    formatCode,
+    channels,
+    sampleRate,
+    bitsPerSample,
+    dataBytes
+  });
 }
 
 async function createResultUrl(result) {
-  if (
-    result &&
-    typeof result.url === 'string' &&
-    result.url.trim()
-  ) {
-    // The lower-level adapter returns { url, blob, audioUrl }. Inspect the
-    // attached WAV bytes before trusting its already-created playback URL;
-    // otherwise an arbitrary Blob could bypass this facade's WAV validation.
-    const wavPayload = result.blob || result.audioBlob || result.wavBlob || result.wav;
-
-    if (
-      (typeof Blob !== 'undefined' && wavPayload instanceof Blob) ||
-      wavPayload instanceof ArrayBuffer ||
-      ArrayBuffer.isView(wavPayload)
-    ) {
-      await validateWavContainer(wavPayload);
-    }
-
-    return {
-      url: result.url,
-      owned: false
-    };
+  if (!result || typeof result !== 'object') {
+    throw new SwarSadhikaEngineError(
+      'The engine returned no audio result object.',
+      'INVALID_ENGINE_RESULT'
+    );
   }
 
-  const wav = result && result.wav;
+  const payload = result.blob || result.audioBlob || result.wavBlob || result.wav;
+  const isAudioPayload = (
+    (typeof Blob !== 'undefined' && payload instanceof Blob) ||
+    payload instanceof ArrayBuffer ||
+    (ArrayBuffer.isView(payload) && !(payload instanceof DataView))
+  );
 
-  if (typeof Blob !== 'undefined' && wav instanceof Blob) {
-    await validateWavContainer(wav);
+  if (isAudioPayload) {
+    const wavValidation = await validateWavContainer(payload);
+    const blob = typeof Blob !== 'undefined' && payload instanceof Blob
+      ? payload
+      : new Blob([
+          payload instanceof ArrayBuffer
+            ? payload
+            : payload.buffer.slice(
+                payload.byteOffset,
+                payload.byteOffset + payload.byteLength
+              )
+        ], { type: 'audio/wav' });
 
-    return {
-      url: URL.createObjectURL(wav),
-      owned: true
-    };
-  }
-
-  if (wav instanceof ArrayBuffer || ArrayBuffer.isView(wav)) {
-    await validateWavContainer(wav);
-
-    const bytes = wav instanceof ArrayBuffer
-      ? wav
-      : wav.buffer.slice(
-          wav.byteOffset,
-          wav.byteOffset + wav.byteLength
-        );
-
-    const blob = new Blob([bytes], {
-      type: 'audio/wav'
-    });
-
+    // Always create playback from the bytes just inspected, not an unrelated
+    // URL which happened to accompany the result object.
     return {
       url: URL.createObjectURL(blob),
-      owned: true
+      owned: true,
+      wavValidation
     };
   }
 
-  throw new SwarSadhikaEngineError(
-    'The engine returned neither a playback URL nor WAV audio data.',
-    'AUDIO_RESULT_MISSING'
-  );
+  if (typeof result.url !== 'string' || !result.url.trim()) {
+    const alternateUrl = result.audioUrl || result.wavUrl || result.outputUrl || result.src;
+    if (typeof alternateUrl !== 'string' || !alternateUrl.trim()) {
+      throw new SwarSadhikaEngineError(
+        'The engine returned neither validated WAV bytes nor an audio URL that can be inspected.',
+        'AUDIO_RESULT_MISSING'
+      );
+    }
+    result = { ...result, url: alternateUrl };
+  }
+
+  const safeUrl = ensureSafePlaybackUrl(result.url);
+  let response;
+  try {
+    response = await fetch(safeUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin'
+    });
+  } catch (error) {
+    throw new SwarSadhikaEngineError(
+      `Could not inspect the audio URL returned by the engine: ${error instanceof Error ? error.message : String(error)}`,
+      'AUDIO_URL_READ_FAILED',
+      { cause: error, details: { url: safeUrl } }
+    );
+  }
+
+  if (!response.ok || response.status !== 200) {
+    throw new SwarSadhikaEngineError(
+      `The audio URL could not be verified (HTTP ${response.status}).`,
+      'AUDIO_URL_READ_FAILED',
+      { details: { url: safeUrl, httpStatus: response.status } }
+    );
+  }
+
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('text/html') || contentType.includes('javascript')) {
+    throw new SwarSadhikaEngineError(
+      'The audio URL returned HTML/JavaScript instead of audio bytes.',
+      'INVALID_AUDIO_CONTENT',
+      { details: { url: safeUrl, contentType } }
+    );
+  }
+
+  const audioBlob = await response.blob();
+  const wavValidation = await validateWavContainer(audioBlob);
+
+  return {
+    url: URL.createObjectURL(new Blob([audioBlob], { type: 'audio/wav' })),
+    owned: true,
+    wavValidation
+  };
 }
 
 function ensureSafePlaybackUrl(url) {
@@ -650,10 +872,41 @@ export class VagdhenuWebEngine {
     this._disposed = false;
     this._listeners = new Map();
     this.lastDependencyReport = null;
+    this.lastRuntimeVerification = null;
   }
 
   get engine() {
     return this._impl;
+  }
+
+  /**
+   * Reports source-provenance and execution states separately. A local module
+   * source check must never be represented as proof of real neural inference.
+   */
+  getRuntimeInfo() {
+    let upstreamInfo = null;
+    try {
+      upstreamInfo = typeof this._impl?.getRuntimeInfo === 'function'
+        ? this._impl.getRuntimeInfo()
+        : null;
+    } catch (error) {
+      upstreamInfo = {
+        readError: error instanceof Error ? error.message : String(error)
+      };
+    }
+
+    return Object.freeze({
+      facade: 'Swar-Sadhika index.js',
+      backend: this.backendMode,
+      provider: this.provider,
+      initializedCallCompleted: Boolean(this.lastRuntimeVerification),
+      localEngineSourceVerified: Boolean(this.lastRuntimeVerification?.sourceLoadedLocally),
+      realInferenceVerified: false,
+      audioGenerationVerified: false,
+      offlineInferenceVerified: false,
+      localEngineSourceUrl: this.lastRuntimeVerification?.sourceUrl || null,
+      upstreamRuntimeInfo: upstreamInfo
+    });
   }
 
   _assertNotDisposed() {
@@ -725,9 +978,19 @@ export class VagdhenuWebEngine {
 
     // The imported browser adapter's first constructor parameter is canvas,
     // not baseUrl. The supported configuration uses no canvas.
+    const onlyPermittedEngineSource = new URL(
+      VENDORED_ENGINE_MODULE_FILE,
+      MODULE_DIRECTORY_URL
+    ).href;
+
+    // The adapter accepts a third configuration argument. Supplying exactly
+    // one local URL prevents its built-in CDN/GitHub source fallbacks from
+    // being used to load the engine implementation. Model assets may still
+    // require a first-run download until fully cached.
     this._impl = new ActualEngine(
       null,
-      this.backendMode
+      this.backendMode,
+      { sourceUrls: [onlyPermittedEngineSource] }
     );
 
     if (this._impl.provider) {
@@ -760,6 +1023,7 @@ export class VagdhenuWebEngine {
       return this._initPromise;
     }
 
+    this.lastRuntimeVerification = null;
     this._initPromise = (async () => {
       const impl = await this._loadImplementation();
 
@@ -776,7 +1040,26 @@ export class VagdhenuWebEngine {
         this._emit('status', info);
       };
 
-      await impl.initOnnxSessions(forward);
+      const initializationResult = await impl.initOnnxSessions(forward);
+
+      if (
+        initializationResult?.ok === false ||
+        initializationResult?.initialized === false ||
+        initializationResult?.success === false ||
+        initializationResult?.upstreamResult?.ok === false ||
+        initializationResult?.upstreamResult?.initialized === false ||
+        initializationResult?.upstreamResult?.success === false
+      ) {
+        throw new SwarSadhikaEngineError(
+          'The engine explicitly reported that model/session initialization failed.',
+          'ENGINE_INITIALIZATION_REPORTED_FAILURE',
+          { details: { initializationResult } }
+        );
+      }
+
+      // A resolved initialization promise is not enough: verify the top-level
+      // engine source is the exact local vendored entry and not a remote URL.
+      this.lastRuntimeVerification = verifyVendoredEngineRuntime(impl);
 
       if (impl.provider) {
         this.provider = String(impl.provider);
@@ -784,7 +1067,22 @@ export class VagdhenuWebEngine {
 
       this.isWarmedUp = Boolean(impl.isWarmedUp);
 
-      return impl;
+      this._emit('status', {
+        stage: 'initialization-call-complete',
+        message: 'Initialization call completed and local source provenance passed. Real inference and audio generation are not yet verified.',
+        progress: 1,
+        backend: this.backendMode
+      });
+
+      return {
+        ok: true,
+        initialized: true,
+        backend: this.backendMode,
+        localEngineSourceVerified: true,
+        realInferenceVerified: false,
+        initializationResult: initializationResult ?? null,
+        runtimeVerification: this.lastRuntimeVerification
+      };
     })();
 
     try {
@@ -817,6 +1115,7 @@ export class VagdhenuWebEngine {
     this.backendMode = backend;
     this._initPromise = null;
     this.isWarmedUp = false;
+    this.lastRuntimeVerification = null;
 
     if (this._impl && this._impl.provider) {
       this.provider = String(this._impl.provider);
@@ -845,6 +1144,12 @@ export class VagdhenuWebEngine {
       ...options,
       backend: this.backendMode
     });
+
+    // Ensure the facade's local-source provenance check is completed before
+    // any synthesis call, even when a caller skips the separate UI init step.
+    if (!this.lastRuntimeVerification) {
+      await this.initOnnxSessions(onProgress);
+    }
 
     const impl = await this._loadImplementation();
 
@@ -924,6 +1229,7 @@ export class VagdhenuWebEngine {
         ? [...normalizedText]
         : normalizedText,
       resultUrlOwnedByAdapter: output.owned,
+      audioContainerValidation: output.wavValidation,
 
       /*
        * This is deliberately NOT an independently verified inference PASS.
@@ -935,7 +1241,9 @@ export class VagdhenuWebEngine {
         engineModule: ENGINE_MODULE_FILE,
         provider: this.provider,
         inferenceClaim: 'not-independently-verified',
-        note: 'A returned result proves the method resolved, not that audio quality or Sanskrit pronunciation is correct.'
+        localEngineSourceVerified: Boolean(this.lastRuntimeVerification?.sourceLoadedLocally),
+        wavContainerValidated: Boolean(output.wavValidation),
+        note: 'A local source URL and valid WAV container do not independently prove that the intended neural model ran or that Sanskrit pronunciation/chant quality is correct.'
       }),
 
       play() {
@@ -973,6 +1281,7 @@ export class VagdhenuWebEngine {
     const impl = this._impl;
     this._impl = null;
     this._initPromise = null;
+    this.lastRuntimeVerification = null;
 
     if (impl) {
       try {
