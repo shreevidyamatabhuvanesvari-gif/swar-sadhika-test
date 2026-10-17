@@ -160,9 +160,16 @@ async function loadOrtRuntime() {
     const script = document.createElement('script');
     script.async = true;
     script.dataset.swarOrt = ORT_VERSION;
+    // Use a CORS-enabled request. Without this, a cross-origin classic script
+    // uses no-cors mode and a controlling service worker can receive an opaque
+    // response that it cannot inspect or safely cache.
+    script.crossOrigin = 'anonymous';
     script.src = `${ORT_BASE}ort.all.min.js`;
     script.onload = finish;
-    script.onerror = () => reject(new Error(`ONNX Runtime Web ${ORT_VERSION} डाउनलोड/लोड नहीं हुआ: ${script.src}`));
+    script.onerror = () => reject(new Error(
+      `ONNX Runtime Web ${ORT_VERSION} लोड नहीं हुआ: ${script.src}. ` +
+      'CORS, CDN नेटवर्क अनुरोध और Service Worker प्रतिक्रिया की जाँच करें।'
+    ));
     document.head.appendChild(script);
   }).catch(error => {
     runtimePromise = null;
