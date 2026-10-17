@@ -1,45 +1,93 @@
+
 name: Vendor Vagdhenu Engine
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Type TEST to confirm this workflow is for the test repository"
+        description: 'Type TEST to run the licensing and vendor checks'
         required: true
-        default: ""
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: vendor-vagdhenu-engine
+  cancel-in-progress: false
+
 jobs:
-  vendor-engine:
-    if: ${{ github.event.inputs.confirmation == 'TEST' && github.repository == 'shreevidyamatabhuvanesvari-gif/swar-sadhika-test' }}
+  verify-and-vendor:
+    name: Verify license and vendor engine
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check manual confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$CONFIRMATION" != "TEST" ]; then
+            echo "::error::Confirmation must be exactly TEST."
+            exit 1
+          fi
+
       - name: Check out test repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
 
-      - name: Set up Git
+      - name: Check upstream license
+        id: license
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set -euo pipefail
+
+          API_URL="https://api.github.com/repos/hemanth/sanskrit-tts-web/license"
+
+          HTTP_CODE="$(curl -sS \
+            -o /tmp/upstream-license.json \
+            -w '%{http_code}' \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$API_URL")"
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+            echo "A GitHub-detected upstream license was found."
+            echo "This is a preliminary check, not proof that every file is covered."
+          elif [ "$HTTP_CODE" = "404" ]; then
+            echo "verified=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No detectable top-level upstream license was found."
+            {
+              echo "## Vagdhenu engine vendor check"
+              echo
+              echo "**Status: BLOCKED — upstream license not verified.**"
+              echo
+              echo "The workflow completed its check, but did not copy upstream engine code."
+              echo "Obtain and verify the applicable license or written permission before vendoring."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::GitHub license API returned HTTP $HTTP_CODE."
+            cat /tmp/upstream-license.json
+            exit 1
+          fi
 
       - name: Fetch verified upstream browser engine
-        run: bash scripts/fetch-vagdhenu-engine.sh
-
-      - name: Check fetched files
+        if: steps.license.outputs.verified == 'true'
+        shell: bash
         run: |
-          test -s vendor/vagdhenu-upstream/vagdhenu-onnx.js
-          test -s vendor/VAGDHENU_UPSTREAM_COMMIT.txt
-          test -s vendor/VAGDHENU_VENDOR_STATUS.md
+          set -euo pipefail
 
-      - name: Commit vendored source to test repository
+          echo "::error::A license API match alone is insufficient to authorize copying."
+          echo "Review the license text and confirm that it covers the engine files."
+          echo "No upstream code has been copied by this guarded step."
+          exit 1
+
+      - name: Explain vendor block
+        if: steps.license.outputs.verified != 'true'
         run: |
-          git add vendor/
-          if git diff --cached --quiet; then
-            echo "No vendor changes to commit."
-          else
-            git commit -m "Vendor upstream Vagdhenu browser engine source"
-            git push
-          fi
+          echo "Engine vendoring was safely skipped."
+          echo "This green workflow run does NOT mean AI inference is ready."
