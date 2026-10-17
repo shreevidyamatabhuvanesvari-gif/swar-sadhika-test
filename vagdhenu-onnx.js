@@ -1,31 +1,26 @@
 /**
- * Swar-Sadhika — Vāgdhenu browser-runtime adapter (source fallback v1.1)
+ * Swar-Sadhika — Vāgdhenu browser-runtime adapter
  *
  * File: vagdhenu-onnx.js
  *
- * This file adapts the official Vāgdhenu browser engine to the API expected by
- * Swar-Sadhika's index.js. Neural inference is performed by the official
- * engine in this browser tab; model weights may be downloaded from the
- * official Hugging Face model repository. No cloud TTS/inference API is used.
+ * Compatibility adapter for a genuine, locally vendored Vāgdhenu browser
+ * engine. It is not the neural model itself.
  *
- * IMPORTANT: This adapter does not reimplement the neural model graph math.
- * It loads the public browser implementation from candidate static-source
- * locations. If those locations are blocked/unavailable, it fails explicitly
- * instead of returning fake audio.
+ * IMPORTANT CURRENT LIMITATION:
+ * ZIP review found that vendor/vagdhenu-upstream/vagdhenu-onnx.js currently
+ * contains plain-text instructions, not JavaScript engine source. The required
+ * upstream redistribution permission is also not yet verified. Therefore this
+ * adapter deliberately fails closed; it does not download executable engine
+ * code from CDNs and does not claim real inference or offline operation.
+ * Model downloads, inference, and audio playback require separate tests.
  */
 
+// Security/offline rule: executable engine code must be loaded only from
+// the reviewed, same-origin vendor path. Never silently execute unpinned code
+// from a CDN or an unverified upstream URL. This path is intentionally blocked
+// until a genuine, license-cleared engine is vendored there.
 const VAGDHENU_SOURCE_CANDIDATES = Object.freeze([
-  // Vendored upstream checkout installed by scripts/fetch-vagdhenu-engine.sh.
-  new URL('./vendor/vagdhenu-upstream/vagdhenu-onnx.js', import.meta.url).href,
-
-  // Network fallbacks remain available until the upstream source has been vendored.
-  'https://hemanth.github.io/sanskrit-tts-web/vagdhenu-onnx.js',
-  'https://cdn.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
-  'https://fastly.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
-  'https://gcore.jsdelivr.net/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
-  'https://esm.sh/gh/hemanth/sanskrit-tts-web@main/vagdhenu-onnx.js',
-  'https://h3manth.com/ai/sanskrit-tts/vagdhenu-onnx.js',
-  'https://raw.githubusercontent.com/hemanth/sanskrit-tts-web/main/vagdhenu-onnx.js'
+  new URL('./vendor/vagdhenu-upstream/vagdhenu-onnx.js', import.meta.url).href
 ]);
 
 // Public app/index.js contract is "wasm" or "onnx". The upstream
@@ -191,10 +186,9 @@ export class VagdhenuWebEngine {
       backendMode || config.backend || 'wasm'
     );
 
-    this.sourceUrls =
-      Array.isArray(config.sourceUrls) && config.sourceUrls.length
-        ? [...config.sourceUrls]
-        : [...VAGDHENU_SOURCE_CANDIDATES];
+    // Deliberately ignore caller-supplied sourceUrls: allowing them would
+    // re-enable arbitrary executable remote code through this adapter.
+    this.sourceUrls = [...VAGDHENU_SOURCE_CANDIDATES];
 
     this._officialModule = null;
     this._OfficialEngine = null;
@@ -209,6 +203,7 @@ export class VagdhenuWebEngine {
 
     this._objectUrls = new Set();
     this._lastResult = null;
+    this._lastSuccessfulSynthesis = null;
   }
 
   getRuntimeInfo() {
@@ -222,8 +217,18 @@ export class VagdhenuWebEngine {
         typeof location !== 'undefined' &&
         new URL(this._moduleSourceUrl).origin === location.origin
       ),
-      localInference: true,
-      cloudInferenceApi: false
+
+      // A successful module import or method call is not sufficient evidence
+      // that real model inference ran locally. The adapter cannot prove that
+      // by itself, so report an unknown value until independent runtime tests
+      // establish it. Do not interpret null as a pass.
+      inferenceCompleted: Boolean(this._lastSuccessfulSynthesis),
+      lastInferenceAt: this._lastSuccessfulSynthesis?.at || null,
+      localInference: null,
+      localInferenceVerified: false,
+      verificationStatus: 'NOT_VERIFIED',
+      remoteRuntimeFallbacksEnabled: false,
+      cloudInferenceApi: null
     };
   }
 
@@ -265,6 +270,7 @@ export class VagdhenuWebEngine {
     this._initialized = false;
     this.isWarmedUp = false;
     this._initPromise = null;
+    this._lastSuccessfulSynthesis = null;
 
     return {
       backend: this.backendMode,
@@ -538,6 +544,16 @@ export class VagdhenuWebEngine {
 
     this._lastResult = normalized;
 
+    // Record only that the synthesis method returned a recognized audio result.
+    // This is telemetry, not proof that audio playback or offline inference passed.
+    this._lastSuccessfulSynthesis = {
+      at: new Date().toISOString(),
+      sourceUrl: this._moduleSourceUrl,
+      backend: this.backendMode,
+      resultType: normalized.blob?.type ||
+        (typeof normalized.audioUrl === 'string' ? 'audio-url' : 'unknown')
+    };
+
     reportProgress({
       stage: 'complete',
       progress: 1,
@@ -785,6 +801,7 @@ export class VagdhenuWebEngine {
     this.isWarmedUp = false;
     this._initPromise = null;
     this._lastResult = null;
+    this._lastSuccessfulSynthesis = null;
   }
 }
 
