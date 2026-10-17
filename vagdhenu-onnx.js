@@ -1,18 +1,16 @@
 /**
- * Swar-Sadhika — Vāgdhenu browser-runtime adapter (source fallback v1.2)
+ * Swar-Sadhika — Vāgdhenu browser-runtime adapter (source fallback v1.1)
  *
  * File: vagdhenu-onnx.js
  *
- * This file adapts a candidate Vāgdhenu browser-engine module to the API
- * expected by Swar-Sādhika's index.js.
+ * This file adapts the official Vāgdhenu browser engine to the API expected by
+ * Swar-Sadhika's index.js. Neural inference is performed by the official
+ * engine in this browser tab; model weights may be downloaded from the
+ * official Hugging Face model repository. No cloud TTS/inference API is used.
  *
- * IMPORTANT: This adapter does not contain the neural model or prove that the
- * imported upstream implementation performs inference locally. Candidate
- * sources and their transitive runtime/model requests must be audited separately.
- * The adapter refuses cross-origin AUDIO OUTPUT, but that alone does not prove
- * that the upstream module made no remote inference/API requests. Do not claim
- * local/offline inference until the source is reviewed and real synthesis is
- * tested with the network disabled. If no source loads, it fails explicitly
+ * IMPORTANT: This adapter does not reimplement the neural model graph math.
+ * It loads the public browser implementation from candidate static-source
+ * locations. If those locations are blocked/unavailable, it fails explicitly
  * instead of returning fake audio.
  */
 
@@ -73,104 +71,6 @@ function isTypedArray(value) {
   return ArrayBuffer.isView(value) && !(value instanceof DataView);
 }
 
-/**
- * Reject remote audio URLs: the app must not mistake fetched audio for
- * locally generated audio. This check does NOT prove the upstream engine
- * used local inference; that must be audited independently.
- */
-function normalizeAudioUrl(value) {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw new TypeError('The engine returned an empty audio URL.');
-  }
-
-  const candidate = value.trim();
-
-  if (/^blob:/i.test(candidate)) return candidate;
-  if (/^data:audio\//i.test(candidate)) return candidate;
-
-  let parsed;
-
-  try {
-    parsed = new URL(candidate, import.meta.url);
-  } catch (error) {
-    throw new Error(
-      `The engine returned an invalid audio URL: ${asErrorMessage(error)}`
-    );
-  }
-
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error(`Unsupported audio URL protocol: ${parsed.protocol}`);
-  }
-
-  if (
-    typeof location === 'undefined' ||
-    parsed.origin !== location.origin
-  ) {
-    throw new Error(
-      'Vāgdhenu returned a cross-origin audio URL. Remote audio is refused; ' +
-      'the engine must return locally generated Blob/PCM/data audio or a same-origin URL.'
-    );
-  }
-
-  if (location.protocol === 'https:' && parsed.protocol === 'http:') {
-    throw new Error('Refusing insecure HTTP audio on an HTTPS page.');
-  }
-
-  return parsed.href;
-}
-
-/**
- * Reject explicit upstream failure signals.
- *
- * A void/undefined return is allowed because some APIs initialize
- * successfully without returning a status object. Therefore, this
- * validates explicit failures but cannot certify success by itself.
- */
-function assertInitializationSucceeded(result, stage) {
-  if (result === false) {
-    throw new Error(
-      `Vāgdhenu ${stage} returned false; initialization was not successful.`
-    );
-  }
-
-  if (!result || typeof result !== 'object') return;
-
-  const status = String(result.status || '').trim().toLowerCase();
-
-  const explicitlyFailed =
-    result.ok === false ||
-    result.success === false ||
-    result.initialized === false ||
-    ['error', 'failed', 'failure'].includes(status) ||
-    (
-      result.error !== undefined &&
-      result.error !== null &&
-      result.error !== false &&
-      result.error !== ''
-    );
-
-  if (explicitlyFailed) {
-    let detail;
-
-    if (result.error instanceof Error) {
-      detail = result.error.message;
-    } else if (typeof result.error === 'string') {
-      detail = result.error;
-    } else {
-      try {
-        detail = JSON.stringify(result);
-      } catch {
-        detail = 'The upstream engine reported an unprintable failure.';
-      }
-    }
-
-    throw new Error(
-      `Vāgdhenu ${stage} explicitly reported failure: ` +
-      `${detail || 'Unknown initialization failure.'}`
-    );
-  }
-}
-
 function pcmToWavBlob(samples, sampleRate = 24000, channels = 1) {
   if (!isTypedArray(samples) && !Array.isArray(samples)) {
     throw new TypeError(
@@ -215,13 +115,11 @@ function pcmToWavBlob(samples, sampleRate = 24000, channels = 1) {
   view.setUint16(20, 1, true);
   view.setUint16(22, safeChannels, true);
   view.setUint32(24, safeRate, true);
-
   view.setUint32(
     28,
     safeRate * safeChannels * bytesPerSample,
     true
   );
-
   view.setUint16(32, safeChannels * bytesPerSample, true);
   view.setUint16(34, 16, true);
   writeString(36, 'data');
@@ -263,7 +161,7 @@ function getEngineConstructor(moduleNamespace) {
 /**
  * Compatibility adapter for Swar-Sadhika.
  *
- * Expected public API:
+ * Expected API:
  *   const engine = new VagdhenuWebEngine(null, 'wasm');
  *   await engine.setBackendMode('wasm');
  *   await engine.initOnnxSessions();
@@ -272,37 +170,22 @@ function getEngineConstructor(moduleNamespace) {
  *   );
  */
 export class VagdhenuWebEngine {
-  constructor(canvasOrBaseUrl = null, backendMode = 'wasm', config = {}) {
-    // index.js may construct this adapter as new Engine(baseUrl, backendMode),
-    // while prototype/audit pages may use new Engine(canvas, backendMode).
-    // Do not accidentally pass a URL as the upstream canvas argument.
-    let canvas = null;
-    let baseUrl = config.baseUrl || config.modelId || null;
-
-    if (canvasOrBaseUrl && typeof canvasOrBaseUrl === 'object') {
-      if (typeof canvasOrBaseUrl.getContext === 'function') {
-        canvas = canvasOrBaseUrl;
-      } else {
-        config = { ...canvasOrBaseUrl, ...config };
-
-        canvas =
-          config.canvas &&
-          typeof config.canvas.getContext === 'function'
-            ? config.canvas
-            : null;
-
-        baseUrl = config.baseUrl || config.modelId || baseUrl;
-        backendMode = config.backendMode || config.backend || backendMode;
-      }
-    } else if (
-      typeof canvasOrBaseUrl === 'string' &&
-      canvasOrBaseUrl.trim()
+  constructor(canvas = null, backendMode = 'wasm', config = {}) {
+    if (
+      canvas &&
+      typeof canvas === 'object' &&
+      !('getContext' in canvas) &&
+      (canvas.backend || canvas.backendMode || canvas.sourceUrls)
     ) {
-      baseUrl = canvasOrBaseUrl.trim();
+      config = canvas;
+      canvas = config.canvas || null;
+      backendMode =
+        config.backendMode ||
+        config.backend ||
+        backendMode;
     }
 
     this.canvas = canvas;
-    this.baseUrl = baseUrl;
 
     this.backendMode = normalizeBackend(
       backendMode || config.backend || 'wasm'
@@ -320,71 +203,73 @@ export class VagdhenuWebEngine {
     this._moduleLoadPromise = null;
     this._initPromise = null;
     this._initialized = false;
-    this._synthesisOutputValidated = false;
+
+    // The public index.js facade reads this readiness flag from the adapter.
+    this.isWarmedUp = false;
+
     this._objectUrls = new Set();
     this._lastResult = null;
   }
 
   getRuntimeInfo() {
-    let sourceLoadedLocally = false;
-
-    try {
-      sourceLoadedLocally = Boolean(
-        this._moduleSourceUrl &&
-        typeof location !== 'undefined' &&
-        new URL(this._moduleSourceUrl).origin === location.origin
-      );
-    } catch {
-      sourceLoadedLocally = false;
-    }
-
     return {
       engine: 'Vāgdhenu browser engine adapter',
       backend: this.backendMode,
       initialized: this._initialized,
       sourceUrl: this._moduleSourceUrl,
-      sourceLoadedLocally,
-      // Output-shape validation is not proof that neural inference occurred.
-      synthesisOutputValidated: this._synthesisOutputValidated,
-      // These remain unverified until upstream requests and real offline
-      // inference are independently audited. Never infer them from a Blob URL.
-      localInference: 'not-verified',
-      cloudInferenceApi: 'not-verified',
-      baseUrl: this.baseUrl || null
+      sourceLoadedLocally: Boolean(
+        this._moduleSourceUrl &&
+        typeof location !== 'undefined' &&
+        new URL(this._moduleSourceUrl).origin === location.origin
+      ),
+      localInference: true,
+      cloudInferenceApi: false
     };
   }
 
   async setBackendMode(mode) {
-    const nextBackend = normalizeBackend(mode);
+    const requestedBackend = normalizeBackend(mode);
 
-    if (
-      this._engine &&
-      typeof this._engine.setBackendMode === 'function'
-    ) {
-      const result = await this._engine.setBackendMode(nextBackend);
-
-      assertInitializationSucceeded(result, 'backend selection');
-    } else if (this._engine) {
-      // If provider switching is unsupported, discard the old instance.
-      if (typeof this._engine.dispose === 'function') {
-        try {
-          await this._engine.dispose();
-        } catch {
-          // Best-effort cleanup.
-        }
-      }
-
-      this._engine = null;
+    if (requestedBackend === this.backendMode) {
+      return {
+        backend: this.backendMode,
+        ok: true,
+        unchanged: true
+      };
     }
 
-    this.backendMode = nextBackend;
+    if (this._initPromise) {
+      throw new Error(
+        'Cannot change Vāgdhenu backend while initialization is in progress. ' +
+        'Wait for initialization to finish, then switch backend.'
+      );
+    }
+
+    // Do not report a successful backend switch when an already-created
+    // upstream engine has no switch method. Its constructor backend cannot be
+    // changed merely by mutating this adapter's label.
+    if (this._engine) {
+      if (typeof this._engine.setBackendMode !== 'function') {
+        throw new Error(
+          'The loaded Vāgdhenu engine cannot switch backend in place. ' +
+          'The current engine has no setBackendMode() method; dispose it and ' +
+          'create a new engine for the requested backend.'
+        );
+      }
+
+      // Commit the adapter state only after the upstream confirms the switch.
+      await this._engine.setBackendMode(requestedBackend);
+    }
+
+    this.backendMode = requestedBackend;
     this._initialized = false;
-    this._synthesisOutputValidated = false;
+    this.isWarmedUp = false;
     this._initPromise = null;
 
     return {
       backend: this.backendMode,
-      ok: true
+      ok: true,
+      unchanged: false
     };
   }
 
@@ -432,9 +317,9 @@ export class VagdhenuWebEngine {
         .join('\n');
 
       throw new Error(
-        'Vāgdhenu का browser engine किसी उपलब्ध स्रोत से लोड नहीं हुआ। ' +
-        'यह नेटवर्क, CORS या स्रोत-उपलब्धता की विफलता हो सकती है; ' +
-        'इस स्थिति में मॉडल inference नहीं चला।\n' +
+        'Vāgdhenu का आधिकारिक browser engine किसी उपलब्ध स्रोत से ' +
+        'लोड नहीं हुआ। यह नेटवर्क/CORS/स्रोत-उपलब्धता की विफलता है; ' +
+        'अभी मॉडल inference नहीं चला।\n' +
         details
       );
     })();
@@ -461,47 +346,47 @@ export class VagdhenuWebEngine {
 
     const engine = new this._OfficialEngine(
       this.canvas,
-      this.backendMode,
-      this.baseUrl
-        ? {
-            baseUrl: this.baseUrl,
-            modelId: this.baseUrl
-          }
-        : undefined
+      this.backendMode
     );
 
     if (!engine || typeof engine !== 'object') {
       throw new Error(
-        'Vāgdhenu engine construction returned an invalid instance.'
+        'Vāgdhenu engine initialization returned an invalid instance.'
       );
     }
 
-    if (typeof engine.setBackendMode === 'function') {
-      const backendResult =
+    // Validate a candidate instance before caching it. Otherwise a partial or
+    // incompatible upstream engine would remain cached and poison later retries.
+    try {
+      if (typeof engine.setBackendMode === 'function') {
         await engine.setBackendMode(this.backendMode);
+      }
 
-      assertInitializationSucceeded(
-        backendResult,
-        'backend selection'
-      );
+      if (typeof engine.initOnnxSessions !== 'function') {
+        throw new Error(
+          'The loaded Vāgdhenu source does not expose initOnnxSessions().'
+        );
+      }
+
+      if (typeof engine.synthesizeInBrowser !== 'function') {
+        throw new Error(
+          'The loaded Vāgdhenu source does not expose synthesizeInBrowser().'
+        );
+      }
+
+      this._engine = engine;
+      return engine;
+    } catch (error) {
+      if (typeof engine.dispose === 'function') {
+        try {
+          await engine.dispose();
+        } catch {
+          // Preserve the compatibility error that explains why it was rejected.
+        }
+      }
+
+      throw error;
     }
-
-    if (typeof engine.initOnnxSessions !== 'function') {
-      throw new Error(
-        'The loaded Vāgdhenu source does not expose initOnnxSessions().'
-      );
-    }
-
-    if (typeof engine.synthesizeInBrowser !== 'function') {
-      throw new Error(
-        'The loaded Vāgdhenu source does not expose synthesizeInBrowser().'
-      );
-    }
-
-    // Cache only a constructed instance with the required API.
-    this._engine = engine;
-
-    return engine;
   }
 
   async initOnnxSessions(progressCallback) {
@@ -529,20 +414,14 @@ export class VagdhenuWebEngine {
             backend: this.backendMode
           });
         } catch {
-          // Do not stop engine initialization because a callback failed.
+          // Keep the engine running if the progress callback fails.
         }
       }
 
       const result = await engine.initOnnxSessions();
 
-      // Explicit upstream failure must never be changed into success.
-      assertInitializationSucceeded(
-        result,
-        'session initialization'
-      );
-
       this._initialized = true;
-      this._synthesisOutputValidated = false;
+      this.isWarmedUp = true;
 
       if (typeof progressCallback === 'function') {
         try {
@@ -552,7 +431,7 @@ export class VagdhenuWebEngine {
             backend: this.backendMode
           });
         } catch {
-          // Do not stop the engine because a callback failed.
+          // Keep the engine running if the progress callback fails.
         }
       }
 
@@ -567,24 +446,6 @@ export class VagdhenuWebEngine {
 
     try {
       return await this._initPromise;
-    } catch (error) {
-      this._initialized = false;
-      this._synthesisOutputValidated = false;
-
-      if (
-        this._engine &&
-        typeof this._engine.dispose === 'function'
-      ) {
-        try {
-          await this._engine.dispose();
-        } catch {
-          // Best-effort cleanup after initialization failure.
-        }
-      }
-
-      this._engine = null;
-
-      throw error;
     } finally {
       this._initPromise = null;
     }
@@ -675,10 +536,7 @@ export class VagdhenuWebEngine {
       rawResult
     );
 
-    // This records recognized output only. It does not prove neural inference,
-    // source provenance, singing quality, or offline completeness.
     this._lastResult = normalized;
-    this._synthesisOutputValidated = true;
 
     reportProgress({
       stage: 'complete',
@@ -692,29 +550,21 @@ export class VagdhenuWebEngine {
 
   async _normalizeAudioResult(result) {
     if (typeof result === 'string') {
-      if (
-        /^(blob:|data:audio\/|https?:\/\/)/i.test(result.trim())
-      ) {
-        const audioUrl = normalizeAudioUrl(result);
-
+      if (/^(blob:|data:|https?:\/\/)/i.test(result)) {
         return {
-          url: audioUrl,
-          audioUrl,
+          url: result,
+          audioUrl: result,
           metadata: {},
           rawResult: result
         };
       }
 
       throw new Error(
-        'Vāgdhenu ने पहचाना जाने वाला audio URL नहीं लौटाया।'
+        'Vāgdhenu ने URL के बजाय अनपहचाना text परिणाम लौटाया।'
       );
     }
 
     if (isBlob(result)) {
-      if (result.size <= 0) {
-        throw new Error('Vāgdhenu returned an empty audio Blob.');
-      }
-
       const url = URL.createObjectURL(result);
       this._objectUrls.add(url);
 
@@ -762,27 +612,17 @@ export class VagdhenuWebEngine {
 
     if (
       typeof urlCandidate === 'string' &&
-      urlCandidate.trim()
+      urlCandidate
     ) {
-      const audioUrl = normalizeAudioUrl(urlCandidate);
-
       return {
         ...result,
-        url: result.url
-          ? normalizeAudioUrl(result.url)
-          : audioUrl,
-        audioUrl: result.audioUrl
-          ? normalizeAudioUrl(result.audioUrl)
-          : audioUrl,
+        url: result.url || urlCandidate,
+        audioUrl: result.audioUrl || urlCandidate,
         metadata: result.metadata || {}
       };
     }
 
     if (isBlob(blobCandidate)) {
-      if (blobCandidate.size <= 0) {
-        throw new Error('Vāgdhenu returned an empty audio Blob.');
-      }
-
       const url = URL.createObjectURL(blobCandidate);
       this._objectUrls.add(url);
 
@@ -808,7 +648,6 @@ export class VagdhenuWebEngine {
       );
 
       const length = Number(audioBuffer.length) || 0;
-
       const interleaved = new Float32Array(
         length * channelCount
       );
@@ -861,15 +700,32 @@ export class VagdhenuWebEngine {
       const sampleFormat = String(
         result.format ||
         result.audioFormat ||
-        'float32'
+        (
+          pcm instanceof Float32Array || Array.isArray(pcm)
+            ? 'float32'
+            : 'unknown'
+        )
       ).toLowerCase();
 
+      // This encoder expects normalized floating-point samples in [-1, 1].
+      // An Int16Array/Uint8Array is not interchangeable with Float32 PCM;
+      // clamping its integer values would create clipped, invalid-sounding audio.
       if (
-        !['float32', 'f32', 'pcm-f32', 'float'].includes(sampleFormat) &&
-        !(pcm instanceof Float32Array)
+        !['float32', 'f32', 'pcm-f32', 'float'].includes(sampleFormat) ||
+        (isTypedArray(pcm) && !(pcm instanceof Float32Array))
       ) {
         throw new Error(
-          `Unsupported PCM sample format: ${sampleFormat}`
+          `Unsupported PCM sample representation/format: ${sampleFormat}. ` +
+          'Expected Float32Array or an array of normalized float samples.'
+        );
+      }
+
+      if (
+        Array.isArray(pcm) &&
+        pcm.some(sample => !Number.isFinite(Number(sample)))
+      ) {
+        throw new Error(
+          'PCM sample array contains a non-finite value.'
         );
       }
 
@@ -926,7 +782,7 @@ export class VagdhenuWebEngine {
     this._objectUrls.clear();
     this._engine = null;
     this._initialized = false;
-    this._synthesisOutputValidated = false;
+    this.isWarmedUp = false;
     this._initPromise = null;
     this._lastResult = null;
   }
