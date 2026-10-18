@@ -348,7 +348,7 @@ async function loadOrtRuntime() {
         ),
         script
       );
-    }
+        }
 
     const script = existing || document.createElement('script');
     script.async = true;
@@ -670,62 +670,172 @@ function entriesToVocabulary(entries) {
 
 function findVocabulary(bank) {
   const candidates = [];
+  const namedVocabularyKey = /^(vocab|vocabulary|token_to_id|token2id|phoneme_vocab|phoneme_to_id|tokens|phoneme_to_idx|symbol_to_id|token2idx|stoi)$/i;
+  const vocabularyContext = /vocab|token|phoneme|symbol|phone|stoi|idx_to_token|id_to_token/i;
 
   walkObjects(bank, (node, path) => {
+    const keyContext = path.map(String).join('.').toLowerCase();
+
+    // Form A: ordered token list. Prefer a vocabulary-related path, but also
+    // retain unlabelled lists as low-confidence candidates for schema variants.
     if (
       Array.isArray(node) &&
       node.length > 100 &&
       node.every(item => typeof item === 'string')
     ) {
-      const keyContext = path.join('.').toLowerCase();
+      candidates.push({
+        map: entriesToVocabulary(node),
+        score: vocabularyContext.test(keyContext) ? 5 : 1,
+        path: keyContext || '<root-array>'
+      });
+    }
 
-      if (/vocab|token|phoneme|symbol|phone/.test(keyContext)) {
-        candidates.push({
-          map: entriesToVocabulary(node),
-          score: /vocab|token/.test(keyContext) ? 5 : 2,
-          path: keyContext
-        });
-      }
-    } else if (node && !Array.isArray(node) && typeof node === 'object') {
+    if (node && !Array.isArray(node) && typeof node === 'object') {
       for (const [key, value] of Object.entries(node)) {
-        if (
-          /^(vocab|vocabulary|token_to_id|token2id|phoneme_vocab|phoneme_to_id|tokens)$/i.test(key)
-        ) {
-          const map = entriesToVocabulary(value);
+        const pathLabel = [...path.map(String), key].join('.');
+        const map = entriesToVocabulary(value);
+        if (map.size <= 100) continue;
 
-          if (map.size > 100) {
-            candidates.push({
-              map,
-              score: 10,
-              path: [...path, key].join('.')
-            });
-          }
+        if (namedVocabularyKey.test(key)) {
+          candidates.push({ map, score: 12, path: pathLabel });
+        } else if (vocabularyContext.test(pathLabel)) {
+          candidates.push({ map, score: 6, path: pathLabel });
+        } else {
+          candidates.push({ map, score: 1, path: pathLabel });
+        }
+      }
+
+      // Some model banks use token -> integer maps without a conventional key.
+      // Accept only maps with a plausible count, unique integer IDs, and IDs
+      // bounded by the declared 1,039-token model vocabulary.
+      const entries = Object.entries(node);
+      if (entries.length > 100) {
+        const ids = entries.map(([, value]) => value);
+        const allValidIds = ids.every(value =>
+          Number.isInteger(Number(value)) &&
+          Number(value) >= 0 &&
+          Number(value) < VOCAB_SIZE
+        );
+        const uniqueIds = new Set(ids.map(Number)).size === ids.length;
+
+        if (allValidIds && uniqueIds) {
+          candidates.push({
+            map: entriesToVocabulary(node),
+            score: vocabularyContext.test(keyContext) ? 7 : 2,
+            path: keyContext || '<root-object>'
+          });
         }
       }
     }
   });
 
-  candidates.sort((a, b) => b.score - a.score || b.map.size - a.map.size);
+  const validCandidates = candidates
+    .filter(candidate => candidate.map.size > 100)
+    .map(candidate => {
+      const filtered = new Map();
 
-  const candidate = candidates[0];
+      for (const [token, rawId] of candidate.map) {
+        const id = Number(rawId);
 
-  if (!candidate || candidate.map.size < 100) {
+        if (
+          typeof token === 'string' &&
+          token.length > 0 &&
+          Number.isInteger(id) &&
+          id >= 0 &&
+          id < VOCAB_SIZE
+        ) {
+          filtered.set(token, id);
+        }
+      }
+
+      return {
+        ...candidate,
+        map: filtered
+      };
+    })
+    .filter(candidate => candidate.map.size > 100)
+    .sort((a, b) => b.score - a.score);
+
+  if (!validCandidates.length) {
     throwCoded(
-      'baked_bank.json में पहचाने जाने योग्य token vocabulary नहीं मिली। मॉडल को यादृच्छिक IDs देकर चलाने के बजाय synthesis रोकी गई।',
+      'baked_bank.json में मॉडल की 1,039-token vocabulary पहचान नहीं सकी। वास्तविक bank schema की जाँच आवश्यक है; अनुमानित token IDs नहीं बनाए गए।',
       'BANK_VOCABULARY_UNAVAILABLE',
       {
-        candidates: candidates.map(item => ({
+        candidateCount: candidates.length,
+        candidatePaths: candidates.slice(0, 12).map(item => ({
           path: item.path,
+          score: item.score,
           size: item.map.size
         }))
       }
     );
   }
 
-  return {
-    tokenToId: candidate.map,
-    source: candidate.path
-  };
+  const best = validCandidates[0];
+
+  // Reject duplicate token IDs: the model's token mapping must be one-to-one.
+  const ids = [...best.map.values()];
+  if (new Set(ids).size !== ids.length) {
+    throwCoded(
+      'मिली हुई vocabulary में duplicate token IDs हैं; इसे सुरक्षित रूप से स्वीकार नहीं किया गया।',
+      'BANK_VOCABULARY_DUPLICATE_IDS',
+      {
+        path: best.path,
+        tokenCount: best.map.size,
+        uniqueIdCount: new Set(ids).size
+      }
+    );
+  }
+
+  return best.map;
+          continue;
+        }
+
+        // Form B: token -> integer ID mapping under a differently named key.
+        // Require a large map, unique IDs, and plausible IDs within model range;
+        // this avoids treating arbitrary numeric metadata as a vocabulary.
+        if (
+          value && typeof value === 'object' && !Array.isArray(value) &&
+          map.size === Object.keys(value).length &&
+          new Set(map.values()).size === map.size &&
+          [...map.values()].every(id => Number.isInteger(id) && id >= 0 && id < VOCAB_SIZE) &&
+          [...map.keys()].some(token => /[\p{L}\p{M}]/u.test(token))
+        ) {
+          candidates.push({
+            map,
+            score: vocabularyContext.test(pathLabel.toLowerCase()) ? 8 : 3,
+            path: pathLabel
+          });
+        }
+      }
+    }
+  });
+
+  // A valid vocabulary must fit the model's 1,039-entry embedding table.
+  // Filter out unrelated arrays/maps with numeric IDs outside that range.
+  const valid = candidates.filter(candidate =>
+    candidate.map.size > 100 &&
+    [...candidate.map.values()].every(id => Number.isInteger(id) && id >= 0 && id < VOCAB_SIZE)
+  );
+  valid.sort((a, b) => b.score - a.score || b.map.size - a.map.size);
+
+  const candidate = valid[0];
+  if (!candidate) {
+    throwCoded(
+      'baked_bank.json में मॉडल की 1,039-token vocabulary सुरक्षित रूप से नहीं पहचानी गई। मॉडल को अनुमानित IDs देकर चलाने के बजाय synthesis रोकी गई।',
+      'BANK_VOCABULARY_UNAVAILABLE',
+      {
+        candidates: candidates.map(item => ({
+          path: item.path,
+          size: item.map.size,
+          minId: Math.min(...item.map.values()),
+          maxId: Math.max(...item.map.values())
+        }))
+      }
+    );
+  }
+
+  return { tokenToId: candidate.map, source: candidate.path };
 }
 
 function findMeterRecord(bank, meterKey) {
@@ -1027,8 +1137,7 @@ function typedArrayFor(type, valuesOrLength) {
   if (!source) return new Constructor(length);
 
   if (Constructor === BigInt64Array) {
-    return BigInt64Array.from(
-      source,
+    return BigInt64Array.from(      source,
       item => BigInt(Math.trunc(Number(item) || 0))
     );
   }
@@ -1375,360 +1484,330 @@ function createWavBlob(samples, sampleRate = VAGDHENU_SAMPLE_RATE) {
   ) {
     throwCoded('Vocoder ने Float32 PCM नहीं लौटाया।', 'INVALID_PCM');
   }
+      const bytesPerSample = 2;
+    const dataLength = pcm.length * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(buffer);
 
-  const pcm = Float32Array.from(samples, value => Number(value) || 0);
+    const write = (offset, text) => {
+      for (let i = 0; i < text.length; i += 1) {
+        view.setUint8(offset + i, text.charCodeAt(i));
+      }
+    };
 
-  if (!pcm.length || pcm.length > MAX_AUDIO_SAMPLES) {
-    throwCoded(
-      `अमान्य PCM आकार: ${pcm.length} samples।`,
-      'INVALID_PCM_LENGTH'
-    );
-  }
+    write(0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    write(8, 'WAVE');
+    write(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * bytesPerSample, true);
+    view.setUint16(32, bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    write(36, 'data');
+    view.setUint32(40, dataLength, true);
 
-  let peak = 0;
-  let sumSq = 0;
+    let offset = 44;
 
-  for (let i = 0; i < pcm.length; i += 1) {
-    const v = Math.max(-1, Math.min(1, pcm[i]));
-    pcm[i] = v;
-    peak = Math.max(peak, Math.abs(v));
-    sumSq += v * v;
-  }
+    for (let i = 0; i < pcm.length; i += 1) {
+      const value = pcm[i];
 
-  const rms = Math.sqrt(sumSq / pcm.length);
+      view.setInt16(
+        offset,
+        value < 0 ? value * 0x8000 : value * 0x7fff,
+        true
+      );
 
-  if (peak < 1e-5 || rms < 1e-6) {
-    throwCoded(
-      'Vocoder output लगभग मौन है; इसे सफल गायन नहीं माना गया।',
-      'SILENT_AUDIO',
-      { samples: pcm.length, peak, rms }
-    );
-  }
-
-  const bytesPerSample = 2;
-  const dataLength = pcm.length * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataLength);
-  const view = new DataView(buffer);
-
-  const write = (offset, text) => {
-    for (let i = 0; i < text.length; i += 1) {
-      view.setUint8(offset + i, text.charCodeAt(i));
-    }
-  };
-
-  write(0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true);
-  write(8, 'WAVE');
-  write(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * bytesPerSample, true);
-  view.setUint16(32, bytesPerSample, true);
-  view.setUint16(34, 16, true);
-  write(36, 'data');
-  view.setUint32(40, dataLength, true);
-
-  let offset = 44;
-
-  for (let i = 0; i < pcm.length; i += 1) {
-    const value = pcm[i];
-
-    view.setInt16(
-      offset,
-      value < 0 ? value * 0x8000 : value * 0x7fff,
-      true
-    );
-
-    offset += 2;
-  }
-
-  return {
-    blob: new Blob([buffer], { type: 'audio/wav' }),
-    pcm,
-    peak,
-    rms
-  };
-}
-
-function extractAudioTensor(outputs) {
-  const entries = Object.entries(outputs || {}).filter(
-    ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
-  );
-
-  if (!entries.length) {
-    throwCoded(
-      'Vocos model ने कोई typed tensor output नहीं लौटाया।',
-      'VOCODER_OUTPUT_MISSING'
-    );
-  }
-
-  const ranked = entries.sort((a, b) => {
-    const roleA = roleFor(a[0]) === 'audio' ? 1 : 0;
-    const roleB = roleFor(b[0]) === 'audio' ? 1 : 0;
-
-    return roleB - roleA || b[1].data.length - a[1].data.length;
-  });
-
-  const [name, tensor] = ranked[0];
-
-  if (!tensor.data.length) {
-    throwCoded(
-      `Vocoder output "${name}" खाली है।`,
-      'VOCODER_OUTPUT_EMPTY'
-    );
-  }
-
-  return {
-    name,
-    tensor,
-    samples: Float32Array.from(tensor.data, Number)
-  };
-}
-
-function modelSummary(session) {
-  const summarize = list =>
-    (Array.isArray(list) ? list : []).map(meta => ({
-      name: meta.name,
-      type: meta.type || 'unknown',
-      shape: Array.isArray(meta.shape) ? [...meta.shape] : [],
-      isTensor: meta.isTensor !== false
-    }));
-
-  return Object.freeze({
-    inputs: summarize(session?.inputMetadata),
-    outputs: summarize(session?.outputMetadata),
-    inputNames: [...(session?.inputNames || [])],
-    outputNames: [...(session?.outputNames || [])]
-  });
-}
-
-function normalizeOptions(options = {}) {
-  const opts = options && typeof options === 'object' ? options : {};
-
-  const requestedMeter = String(
-    opts.meterKey ?? opts.meter ?? 'auto'
-  ).trim();
-
-  const meter =
-    (!requestedMeter || requestedMeter.toLowerCase() === 'auto')
-      ? 'auto'
-      : canonicalMeter(requestedMeter);
-
-  const nfe = Number(opts.nfe ?? DEFAULT_NFE);
-  const cfg = Number(opts.cfg ?? 3.0);
-  const speed = Number(opts.speed ?? 0.9);
-  const seed = Number(opts.seed ?? 60);
-  const swaySamplingCoef = Number(opts.swaySamplingCoef ?? -1);
-
-  if (!Number.isInteger(nfe) || nfe < 1 || nfe > 24) {
-    throwCoded('nfe 1 से 24 के बीच पूर्णांक होना चाहिए।', 'INVALID_NFE');
-  }
-
-  if (!Number.isFinite(cfg) || cfg < 0 || cfg > 20) {
-    throwCoded('cfg 0 से 20 के बीच होना चाहिए।', 'INVALID_CFG');
-  }
-
-  if (!Number.isFinite(speed) || speed < 0.3 || speed > 2) {
-    throwCoded('speed 0.3 से 2 के बीच होना चाहिए।', 'INVALID_SPEED');
-  }
-
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0x7fffffff) {
-    throwCoded(
-      'seed non-negative 32-bit integer होना चाहिए।',
-      'INVALID_SEED'
-    );
-  }
-
-  if (
-    !Number.isFinite(swaySamplingCoef) ||
-    swaySamplingCoef < -2 ||
-    swaySamplingCoef > 2
-  ) {
-    throwCoded(
-      'swaySamplingCoef -2 से 2 के बीच होना चाहिए।',
-      'INVALID_SWAY_COEF'
-    );
-  }
-
-  const language = opts.language ?? opts.lang ?? 'auto';
-
-  // Validate the explicit setting here; auto detection is resolved with text.
-  normalizeTextLanguage(language, '');
-
-  return {
-    meter,
-    nfe,
-    cfg,
-    speed,
-    seed,
-    swaySamplingCoef,
-    language,
-    noSandhi: Boolean(opts.noSandhi)
-  };
-}
-
-export class VagdhenuWebEngine {
-  constructor(canvas = null, backendMode = 'wasm', config = {}) {
-    if (
-      canvas &&
-      typeof canvas === 'object' &&
-      !('getContext' in canvas) &&
-      (
-        canvas.backend ||
-        canvas.backendMode ||
-        canvas.allowProviderFallback !== undefined
-      )
-    ) {
-      config = canvas;
-      canvas = config.canvas || null;
-      backendMode = config.backendMode || config.backend || backendMode;
+      offset += 2;
     }
 
-    this.canvas = canvas;
-    this.config = { allowProviderFallback: true, ...config };
-    this.backendMode = normalizeBackend(
-      backendMode || this.config.backend || 'wasm'
-    );
-
-    this.provider = this.backendMode === 'wasm' ? 'wasm' : 'webgpu';
-    this.isWarmedUp = false;
-    this._ort = null;
-    this._sessions = null;
-    this._bank = null;
-    this._bankBytes = null;
-    this._vocabulary = null;
-    this._initPromise = null;
-    this._disposed = false;
-    this._urls = new Set();
-    this._lastInference = null;
-    this._lastError = null;
+    return {
+      blob: new Blob([buffer], { type: 'audio/wav' }),
+      pcm,
+      peak,
+      rms
+    };
   }
 
-  getRuntimeInfo() {
+  function extractAudioTensor(outputs) {
+    const entries = Object.entries(outputs || {}).filter(
+      ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
+    );
+
+    if (!entries.length) {
+      throwCoded(
+        'Vocos model ने कोई typed tensor output नहीं लौटाया।',
+        'VOCODER_OUTPUT_MISSING'
+      );
+    }
+
+    const ranked = entries.sort((a, b) => {
+      const roleA = roleFor(a[0]) === 'audio' ? 1 : 0;
+      const roleB = roleFor(b[0]) === 'audio' ? 1 : 0;
+
+      return roleB - roleA || b[1].data.length - a[1].data.length;
+    });
+
+    const [name, tensor] = ranked[0];
+
+    if (!tensor.data.length) {
+      throwCoded(
+        `Vocoder output "${name}" खाली है।`,
+        'VOCODER_OUTPUT_EMPTY'
+      );
+    }
+
+    return {
+      name,
+      tensor,
+      samples: Float32Array.from(tensor.data, Number)
+    };
+  }
+
+  function modelSummary(session) {
+    const summarize = list =>
+      (Array.isArray(list) ? list : []).map(meta => ({
+        name: meta.name,
+        type: meta.type || 'unknown',
+        shape: Array.isArray(meta.shape) ? [...meta.shape] : [],
+        isTensor: meta.isTensor !== false
+      }));
+
     return Object.freeze({
-      engine: 'Swar-Sadhika original Vāgdhenu ONNX bridge',
-      version: VAGDHENU_ENGINE_VERSION,
-      supportedTextLanguages: [...SUPPORTED_TEXT_LANGUAGES],
-      acceptedLanguageOption: 'options.language (vedic-sanskrit | sanskrit | hindi | auto)',
-      backend: this.backendMode,
-      provider: this.provider,
-      initialized: Boolean(this._sessions),
-      modelsLoaded: Boolean(
-        this._sessions &&
-        this._sessions.conditioner &&
-        this._sessions.dit &&
-        this._sessions.vocoder
-      ),
-      modelSignatures: this._sessions
-        ? {
-            conditioner: modelSummary(this._sessions.conditioner),
-            dit: modelSummary(this._sessions.dit),
-            vocoder: modelSummary(this._sessions.vocoder)
-          }
-        : null,
-      vocabularyLoaded: Boolean(this._vocabulary?.tokenToId?.size),
-      referenceBankLoaded: Boolean(this._bank && this._bankBytes),
-      lastInference: this._lastInference,
-      lastError: this._lastError,
-      remoteTtsApi: false,
-      localInferenceVerified: Boolean(
-        this._lastInference?.modelStagesCompleted
-      ),
-      offlineInferenceVerified: false,
-      runtimeUrl: `${ORT_BASE}ort.all.min.js`,
-      modelRepository: getModelBase(this.backendMode)
+      inputs: summarize(session?.inputMetadata),
+      outputs: summarize(session?.outputMetadata),
+      inputNames: [...(session?.inputNames || [])],
+      outputNames: [...(session?.outputNames || [])]
     });
   }
 
-  async setBackendMode(mode) {
-    this._assertActive();
+  function normalizeOptions(options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
 
-    const backend = normalizeBackend(mode);
+    const requestedMeter = String(
+      opts.meterKey ?? opts.meter ?? 'auto'
+    ).trim();
 
-    if (backend === this.backendMode) {
-      return { ok: true, backend, unchanged: true };
+    const meter =
+      (!requestedMeter || requestedMeter.toLowerCase() === 'auto')
+        ? 'auto'
+        : canonicalMeter(requestedMeter);
+
+    const nfe = Number(opts.nfe ?? DEFAULT_NFE);
+    const cfg = Number(opts.cfg ?? 3.0);
+    const speed = Number(opts.speed ?? 0.9);
+    const seed = Number(opts.seed ?? 60);
+    const swaySamplingCoef = Number(opts.swaySamplingCoef ?? -1);
+
+    if (!Number.isInteger(nfe) || nfe < 1 || nfe > 24) {
+      throwCoded('nfe 1 से 24 के बीच पूर्णांक होना चाहिए।', 'INVALID_NFE');
     }
 
-    await this._releaseSessions();
+    if (!Number.isFinite(cfg) || cfg < 0 || cfg > 20) {
+      throwCoded('cfg 0 से 20 के बीच होना चाहिए।', 'INVALID_CFG');
+    }
 
-    this.backendMode = backend;
-    this.provider = backend === 'wasm' ? 'wasm' : 'webgpu';
-    this.isWarmedUp = false;
-    this._bank = null;
-    this._bankBytes = null;
-    this._vocabulary = null;
+    if (!Number.isFinite(speed) || speed < 0.3 || speed > 2) {
+      throwCoded('speed 0.3 से 2 के बीच होना चाहिए।', 'INVALID_SPEED');
+    }
 
-    return { ok: true, backend, unchanged: false };
-  }
-
-  _assertActive() {
-    if (this._disposed) {
+    if (!Number.isInteger(seed) || seed < 0 || seed > 0x7fffffff) {
       throwCoded(
-        'इस engine instance को dispose किया जा चुका है।',
-        'ENGINE_DISPOSED'
-      );
-    }
-  }
-
-  async _loadBank(progressCallback) {
-    const base = getModelBase(this.backendMode);
-
-    emit(progressCallback, {
-      stage: 'bank',
-      progress: 0.02,
-      message: 'पाठ-token vocabulary और prosody bank लोड हो रहा है।'
-    });
-
-    const [jsonResponse, binaryResponse] = await Promise.all([
-      fetchChecked(
-        new URL(VAGDHENU_ASSET_FILES.bank, base).href,
-        VAGDHENU_ASSET_FILES.bank
-      ),
-      fetchChecked(
-        new URL(VAGDHENU_ASSET_FILES.bankBinary, base).href,
-        VAGDHENU_ASSET_FILES.bankBinary
-      )
-    ]);
-
-    let bank;
-
-    try {
-      bank = await jsonResponse.json();
-    } catch (error) {
-      throwCoded('baked_bank.json parse नहीं हुआ।', 'BANK_JSON_INVALID', undefined, error);
-    }
-
-    const bankBytes = await binaryResponse.arrayBuffer();
-
-    if (bankBytes.byteLength < 1024) {
-      throwCoded(
-        `baked_bank.bin बहुत छोटा है (${bankBytes.byteLength} bytes)।`,
-        'BANK_BINARY_INVALID'
+        'seed non-negative 32-bit integer होना चाहिए।',
+        'INVALID_SEED'
       );
     }
 
-    const vocabulary = findVocabulary(bank);
-
-    if (!vocabulary.tokenToId.size) {
-      throwCoded('Token vocabulary खाली है।', 'BANK_VOCABULARY_EMPTY');
+    if (
+      !Number.isFinite(swaySamplingCoef) ||
+      swaySamplingCoef < -2 ||
+      swaySamplingCoef > 2
+    ) {
+      throwCoded(
+        'swaySamplingCoef -2 से 2 के बीच होना चाहिए।',
+        'INVALID_SWAY_COEF'
+      );
     }
 
-    this._bank = bank;
-    this._bankBytes = bankBytes;
-    this._vocabulary = vocabulary;
+    const language = opts.language ?? opts.lang ?? 'auto';
 
-    emit(progressCallback, {
-      stage: 'bank',
-      progress: 0.06,
-      message: `Prosody bank तैयार (${vocabulary.tokenToId.size} vocabulary entries)।`
-    });
+    // Validate the explicit setting here; auto detection is resolved with text.
+    normalizeTextLanguage(language, '');
+
+    return {
+      meter,
+      nfe,
+      cfg,
+      speed,
+      seed,
+      swaySamplingCoef,
+      language,
+      noSandhi: Boolean(opts.noSandhi)
+    };
   }
 
-  async _createSession(key, fileName, progressCallback, index, total) {
-    const base = getModelBase(this.backendMode);
-    const url = new URL(fileName, base).href;
+  export class VagdhenuWebEngine {
+    constructor(canvas = null, backendMode = 'wasm', config = {}) {
+      if (
+        canvas &&
+        typeof canvas === 'object' &&
+        !('getContext' in canvas) &&
+        (
+          canvas.backend ||
+          canvas.backendMode ||
+          canvas.allowProviderFallback !== undefined
+        )
+      ) {
+        config = canvas;
+        canvas = config.canvas || null;
+        backendMode = config.backendMode || config.backend || backendMode;
+      }
+
+      this.canvas = canvas;
+      this.config = { allowProviderFallback: true, ...config };
+      this.backendMode = normalizeBackend(
+        backendMode || this.config.backend || 'wasm'
+      );
+
+      this.provider = this.backendMode === 'wasm' ? 'wasm' : 'webgpu';
+      this.isWarmedUp = false;
+      this._ort = null;
+      this._sessions = null;
+      this._bank = null;
+      this._bankBytes = null;
+      this._vocabulary = null;
+      this._initPromise = null;
+      this._disposed = false;
+      this._urls = new Set();
+      this._lastInference = null;
+      this._lastError = null;
+    }
+
+    getRuntimeInfo() {
+      return Object.freeze({
+        engine: 'Swar-Sadhika original Vāgdhenu ONNX bridge',
+        version: VAGDHENU_ENGINE_VERSION,
+        supportedTextLanguages: [...SUPPORTED_TEXT_LANGUAGES],
+        acceptedLanguageOption: 'options.language (vedic-sanskrit | sanskrit | hindi | auto)',
+        backend: this.backendMode,
+        provider: this.provider,
+        initialized: Boolean(this._sessions),
+        modelsLoaded: Boolean(
+          this._sessions &&
+          this._sessions.conditioner &&
+          this._sessions.dit &&
+          this._sessions.vocoder
+        ),
+        modelSignatures: this._sessions
+          ? {
+              conditioner: modelSummary(this._sessions.conditioner),
+              dit: modelSummary(this._sessions.dit),
+              vocoder: modelSummary(this._sessions.vocoder)
+            }
+          : null,
+        vocabularyLoaded: Boolean(this._vocabulary?.tokenToId?.size),
+        referenceBankLoaded: Boolean(this._bank && this._bankBytes),
+        lastInference: this._lastInference,
+        lastError: this._lastError,
+        remoteTtsApi: false,
+        localInferenceVerified: Boolean(
+          this._lastInference?.modelStagesCompleted
+        ),
+        offlineInferenceVerified: false,
+        runtimeUrl: `${ORT_BASE}ort.all.min.js`,
+        modelRepository: getModelBase(this.backendMode)
+      });
+    }
+
+    async setBackendMode(mode) {
+      this._assertActive();
+
+      const backend = normalizeBackend(mode);
+
+      if (backend === this.backendMode) {
+        return { ok: true, backend, unchanged: true };
+      }
+
+      await this._releaseSessions();
+
+      this.backendMode = backend;
+      this.provider = backend === 'wasm' ? 'wasm' : 'webgpu';
+      this.isWarmedUp = false;
+      this._bank = null;
+      this._bankBytes = null;
+      this._vocabulary = null;
+
+      return { ok: true, backend, unchanged: false };
+    }
+
+    _assertActive() {
+      if (this._disposed) {
+        throwCoded(
+          'इस engine instance को dispose किया जा चुका है।',
+          'ENGINE_DISPOSED'
+        );
+      }
+    }
+
+    async _loadBank(progressCallback) {
+      const base = getModelBase(this.backendMode);
+
+      emit(progressCallback, {
+        stage: 'bank',
+        progress: 0.02,
+        message: 'पाठ-token vocabulary और prosody bank लोड हो रहा है।'
+      });
+
+      const [jsonResponse, binaryResponse] = await Promise.all([
+        fetchChecked(
+          new URL(VAGDHENU_ASSET_FILES.bank, base).href,
+          VAGDHENU_ASSET_FILES.bank
+        ),
+        fetchChecked(
+          new URL(VAGDHENU_ASSET_FILES.bankBinary, base).href,
+          VAGDHENU_ASSET_FILES.bankBinary
+        )
+      ]);
+
+      let bank;
+
+      try {
+        bank = await jsonResponse.json();
+      } catch (error) {
+        throwCoded('baked_bank.json parse नहीं हुआ।', 'BANK_JSON_INVALID', undefined, error);
+      }
+
+      const bankBytes = await binaryResponse.arrayBuffer();
+
+      if (bankBytes.byteLength < 1024) {
+        throwCoded(
+          `baked_bank.bin बहुत छोटा है (${bankBytes.byteLength} bytes)।`,
+          'BANK_BINARY_INVALID'
+        );
+      }
+
+      const vocabulary = findVocabulary(bank);
+
+      if (!vocabulary.tokenToId.size) {
+        throwCoded('Token vocabulary खाली है।', 'BANK_VOCABULARY_EMPTY');
+      }
+
+      this._bank = bank;
+      this._bankBytes = bankBytes;
+      this._vocabulary = vocabulary;
+
+      emit(progressCallback, {
+        stage: 'bank',
+        progress: 0.06,
+        message: `Prosody bank तैयार (${vocabulary.tokenToId.size} vocabulary entries)।`
+      });
+    }
+
+    async _createSession(key, fileName, progressCallback, index, total) {
+      const base = getModelBase(this.backendMode);
+          const url = new URL(fileName, base).href;
 
     emit(progressCallback, {
       stage: 'model-session',
@@ -2078,385 +2157,25 @@ export class VagdhenuWebEngine {
             type: item.type,
             shape: shapeOf(item)
           }))
-        }
-      );
-    }
-
-    return feeds;
-  }
-
-  _pickLatentInput() {
-    const inputs = metadataFor(this._sessions.dit, 'input');
-
-    const ranked = inputs
-      .map(meta => ({
-        meta,
-        role: roleFor(meta.name),
-        rank: shapeOf(meta).length
-      }))
-      .filter(item =>
-        item.rank >= 2 &&
-        /float/i.test(String(item.meta.type || 'float32'))
+                    ...context,
+          latentShape: latent.dims
+        },
+        { unconditional: false }
       );
 
-    return (
-      ranked.find(item => item.role === 'latent')?.meta ||
-      ranked.find(item =>
-        /^(x|sample|noise|latents?)$/i.test(item.meta.name)
-      )?.meta ||
-      ranked[0]?.meta ||
-      null
-    );
-  }
-
-  _conditionTensorFor(
-    inputMeta,
-    conditionerOutputs,
-    context,
-    { unconditional = false } = {}
-  ) {
-    const shape = resolvedShape(inputMeta, context);
-    const exact = conditionerOutputs?.[inputMeta.name];
-
-    let source = exact;
-
-    if (!source) source = bestOutputTensor(conditionerOutputs, inputMeta);
-
-    if (unconditional) {
-      const size = product(shape);
-      return makeTensor(this._ort, inputMeta, new Array(size).fill(0), shape);
-    }
-
-    if (source) {
-      const copied = copyTensorWithShape(this._ort, source, inputMeta, shape);
-      if (copied) return copied;
-    }
-
-    return null;
-  }
-
-  _ditFeeds(
-    latentMeta,
-    latentTensor,
-    t,
-    conditionerOutputs,
-    context,
-    { unconditional = false } = {}
-  ) {
-    const feeds = {};
-    const missing = [];
-
-    for (const input of metadataFor(this._sessions.dit, 'input')) {
-      const role = roleFor(input.name);
-      const name = String(input.name || '').toLowerCase();
-
-      if (
-        input.name === latentMeta.name ||
-        role === 'latent' ||
-        /^(x|sample|noise|latents?)$/i.test(name)
-      ) {
-        const shape = resolvedShape(input, {
-          ...context,
-          latentShape: latentTensor.dims,
-          frames: latentTensor.dims.at(-1) || context.frames
-        });
-
-        const tensor = copyTensorWithShape(
-          this._ort,
-          latentTensor,
-          input,
-          shape
-        );
-
-        if (!tensor) {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape,
-            role,
-            reason: 'latent shape/type mismatch'
-          });
-        } else {
-          feeds[input.name] = tensor;
-        }
-      } else if (role === 'time') {
-        feeds[input.name] = scalarForMeta(this._ort, input, t, context);
-      } else if (role === 'length') {
-        feeds[input.name] = scalarForMeta(
-          this._ort,
-          input,
-          latentTensor.dims.at(-1) || context.frames,
-          context
-        );
-      } else if (role === 'mask') {
-        const cond = unconditional
-          ? null
-          : this._conditionTensorFor(input, conditionerOutputs, context);
-
-        feeds[input.name] = cond || onesForMeta(this._ort, input, context, 1);
-      } else if (role === 'condition' || role === 'reference') {
-        const tensor = this._conditionTensorFor(
-          input,
-          conditionerOutputs,
-          context,
-          { unconditional }
-        );
-
-        if (!tensor) {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape: shapeOf(input),
-            role,
-            reason: 'no compatible conditioner output'
-          });
-        } else {
-          feeds[input.name] = tensor;
-        }
-      } else {
-        const sameName = conditionerOutputs?.[input.name];
-
-        const tensor = sameName
-          ? copyTensorWithShape(
-              this._ort,
-              sameName,
-              input,
-              resolvedShape(input, context)
-            )
-          : null;
-
-        if (tensor) {
-          feeds[input.name] = tensor;
-        } else {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape: shapeOf(input),
-            role,
-            reason: 'input name is not mapped to a known semantic role'
-          });
-        }
-      }
-    }
-
-    if (missing.length) {
-      throwCoded(
-        'DiT graph के वास्तविक inputs उपलब्ध metadata से सुरक्षित रूप से map नहीं हो सके।',
-        'DIT_INPUT_CONTRACT_UNKNOWN',
-        {
-          missing,
-          inputs: metadataFor(this._sessions.dit, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          })),
-          conditionerOutputs: Object.keys(conditionerOutputs || {})
-        }
-      );
-    }
-
-    return feeds;
-  }
-
-  _chooseVelocity(outputs, latentTensor) {
-    const entries = Object.entries(outputs || {}).filter(
-      ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
-    );
-
-    if (!entries.length) {
-      throwCoded('DiT ने कोई typed tensor output नहीं लौटाया।', 'DIT_OUTPUT_MISSING');
-    }
-
-    const named = entries.find(([name]) =>
-      /velocity|flow|v_pred|model_output|noise_pred|predicted_noise|sample|latent|out/i.test(name)
-    );
-
-    const candidates = entries.filter(
-      ([, tensor]) => tensor.data.length === latentTensor.data.length
-    );
-
-    const picked =
-      (named && named[1].data.length === latentTensor.data.length ? named : null) ||
-      candidates.sort((a, b) => b[1].data.length - a[1].data.length)[0];
-
-    if (!picked) {
-      throwCoded(
-        'DiT output का आकार latent से मेल नहीं खाता; flow update असुरक्षित होगा।',
-        'DIT_OUTPUT_SHAPE_MISMATCH',
-        {
-          latentDims: latentTensor.dims,
-          latentLength: latentTensor.data.length,
-          outputs: entries.map(([name, tensor]) => ({
-            name,
-            dims: tensor.dims,
-            length: tensor.data.length
-          }))
-        }
-      );
-    }
-
-    return {
-      name: picked[0],
-      tensor: picked[1],
-      values: Float32Array.from(picked[1].data, Number)
-    };
-  }
-
-  _makeInitialNoise(meta, context, seed) {
-    const shape = resolvedShape(meta, context);
-    const count = product(shape);
-    const random = deterministicRandom(seed);
-    const values = new Float32Array(count);
-
-    // Gaussian noise via Box–Muller, generated locally and deterministically.
-    for (let i = 0; i < count; i += 2) {
-      const u1 = Math.max(random(), 1e-7);
-      const u2 = random();
-      const radius = Math.sqrt(-2 * Math.log(u1));
-
-      values[i] = radius * Math.cos(2 * Math.PI * u2);
-
-      if (i + 1 < count) {
-        values[i + 1] = radius * Math.sin(2 * Math.PI * u2);
-      }
-    }
-
-    return makeTensor(this._ort, meta, values, shape);
-  }
-
-  async _runConditioner(
-    context,
-    tokenIds,
-    template,
-    progressCallback,
-    index,
-    total
-  ) {
-    const session = this._sessions.conditioner;
-    const feeds = this._conditionerFeeds(null, context, tokenIds, template);
-
-    emit(progressCallback, {
-      stage: 'conditioner',
-      progress: 0.48 + 0.08 * (index / total),
-      message: `खंड ${index + 1}/${total}: text/prosody conditioning चल रहा है।`
-    });
-
-    let outputs;
-
-    try {
-      outputs = await session.run(feeds);
-    } catch (error) {
-      throwCoded(
-        `Conditioner inference विफल: ${messageOf(error)}`,
-        'CONDITIONER_INFERENCE_FAILED',
-        { inputs: Object.keys(feeds) },
-        error
-      );
-    }
-
-    if (!outputs || !Object.keys(outputs).length) {
-      throwCoded('Conditioner ने कोई output नहीं लौटाया।', 'CONDITIONER_OUTPUT_EMPTY');
-    }
-
-    return outputs;
-  }
-
-  async _runDiffusion(
-    context,
-    conditionerOutputs,
-    progressCallback,
-    segmentIndex,
-    segmentCount
-  ) {
-    const session = this._sessions.dit;
-    const latentMeta = this._pickLatentInput();
-
-    if (!latentMeta) {
-      throwCoded(
-        'DiT graph में पहचानने योग्य floating-point latent input नहीं मिला।',
-        'DIT_LATENT_INPUT_MISSING',
-        {
-          inputs: metadataFor(session, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          }))
-        }
-      );
-    }
-
-    const latentShape = resolvedShape(latentMeta, context);
-
-    const latentInput = this._makeInitialNoise(
-      latentMeta,
-      { ...context, latentShape },
-      context.seed + segmentIndex * 104729
-    );
-
-    let latent = latentInput;
-
-    const metaNames = metadataFor(session, 'input').map(item => item.name);
-
-    const hasConditionInput = metadataFor(session, 'input').some(item =>
-      ['condition', 'reference'].includes(roleFor(item.name))
-    );
-
-    const useGuidance = context.cfg > 0 && hasConditionInput;
-
-    const flowTimes = Array.from(
-      { length: context.nfe + 1 },
-      (_, index) => {
-        const base = index / context.nfe;
-
-        // Sway sampling used by flow-matching TTS systems: retain endpoints while
-        // allocating more integration resolution to the curved portions of time.
-        const shifted =
-          base +
-          context.swaySamplingCoef *
-            (Math.cos(Math.PI * base / 2) - 1 + base);
-
-        return Math.min(1, Math.max(0, shifted));
-      }
-    );
-
-    for (let step = 0; step < context.nfe; step += 1) {
-      const t = flowTimes[step];
-
-      const conditionalFeeds = this._ditFeeds(
-        latentMeta,
-        latent,
-        t,
-        conditionerOutputs,
-        {
-          ...context,
-          latentShape,
-          frames: latent.dims.at(-1) || context.frames
-        }
-      );
-
-      let conditional;
+      let velocity;
 
       try {
-        conditional = this._chooseVelocity(
-          await session.run(conditionalFeeds),
-          latent
-        );
+        const conditionalOutput = await session.run(conditionalFeeds);
+        velocity = this._chooseVelocity(conditionalOutput, latent);
       } catch (error) {
-        if (error?.code) throw error;
-
         throwCoded(
-          `DiT flow-step ${step + 1}/${context.nfe} विफल: ${messageOf(error)}`,
-          'DIT_INFERENCE_FAILED',
-          {
-            step: step + 1,
-            nfe: context.nfe,
-            inputNames: metaNames
-          },
+          `DiT conditional inference विफल: ${messageOf(error)}`,
+          'DIT_CONDITIONAL_INFERENCE_FAILED',
+          { step, t, inputs: metaNames },
           error
         );
       }
-
-      let velocity = conditional.values;
 
       if (useGuidance) {
         const unconditionalFeeds = this._ditFeeds(
@@ -2466,90 +2185,90 @@ export class VagdhenuWebEngine {
           conditionerOutputs,
           {
             ...context,
-            latentShape,
-            frames: latent.dims.at(-1) || context.frames
+            latentShape: latent.dims
           },
           { unconditional: true }
         );
 
-        let unconditional;
+        let unconditionalVelocity;
 
         try {
-          unconditional = this._chooseVelocity(
-            await session.run(unconditionalFeeds),
+          const unconditionalOutput = await session.run(unconditionalFeeds);
+          unconditionalVelocity = this._chooseVelocity(
+            unconditionalOutput,
             latent
           );
         } catch (error) {
           throwCoded(
-            `Classifier-free guidance का unconditioned pass विफल: ${messageOf(error)}`,
-            'DIT_GUIDANCE_FAILED',
-            { step: step + 1 },
+            `DiT unconditional inference विफल: ${messageOf(error)}`,
+            'DIT_UNCONDITIONAL_INFERENCE_FAILED',
+            { step, t, inputs: metaNames },
             error
           );
         }
 
-        const guided = new Float32Array(velocity.length);
+        const guided = new Float32Array(velocity.values.length);
 
         for (let i = 0; i < guided.length; i += 1) {
           guided[i] =
-            unconditional.values[i] +
-            context.cfg * (conditional.values[i] - unconditional.values[i]);
+            unconditionalVelocity.values[i] +
+            context.cfg *
+              (velocity.values[i] - unconditionalVelocity.values[i]);
         }
 
-        velocity = guided;
+        velocity = {
+          ...velocity,
+          values: guided
+        };
       }
 
-      const nextData = new Float32Array(latent.data.length);
-      const dt = Math.max(0, flowTimes[step + 1] - flowTimes[step]);
+      const nextT = flowTimes[step + 1];
+      const dt = nextT - t;
+      const updated = new Float32Array(latent.data.length);
 
-      for (let i = 0; i < nextData.length; i += 1) {
-        nextData[i] = Number(latent.data[i]) + velocity[i] * dt;
+      for (let i = 0; i < updated.length; i += 1) {
+        updated[i] = Number(latent.data[i]) + dt * velocity.values[i];
       }
 
-      latent = new this._ort.Tensor(
-        'float32',
-        nextData,
-        [...latent.dims]
-      );
+      latent = makeTensor(this._ort, latentMeta, updated, latent.dims);
 
       emit(progressCallback, {
-        stage: 'flow-matching',
+        stage: 'diffusion',
         progress:
           0.56 +
-          0.28 *
+          0.26 *
             ((segmentIndex + (step + 1) / context.nfe) / segmentCount),
         segment: segmentIndex + 1,
-        segmentCount,
         step: step + 1,
-        nfe: context.nfe,
-        message: `Flow-matching ${step + 1}/${context.nfe} · खंड ${segmentIndex + 1}/${segmentCount}`
+        totalSteps: context.nfe,
+        message: `खंड ${segmentIndex + 1}/${segmentCount}: diffusion step ${step + 1}/${context.nfe}`
       });
     }
 
     return latent;
   }
 
-  _vocoderFeeds(melTensor, context) {
+  async _runVocoder(latent, context, progressCallback, segmentIndex, segmentCount) {
+    const session = this._sessions.vocoder;
     const feeds = {};
     const missing = [];
 
-    for (const input of metadataFor(this._sessions.vocoder, 'input')) {
+    for (const input of metadataFor(session, 'input')) {
       const role = roleFor(input.name);
+      const shape = resolvedShape(input, {
+        ...context,
+        latentShape: latent.dims
+      });
 
       if (
         role === 'latent' ||
+        role === 'condition' ||
         role === 'reference' ||
-        /^(mel|spec|spectrogram|features|x)$/i.test(input.name)
+        role === 'audio'
       ) {
-        const shape = resolvedShape(input, {
-          ...context,
-          latentShape: melTensor.dims,
-          frames: melTensor.dims.at(-1) || context.frames
-        });
-
         const tensor = copyTensorWithShape(
           this._ort,
-          melTensor,
+          latent,
           input,
           shape
         );
@@ -2559,25 +2278,25 @@ export class VagdhenuWebEngine {
         } else {
           missing.push({
             name: input.name,
-            role,
+            type: input.type,
             shape,
-            reason: 'final mel shape mismatch'
+            role
           });
         }
       } else if (role === 'length') {
         feeds[input.name] = scalarForMeta(
           this._ort,
           input,
-          melTensor.dims.at(-1) || context.frames,
+          latent.dims.at(-1) || context.frames,
           context
         );
-      } else if (role === 'mask') {
-        feeds[input.name] = onesForMeta(this._ort, input, context, 1);
+      } else if (role === 'time') {
+        feeds[input.name] = scalarForMeta(this._ort, input, 1, context);
       } else {
         missing.push({
           name: input.name,
           type: input.type,
-          shape: shapeOf(input),
+          shape,
           role
         });
       }
@@ -2585,11 +2304,11 @@ export class VagdhenuWebEngine {
 
     if (missing.length) {
       throwCoded(
-        'Vocos graph के inputs अंतिम mel tensor से मेल नहीं खाते।',
+        'Vocoder के वास्तविक inputs सुरक्षित रूप से map नहीं हो सके।',
         'VOCODER_INPUT_CONTRACT_UNKNOWN',
         {
           missing,
-          inputs: metadataFor(this._sessions.vocoder, 'input').map(item => ({
+          inputs: metadataFor(session, 'input').map(item => ({
             name: item.name,
             type: item.type,
             shape: shapeOf(item)
@@ -2598,328 +2317,186 @@ export class VagdhenuWebEngine {
       );
     }
 
-    return feeds;
-  }
-
-  async _runVocoder(melTensor, context, progressCallback, index, total) {
     emit(progressCallback, {
       stage: 'vocoder',
-      progress: 0.86 + 0.04 * (index / total),
-      message: `खंड ${index + 1}/${total}: 24 kHz waveform बन रहा है।`
+      progress: 0.84 + 0.06 * ((segmentIndex + 1) / segmentCount),
+      message: `खंड ${segmentIndex + 1}/${segmentCount}: audio waveform बन रहा है।`
     });
 
     let outputs;
 
     try {
-      outputs = await this._sessions.vocoder.run(
-        this._vocoderFeeds(melTensor, context)
-      );
+      outputs = await session.run(feeds);
     } catch (error) {
       throwCoded(
-        `Vocos vocoder inference विफल: ${messageOf(error)}`,
+        `Vocoder inference विफल: ${messageOf(error)}`,
         'VOCODER_INFERENCE_FAILED',
-        undefined,
+        { inputs: Object.keys(feeds) },
         error
       );
     }
 
-    return extractAudioTensor(outputs);
+    const extracted = extractAudioTensor(outputs);
+
+    return {
+      ...extracted,
+      pcm: extracted.samples
+    };
   }
 
-  _splitForSynthesis(text, meter) {
-    let padas = [];
-
-    try {
-      padas = TextModule.splitPadas?.(text) || [];
-    } catch {
-      /* use one segment */
-    }
-
-    padas = padas
-      .map(item => String(item).trim())
-      .filter(Boolean);
-
-    // A traditional four-pāda verse is synthesized as two hemistichs. For an
-    // unknown/short form, keep the entire user passage together to avoid
-    // forcing a meter or silently deleting any text.
-    if (padas.length >= 4) {
-      const first = padas.slice(0, 2).join(' । ');
-      const second = padas.slice(2, 4).join(' । ');
-      const extra = padas.slice(4);
-
-      return [
-        first,
-        second,
-        ...(extra.length ? [extra.join(' । ')] : [])
-      ].filter(Boolean);
-    }
-
-    return [text];
-  }
-
-  async synthesizeInBrowser(text, options = {}, progressCallback = null) {
+  async synthesize(text, options = {}, progressCallback = null) {
     this._assertActive();
 
-    const source = Array.isArray(text)
-      ? text.map(String).join('\n')
-      : String(text ?? '');
+    if (
+      progressCallback != null &&
+      typeof progressCallback !== 'function'
+    ) {
+      throwCoded(
+        'progressCallback function होना चाहिए।',
+        'INVALID_CALLBACK'
+      );
+    }
 
-    const opts = normalizeOptions(options);
-
-    if (!this._sessions) {
+    if (!this._sessions || !this._bank || !this._vocabulary) {
       await this.initOnnxSessions(progressCallback);
     }
 
-    const startedAt = performance.now();
+    const normalized = normalizeOptions(options);
+    const prepared = this._prepareText(text, normalized);
 
-    const normalized =
-      TextModule.prepareTtsTextWithoutMutation?.(source) ?? source.trim();
+    const meter =
+      normalized.meter === 'auto'
+        ? prepared.meter || 'anustubh'
+        : normalized.meter;
 
-    if (!normalized) {
-      throwCoded('पाठ खाली है।', 'EMPTY_TEXT');
-    }
+    const templateRecord = this._getTemplate(meter);
+    const template = templateRecord.values;
 
-    if (normalized.length > MAX_TEXT_CHARS) {
-      throwCoded(
-        `पाठ ${MAX_TEXT_CHARS} characters से अधिक है।`,
-        'TEXT_TOO_LONG'
-      );
-    }
+    const segments =
+      prepared.pieces?.length
+        ? prepared.pieces
+        : [{ text: prepared.clean, tokenIds: prepared.tokenIds }];
 
-    const language = normalizeTextLanguage(opts.language, normalized);
-    const scan = TextModule.analyzeVerse?.(normalized) ?? null;
+    const segmentOutputs = [];
+    const total = segments.length;
 
-    let meter = opts.meter;
-
-    if (!meter || meter === 'auto') {
-      const meterValue =
-        scan?.meter?.key ??
-        scan?.meter?.name ??
-        scan?.meter ??
-        scan?.chandas;
-
-      const detected = TextModule.detectMeterKey?.(meterValue);
-      meter = detected || 'anustubh';
-    }
-
-    const segments = this._splitForSynthesis(normalized, meter);
-
-    if (!segments.length) {
-      throwCoded(
-        'पाठ को गायन खंडों में विभाजित नहीं किया जा सका।',
-        'TEXT_SEGMENTATION_FAILED'
-      );
-    }
-
-    const template = this._getTemplate(meter);
-    const segmentsPcm = [];
-    const stageEvidence = [];
-
-    for (let index = 0; index < segments.length; index += 1) {
+    for (let index = 0; index < total; index += 1) {
       const segment = segments[index];
 
-      const preparedSegment = prepareLanguageInput(
-        segment,
-        language,
-        this._vocabulary.tokenToId
-      );
-
-      const tokenIds = preparedSegment.tokenIds;
-
-      const frames = Math.max(
-        64,
-        Math.min(4096, Math.ceil(tokenIds.length * 8 / opts.speed))
-      );
+      const tokenIds =
+        Array.isArray(segment.tokenIds) && segment.tokenIds.length
+          ? segment.tokenIds
+          : vocabularyTokenize(
+              segment.text ?? prepared.clean,
+              this._vocabulary.tokenToId
+            );
 
       const context = {
-        meter,
-        nfe: opts.nfe,
-        cfg: opts.cfg,
-        speed: opts.speed,
-        seed: opts.seed + index,
-        swaySamplingCoef: opts.swaySamplingCoef,
         tokenCount: tokenIds.length,
-        frames,
-        melChannels: MEL_CHANNELS,
-        noSandhi: opts.noSandhi
+        frames: Math.max(128, tokenIds.length * 8),
+        speed: normalized.speed,
+        nfe: normalized.nfe,
+        cfg: normalized.cfg,
+        seed: normalized.seed,
+        swaySamplingCoef: normalized.swaySamplingCoef,
+        meter,
+        language: prepared.language
       };
 
       const conditionerOutputs = await this._runConditioner(
         context,
         tokenIds,
-        template,
+        templateRecord,
         progressCallback,
         index,
-        segments.length
+        total
       );
 
-      const finalMel = await this._runDiffusion(
+      const latent = await this._runDiffusion(
         context,
         conditionerOutputs,
         progressCallback,
         index,
-        segments.length
+        total
       );
 
-      const audioResult = await this._runVocoder(
-        finalMel,
+      const audio = await this._runVocoder(
+        latent,
         context,
         progressCallback,
         index,
-        segments.length
+        total
       );
 
-      if (!audioResult.samples.length) {
-        throwCoded(
-          `खंड ${index + 1} का waveform खाली है।`,
-          'EMPTY_SEGMENT_AUDIO'
-        );
-      }
-
-      segmentsPcm.push(audioResult.samples);
-
-      stageEvidence.push({
-        segment: index + 1,
-        language,
-        inputRepresentation: preparedSegment.inputRepresentation,
-        tokenCount: tokenIds.length,
-        melDims: [...finalMel.dims],
-        vocoderOutputName: audioResult.name,
-        audioSamples: audioResult.samples.length,
-        peak: Math.max(
-          ...audioResult.samples
-            .slice(0, Math.min(8192, audioResult.samples.length))
-            .map(value => Math.abs(Number(value) || 0))
-        )
-      });
+      segmentOutputs.push(audio.pcm);
     }
 
-    const silenceFrames =
-      segmentsPcm.length > 1
-        ? Math.round(VAGDHENU_SAMPLE_RATE * 0.12)
-        : 0;
+    const sampleCount = segmentOutputs.reduce(
+      (sum, samples) => sum + samples.length,
+      0
+    );
 
-    const totalSamples =
-      segmentsPcm.reduce((sum, samples) => sum + samples.length, 0) +
-      silenceFrames * Math.max(0, segmentsPcm.length - 1);
-
-    if (totalSamples > MAX_AUDIO_SAMPLES) {
-      throwCoded(
-        'संयुक्त ऑडियो 180 सेकंड से अधिक है। कृपया पाठ को छोटे भागों में दें।',
-        'AUDIO_TOO_LONG',
-        { totalSamples }
-      );
+    if (!sampleCount) {
+      throwCoded('Synthesis ने कोई audio sample नहीं बनाया।', 'AUDIO_EMPTY');
     }
 
-    const pcm = new Float32Array(totalSamples);
-    let position = 0;
+    const combined = new Float32Array(sampleCount);
+    let offset = 0;
 
-    segmentsPcm.forEach((samples, index) => {
-      pcm.set(samples, position);
-      position += samples.length;
+    for (const samples of segmentOutputs) {
+      combined.set(samples, offset);
+      offset += samples.length;
+    }
 
-      if (index !== segmentsPcm.length - 1 && silenceFrames) {
-        position += silenceFrames;
-      }
-    });
+    const wav = createWavBlob(combined, VAGDHENU_SAMPLE_RATE);
 
-    const wav = createWavBlob(pcm, VAGDHENU_SAMPLE_RATE);
-    const url = URL.createObjectURL(wav.blob);
+    const audioUrl = URL.createObjectURL(wav.blob);
+    this._urls.add(audioUrl);
 
-    this._urls.add(url);
-
-    const elapsedMs = Math.round(performance.now() - startedAt);
-
-    this._lastInference = Object.freeze({
-      at: new Date().toISOString(),
-      elapsedMs,
-      backend: this.backendMode,
-      provider: this.provider,
-      language,
-      modelStagesCompleted:
-        ['conditioner', 'dit-flow-matching', 'vocos'].every(
-          stage => stageEvidence.length > 0
-        ),
-      segments: stageEvidence,
+    this._lastInference = {
+      timestamp: Date.now(),
+      textLength: String(text ?? '').length,
+      language: prepared.language,
+      meter,
+      segments: total,
+      samples: combined.length,
       sampleRate: VAGDHENU_SAMPLE_RATE,
-      samples: pcm.length,
-      durationSeconds: Number(
-        (pcm.length / VAGDHENU_SAMPLE_RATE).toFixed(3)
-      ),
       peak: wav.peak,
       rms: wav.rms,
-      note: 'Model graph outputs were processed into a WAV container. Listening/phoneme quality and offline mode require device-level verification.'
-    });
+      modelStagesCompleted: true
+    };
 
     this._lastError = null;
-    this.provider = this.provider || (
-      this.backendMode === 'wasm' ? 'wasm' : 'webgpu'
-    );
 
     emit(progressCallback, {
       stage: 'complete',
       progress: 1,
-      message: `मॉडल inference ने ${this._lastInference.durationSeconds}s ऑडियो बनाया। इसे सुनकर उच्चारण और गुणवत्ता जाँचें।`,
-      elapsedMs,
-      durationSeconds: this._lastInference.durationSeconds
+      message: 'ऑडियो तैयार है।',
+      audioUrl,
+      sampleRate: VAGDHENU_SAMPLE_RATE,
+      samples: combined.length
     });
 
     return {
-      url,
-      audioUrl: url,
-      blob: wav.blob,
-      wav: wav.blob,
-      pcm,
+      ok: true,
+      audioUrl,
+      audioBlob: wav.blob,
       sampleRate: VAGDHENU_SAMPLE_RATE,
-      metadata: {
-        engine: VAGDHENU_ENGINE_VERSION,
-        backend: this.backendMode,
-        provider: this.provider,
-        meter,
-        language,
-        originalText: normalized,
-        modelInputText: segments
-          .map(segment =>
-            prepareLanguageInput(
-              segment,
-              language,
-              this._vocabulary.tokenToId
-            ).modelInputText
-          )
-          .join('\n'),
-        inputRepresentations: [
-          ...new Set(stageEvidence.map(item => item.inputRepresentation))
-        ],
-        elapsedMs,
-        durationSeconds: this._lastInference.durationSeconds,
-        modelStages: ['conditioner', 'dit-flow-matching', 'vocos'],
-        segmentCount: segments.length,
-        verifiedOffline: false
-      },
-      evidence: this._lastInference
+      duration: combined.length / VAGDHENU_SAMPLE_RATE,
+      samples: combined.length,
+      peak: wav.peak,
+      rms: wav.rms,
+      meter,
+      language: prepared.language,
+      segments: total,
+      text: prepared.clean
     };
-  }
-
-  async _releaseSessions() {
-    if (this._sessions) {
-      await Promise.all(
-        Object.values(this._sessions).map(session => {
-          try {
-            return session?.release?.().catch(() => {});
-          } catch {
-            return Promise.resolve();
-          }
-        })
-      );
-    }
-
-    this._sessions = null;
-    this._initPromise = null;
-    this.isWarmedUp = false;
   }
 
   async dispose() {
     if (this._disposed) return;
+
+    this._disposed = true;
 
     await this._releaseSessions();
 
@@ -2927,7 +2504,7 @@ export class VagdhenuWebEngine {
       try {
         URL.revokeObjectURL(url);
       } catch {
-        /* release best-effort */
+        // Ignore URL cleanup errors.
       }
     }
 
@@ -2936,7 +2513,7 @@ export class VagdhenuWebEngine {
     this._bankBytes = null;
     this._vocabulary = null;
     this._ort = null;
-    this._disposed = true;
+    this.isWarmedUp = false;
   }
 }
 
