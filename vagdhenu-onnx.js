@@ -1,3154 +1,2193 @@
-/**
- * Swar-Sadhika — original local Vāgdhenu ONNX runtime bridge
- *
- * Path: vendor/vagdhenu-upstream/vagdhenu-onnx.js
- *
- * This file is an original implementation of the browser runtime bridge. It
- * does not copy the upstream browser-engine source. It uses the published
- * Vāgdhenu ONNX model artifacts and ONNX Runtime Web, both executed in this
- * browser tab. No cloud TTS/inference API is called and no synthetic/fallback
- * audio is emitted when the model pipeline fails.
- *
- * Public API expected by the parent adapter:
- *   new VagdhenuWebEngine(null, 'wasm' | 'webgpu')
- *   await engine.setBackendMode(mode)
- *   await engine.initOnnxSessions(progressCallback)
- *   await engine.synthesizeInBrowser(text, options, progressCallback)
- *   await engine.dispose()
- *
- * Runtime/model downloads are performed over HTTPS on first use. The test
- * repository's service worker caches matching model/runtime requests where
- * browser storage permits. Offline behavior still requires a prior complete
- * download/cache and must be tested on the target Android device.
- */
-
-import * as TextModule from '../../vagdhenu-text.js';
-
-export const VAGDHENU_ENGINE_VERSION = '1.2.0-model-matched-bank-fallback';
-
-/** Languages accepted by the Swar-Sadhika text-preparation bridge. */
-export const SUPPORTED_TEXT_LANGUAGES = Object.freeze([
-  'vedic-sanskrit',
-  'sanskrit',
-  'hindi'
+// vagdhenu-text.js
+var SCRIPT_BLOCKS = [
+  [2304, 2431, "devanagari", 2304],
+  [2432, 2559, "bengali", 2432],
+  [2560, 2687, "gurmukhi", 2560],
+  [2688, 2815, "gujarati", 2688],
+  [2816, 2943, "oriya", 2816],
+  [2944, 3071, "tamil", 2944],
+  [3072, 3199, "telugu", 3072],
+  [3200, 3327, "kannada", 3200],
+  [3328, 3455, "malayalam", 3328],
+  [70400, 70527, "grantha", 70400]
+];
+var DEVA_INDEP_VOWELS = {
+  "\u0905": "a",
+  "\u0906": "A",
+  "\u0907": "i",
+  "\u0908": "I",
+  "\u0909": "u",
+  "\u090A": "U",
+  "\u090B": "f",
+  "\u0960": "F",
+  "\u090C": "x",
+  "\u0961": "X",
+  "\u090F": "e",
+  "\u0910": "E",
+  "\u0913": "o",
+  "\u0914": "O",
+  "\u0972": "e",
+  "\u0911": "o",
+  "\u090E": "e",
+  "\u0912": "o"
+};
+var DEVA_MATRA_TO_SLP1 = {
+  "\u093E": "A",
+  "\u093F": "i",
+  "\u0940": "I",
+  "\u0941": "u",
+  "\u0942": "U",
+  "\u0943": "f",
+  "\u0944": "F",
+  "\u0962": "x",
+  "\u0963": "X",
+  "\u0947": "e",
+  "\u0948": "E",
+  "\u094B": "o",
+  "\u094C": "O",
+  "\u0945": "e",
+  "\u0949": "o",
+  "\u0946": "e",
+  "\u094A": "o"
+};
+var DEVA_CONS_TO_SLP1 = {
+  "\u0915": "k",
+  "\u0916": "K",
+  "\u0917": "g",
+  "\u0918": "G",
+  "\u0919": "N",
+  "\u091A": "c",
+  "\u091B": "C",
+  "\u091C": "j",
+  "\u091D": "J",
+  "\u091E": "Y",
+  "\u091F": "w",
+  "\u0920": "W",
+  "\u0921": "q",
+  "\u0922": "Q",
+  "\u0923": "R",
+  "\u0924": "t",
+  "\u0925": "T",
+  "\u0926": "d",
+  "\u0927": "D",
+  "\u0928": "n",
+  "\u092A": "p",
+  "\u092B": "P",
+  "\u092C": "b",
+  "\u092D": "B",
+  "\u092E": "m",
+  "\u092F": "y",
+  "\u0930": "r",
+  "\u0932": "l",
+  "\u0933": "L",
+  "\u0935": "v",
+  "\u0936": "S",
+  "\u0937": "z",
+  "\u0938": "s",
+  "\u0939": "h"
+};
+var DEVA_MISC_TO_SLP1 = {
+  "\u0902": "M",
+  "\u0903": "H",
+  "\u0901": "~",
+  "\u093D": "'",
+  "\u0950": "oM",
+  "\u0964": ".",
+  "\u0965": "..",
+  "\u0966": "0",
+  "\u0967": "1",
+  "\u0968": "2",
+  "\u0969": "3",
+  "\u096A": "4",
+  "\u096B": "5",
+  "\u096C": "6",
+  "\u096D": "7",
+  "\u096E": "8",
+  "\u096F": "9"
+};
+var SLP1_INDEP_TO_KAN = {
+  "a": "\u0C85",
+  "A": "\u0C86",
+  "i": "\u0C87",
+  "I": "\u0C88",
+  "u": "\u0C89",
+  "U": "\u0C8A",
+  "f": "\u0C8B",
+  "F": "\u0CE0",
+  "x": "\u0C8C",
+  "X": "\u0CE1",
+  "e": "\u0C8F",
+  "E": "\u0C90",
+  "o": "\u0C93",
+  "O": "\u0C94"
+};
+var SLP1_MATRA_TO_KAN = {
+  "a": "",
+  "A": "\u0CBE",
+  "i": "\u0CBF",
+  "I": "\u0CC0",
+  "u": "\u0CC1",
+  "U": "\u0CC2",
+  "f": "\u0CC3",
+  "F": "\u0CC4",
+  "x": "\u0CE2",
+  "X": "\u0CE3",
+  "e": "\u0CC7",
+  "E": "\u0CC8",
+  "o": "\u0CCB",
+  "O": "\u0CCC"
+};
+var SLP1_CONS_TO_KAN = {
+  "k": "\u0C95",
+  "K": "\u0C96",
+  "g": "\u0C97",
+  "G": "\u0C98",
+  "N": "\u0C99",
+  "c": "\u0C9A",
+  "C": "\u0C9B",
+  "j": "\u0C9C",
+  "J": "\u0C9D",
+  "Y": "\u0C9E",
+  "w": "\u0C9F",
+  "W": "\u0CA0",
+  "q": "\u0CA1",
+  "Q": "\u0CA2",
+  "R": "\u0CA3",
+  "t": "\u0CA4",
+  "T": "\u0CA5",
+  "d": "\u0CA6",
+  "D": "\u0CA7",
+  "n": "\u0CA8",
+  "p": "\u0CAA",
+  "P": "\u0CAB",
+  "b": "\u0CAC",
+  "B": "\u0CAD",
+  "m": "\u0CAE",
+  "y": "\u0CAF",
+  "r": "\u0CB0",
+  "l": "\u0CB2",
+  "L": "\u0CB3",
+  "v": "\u0CB5",
+  "S": "\u0CB6",
+  "z": "\u0CB7",
+  "s": "\u0CB8",
+  "h": "\u0CB9"
+};
+var SLP1_MISC_TO_KAN = {
+  "M": "\u0C82",
+  "H": "\u0C83",
+  "~": "\u0901",
+  "'": "\u0CBD"
+};
+var SHORT_DRAVIDIAN_OFFSETS = /* @__PURE__ */ new Map([
+  [14, 15],
+  // short Indep E -> long Indep E
+  [18, 19],
+  // short Indep O -> long Indep O
+  [70, 71],
+  // short matra e -> long matra e
+  [74, 75]
+  // short matra o -> long matra o
 ]);
-
-export const VAGDHENU_SAMPLE_RATE = 24000;
-
-export const VAGDHENU_ASSET_FILES = Object.freeze({
-  conditioner: 'vagdhenu_cond_q8.onnx',
-  dit: 'vagdhenu_dit_step_q8.onnx',
-  vocoder: 'vagdhenu_vocos_q8.onnx',
-  bank: 'baked_bank.json',
-  bankBinary: 'baked_bank.bin'
-});
-
-const ORT_VERSION = '1.23.2';
-const ORT_BASE = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
-
-const MODEL_REPOSITORIES = Object.freeze({
-  wasm: 'https://huggingface.co/gnumanth/sanskrit-tts-wasm/resolve/main/',
-  onnx: 'https://huggingface.co/gnumanth/sanskrit-tts-onnx/resolve/main/'
-});
-
-const RUNTIME_CACHE_NAME = 'swar-sadhika-remote-runtime-v1';
-const MODEL_CACHE_NAME = 'swar-sadhika-vagdhenu-models-v1';
-const MAX_TEXT_CHARS = 12000;
-const MAX_AUDIO_SAMPLES = VAGDHENU_SAMPLE_RATE * 180;
-const DEFAULT_NFE = 7;
-const MEL_CHANNELS = 100;
-const VOCAB_SIZE = 1039;
-
-let runtimePromise = null;
-
-function messageOf(error) {
-  if (error instanceof Error) return error.message;
-  try {
-    return String(error);
-  } catch {
-    return 'Unknown error';
+function detectScript(text) {
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    for (const [lo, hi, scheme] of SCRIPT_BLOCKS) {
+      if (code >= lo && code <= hi) return scheme;
+    }
   }
+  return "devanagari";
 }
-
-function throwCoded(message, code, details = undefined, cause = undefined) {
-  const error = new Error(message, cause ? { cause } : undefined);
-  error.name = 'VagdhenuRuntimeError';
-  error.code = code;
-
-  if (details !== undefined) error.details = details;
-
-  throw error;
-}
-
-function emit(callback, detail) {
-  if (typeof callback !== 'function') return;
-
-  try {
-    callback(Object.freeze({
-      at: new Date().toISOString(),
-      ...detail
-    }));
-  } catch (error) {
-    console.warn('[Swar-Sadhika] progress callback failed:', error);
-  }
-}
-
-function normalizeBackend(value) {
-  const backend = String(value || 'wasm').trim().toLowerCase();
-
-  if (backend === 'webgpu') return 'onnx';
-
-  if (backend !== 'wasm' && backend !== 'onnx') {
-    throwCoded(
-      `असमर्थित backend "${backend}"। "wasm" या "onnx" चुनें।`,
-      'INVALID_BACKEND'
-    );
-  }
-
-  return backend;
-}
-
-function getModelBase(backend) {
-  return MODEL_REPOSITORIES[normalizeBackend(backend)];
-}
-
-function isHtmlResponse(response) {
-  return String(response?.headers?.get('content-type') || '')
-    .toLowerCase()
-    .includes('text/html');
-}
-
-function isUsableAssetResponse(response) {
-  return Boolean(
-    response &&
-    response.status === 200 &&
-    response.ok &&
-    response.type !== 'opaque' &&
-    !isHtmlResponse(response)
-  );
-}
-
-async function fetchChecked(url, label, { cache = 'default' } = {}) {
-  const parsedUrl = new URL(url);
-  const isModelHost = /(^|\.)huggingface\.co$/i.test(parsedUrl.hostname);
-  const cacheName = isModelHost ? MODEL_CACHE_NAME : RUNTIME_CACHE_NAME;
-  let response = null;
-
-  // Validate cached entries before using them. A stale opaque response, an
-  // HTML error page, or a non-200 response is not a usable model/runtime file.
-  if (typeof caches !== 'undefined' && !isModelHost) {
-    try {
-      const assetCache = await caches.open(cacheName);
-      const cached = await assetCache.match(url, { ignoreSearch: true });
-
-      if (cached && isUsableAssetResponse(cached)) {
-        response = cached;
-      } else if (cached) {
-        console.warn(
-          `[Swar-Sadhika] Invalid cached ${label}; deleting and retrying network:`,
-          url,
-          {
-            status: cached.status,
-            type: cached.type,
-            contentType: cached.headers?.get('content-type') || ''
-          }
-        );
-
-        try {
-          await assetCache.delete(url);
-        } catch {
-          /* best-effort cleanup */
-        }
+function toDeva(text) {
+  const src = detectScript(text);
+  if (src === "devanagari") return text;
+  const block = SCRIPT_BLOCKS.find((b) => b[2] === src);
+  if (!block) return text;
+  const base = block[3];
+  let out = "";
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    if (code >= block[0] && code <= block[1]) {
+      let offset = code - base;
+      if (SHORT_DRAVIDIAN_OFFSETS.has(offset)) {
+        offset = SHORT_DRAVIDIAN_OFFSETS.get(offset);
       }
-    } catch (error) {
-      console.warn(
-        `[Swar-Sadhika] Cache lookup for ${label} failed; trying network:`,
-        error
-      );
-    }
-  } else if (isModelHost) {
-    // Do not bypass model-cache.js integrity metadata by reading model bytes
-    // directly from Cache Storage. A controlling service worker may return a
-    // verified cached response; otherwise this request goes to the network.
-  }
-
-  if (!response) {
-    try {
-      response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit',
-        cache
-      });
-    } catch (error) {
-      throwCoded(
-        `${label}: फ़ाइल प्राप्त नहीं हुई। नेटवर्क, CORS या पहले से भरा हुआ स्थानीय cache जाँचें। (${messageOf(error)})`,
-        'ASSET_FETCH_FAILED',
-        { url, label },
-        error
-      );
-    }
-  }
-
-  if (response?.type === 'opaque') {
-    throwCoded(
-      `${label}: प्रतिक्रिया Opaque है; HTTP स्थिति और headers सत्यापित नहीं किए जा सकते। CORS अनुरोध जाँचें।`,
-      'ASSET_OPAQUE_RESPONSE',
-      { url, label, responseType: response.type }
-    );
-  }
-
-  if (!response || !response.ok || response.status !== 200) {
-    throwCoded(
-      `${label}: HTTP ${response?.status ?? 'unknown'}; अपेक्षित HTTP 200।`,
-      'ASSET_HTTP_ERROR',
-      {
-        url,
-        status: response?.status ?? null,
-        responseType: response?.type ?? null,
-        label
-      }
-    );
-  }
-
-  if (isHtmlResponse(response)) {
-    throwCoded(
-      `${label}: सर्वर ने फ़ाइल के बजाय HTML लौटाया; मॉडल/runtime लोड नहीं हुआ।`,
-      'ASSET_CONTENT_TYPE_ERROR',
-      {
-        url,
-        label,
-        contentType: response.headers.get('content-type')
-      }
-    );
-  }
-
-  // Persist validated CORS-readable responses explicitly. If the first visit
-  // is not yet controlled by the service worker, this still attempts to cache
-  // a response. A cache-write failure does not invalidate a valid network file.
-  if (typeof caches !== 'undefined' && !isModelHost) {
-    try {
-      const assetCache = await caches.open(cacheName);
-      await assetCache.put(url, response.clone());
-    } catch (error) {
-      console.warn(
-        `[Swar-Sadhika] ${label} डाउनलोड हुआ, लेकिन local Cache Storage में नहीं लिखा जा सका:`,
-        error
-      );
-    }
-  }
-
-  return response;
-}
-
-async function loadOrtRuntime() {
-  if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
-    configureOrt(globalThis.ort);
-    return globalThis.ort;
-  }
-
-  if (runtimePromise) return runtimePromise;
-
-  runtimePromise = new Promise((resolve, reject) => {
-    if (typeof document === 'undefined' || !document.head) {
-      reject(new Error('ONNX Runtime Web को browser document/head चाहिए।'));
-      return;
-    }
-
-    const runtimeUrl = `${ORT_BASE}ort.all.min.js`;
-
-    let existing = document.querySelector(
-      `script[data-swar-ort="${ORT_VERSION}"]`
-    );
-
-    // A script element created by an older bridge version has no recorded
-    // loading state, so its request mode cannot be trusted. Recreate it rather
-    // than accidentally reusing a no-cors request already in progress.
-    if (
-      existing &&
-      !existing.dataset.swarOrtState &&
-      existing.src &&
-      !(globalThis.ort?.InferenceSession && globalThis.ort?.Tensor)
-    ) {
-      existing.remove();
-      existing = null;
-    }
-
-    let settled = false;
-    let timeoutId = null;
-
-    const cleanup = script => {
-      if (timeoutId !== null) clearTimeout(timeoutId);
-
-      if (script) {
-        script.removeEventListener('load', onLoad);
-        script.removeEventListener('error', onError);
-      }
-    };
-
-    const fail = (error, script) => {
-      if (settled) return;
-
-      settled = true;
-
-      if (script) {
-        script.dataset.swarOrtState = 'error';
-
-        // A failed element would otherwise poison every retry on this page.
-        try {
-          script.remove();
-        } catch {
-          /* best-effort cleanup */
-        }
-      }
-
-      cleanup(script);
-      reject(error instanceof Error ? error : new Error(String(error)));
-    };
-
-    const finish = script => {
-      if (settled) return;
-
-      if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
-        settled = true;
-
-        if (script) script.dataset.swarOrtState = 'loaded';
-
-        cleanup(script);
-
-        try {
-          configureOrt(globalThis.ort);
-          resolve(globalThis.ort);
-        } catch (error) {
-          reject(error);
-        }
-
-        return;
-      }
-
-      fail(
-        new Error(
-          'ONNX Runtime script का load event आया, लेकिन आवश्यक ort.InferenceSession और ort.Tensor APIs उपलब्ध नहीं हैं।'
-        ),
-        script
-      );
-    };
-
-    function onLoad(event) {
-      finish(event.currentTarget);
-    }
-
-    function onError(event) {
-      const script = event.currentTarget;
-
-      fail(
-        new Error(
-          `ONNX Runtime Web ${ORT_VERSION} लोड नहीं हुआ: ${runtimeUrl}. ` +
-          'जाँचें कि अनुरोध CORS mode में है, CDN उपलब्ध है और Service Worker वास्तविक प्रतिक्रिया लौटा रहा है।'
-        ),
-        script
-      );
-    }
-
-    const script = existing || document.createElement('script');
-    script.async = true;
-    script.dataset.swarOrt = ORT_VERSION;
-
-    // This must be set BEFORE src. It makes the cross-origin classic-script
-    // request use CORS mode rather than no-cors, allowing the Service Worker
-    // to inspect and cache a readable CDN response. The CDN must still provide
-    // a valid Access-Control-Allow-Origin response header.
-    script.crossOrigin = 'anonymous';
-
-    // Mark the state on our script so subsequent initialization attempts can
-    // diagnose an already failed/loaded element instead of waiting forever.
-    const previousState = script.dataset.swarOrtState || '';
-
-    if (previousState === 'error') {
-      fail(
-        new Error(`पहले का ONNX Runtime script load विफल था: ${runtimeUrl}`),
-        script
-      );
-      return;
-    }
-
-    if (previousState === 'loaded') {
-      finish(script);
-      return;
-    }
-
-    script.addEventListener('load', onLoad);
-    script.addEventListener('error', onError);
-
-    // A script may have completed before listeners were attached. Check the
-    // global immediately; if it is absent, the timeout below prevents a
-    // permanently pending initialization promise.
-    if (globalThis.ort?.InferenceSession && globalThis.ort?.Tensor) {
-      finish(script);
-      return;
-    }
-
-    timeoutId = setTimeout(() => {
-      fail(
-        new Error(
-          `ONNX Runtime Web ${ORT_VERSION} के load की प्रतीक्षा समय-सीमा समाप्त हुई। ` +
-          'Network/CORS त्रुटि, Service Worker और CDN request जाँचें।'
-        ),
-        script
-      );
-    }, 45000);
-
-    if (!existing) {
-      script.src = runtimeUrl;
-      script.dataset.swarOrtState = 'loading';
-      document.head.appendChild(script);
-    }
-  }).catch(error => {
-    runtimePromise = null;
-
-    throwCoded(
-      `ONNX Runtime शुरू नहीं हुआ: ${messageOf(error)}`,
-      'ORT_RUNTIME_UNAVAILABLE',
-      {
-        url: `${ORT_BASE}ort.all.min.js`,
-        version: ORT_VERSION
-      },
-      error
-    );
-  });
-
-  return runtimePromise;
-}
-
-function configureOrt(ort) {
-  try {
-    ort.env.logLevel = 'warning';
-    ort.env.wasm.wasmPaths = ORT_BASE;
-
-    // A single WASM thread is the safest default for Android WebViews and does
-    // not require cross-origin isolation/SharedArrayBuffer.
-    ort.env.wasm.numThreads = 1;
-    ort.env.wasm.proxy = false;
-  } catch (error) {
-    console.warn(
-      '[Swar-Sadhika] Could not set every ORT runtime option:',
-      error
-    );
-  }
-}
-
-function canonicalMeter(value) {
-  const input = String(value || 'auto').trim().toLowerCase();
-
-  if (!input || input === 'auto') return 'anustubh';
-
-  try {
-    const key = TextModule.detectMeterKey?.(input);
-    if (key) return key;
-  } catch {
-    /* use normalized spelling */
-  }
-
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '') || 'anustubh';
-}
-
-function toSlp1(text) {
-  try {
-    const alignment = TextModule.alignSlp1?.(text);
-    if (alignment?.slp1) return String(alignment.slp1);
-  } catch {
-    /* use original Sanskrit string; tokenizer will validate it */
-  }
-
-  return String(text);
-}
-
-/**
- * Resolve the requested language without changing the user's source text.
- * Pass options.language as "vedic-sanskrit", "sanskrit", or "hindi" to
- * choose explicitly. "auto" detects explicit Vedic accent marks and a small
- * set of high-confidence Hindi function words; ordinary Devanagari text is
- * treated as Sanskrit because script alone cannot distinguish the languages.
- */
-function normalizeTextLanguage(value, input = '') {
-  const raw = String(value ?? 'auto').trim().toLowerCase();
-
-  const aliases = new Map([
-    ['vedic', 'vedic-sanskrit'],
-    ['vedicsanskrit', 'vedic-sanskrit'],
-    ['vedic-sanskrit', 'vedic-sanskrit'],
-    ['sa-vedic', 'vedic-sanskrit'],
-    ['वैदिक', 'vedic-sanskrit'],
-    ['वैदिक संस्कृत', 'vedic-sanskrit'],
-    ['sanskrit', 'sanskrit'],
-    ['sa', 'sanskrit'],
-    ['sa-deva', 'sanskrit'],
-    ['संस्कृत', 'sanskrit'],
-    ['hindi', 'hindi'],
-    ['hi', 'hindi'],
-    ['hi-deva', 'hindi'],
-    ['हिंदी', 'hindi'],
-    ['हिन्दी', 'hindi'],
-    ['', 'auto'],
-    ['auto', 'auto']
-  ]);
-
-  const requested = aliases.get(raw);
-
-  if (requested === undefined) {
-    throwCoded(
-      `असमर्थित पाठ-भाषा "${value}"। वैदिक संस्कृत, संस्कृत, हिंदी या auto चुनें।`,
-      'UNSUPPORTED_TEXT_LANGUAGE',
-      {
-        requested: value,
-        supported: [...SUPPORTED_TEXT_LANGUAGES, 'auto']
-      }
-    );
-  }
-
-  if (requested !== 'auto') return requested;
-
-  const text = String(input ?? '');
-
-  if (/[\u0951-\u0954\u1CD0-\u1CFF\uA8E0-\uA8FF]/u.test(text)) {
-    return 'vedic-sanskrit';
-  }
-
-  // Script is not enough to separate Hindi and Sanskrit. This conservative
-  // heuristic only marks Hindi when common Hindi function words are present.
-  if (/(?:^|\s)(?:है|हैं|था|थी|थे|को|की|के|का|और|में|से|पर|यह|वह|नहीं|करता|करती|करते)(?=$|\s|[।॥,;:!?])/u.test(text)) {
-    return 'hindi';
-  }
-
-  return 'sanskrit';
-}
-
-/**
- * Choose only a representation that the loaded model vocabulary can tokenize.
- * The source text is never rewritten in the editor or discarded from metadata.
- * Native Devanagari is tried first; SLP1 is a standards-based fallback. No
- * conversion to an unrelated script and no guessed token IDs are used.
- */
-function prepareLanguageInput(sourceText, requestedLanguage, tokenToId) {
-  const original = String(sourceText ?? '').replace(/\r\n?/g, '\n').trim();
-
-  if (!original) {
-    throwCoded('कृपया पाठ लिखें।', 'EMPTY_TEXT');
-  }
-
-  const language = normalizeTextLanguage(requestedLanguage, original);
-  const clean = TextModule.prepareTtsTextWithoutMutation?.(original) ?? original;
-  const slp1 = toSlp1(clean);
-  const candidates = [];
-
-  const addCandidate = (representation, text) => {
-    const value = String(text ?? '').normalize('NFC');
-
-    if (value && !candidates.some(item => item.text === value)) {
-      candidates.push({ representation, text: value });
-    }
-  };
-
-  // Vedic accents are preserved in both candidates. If the model has no token
-  // for an accent, report that fact instead of silently deleting the accent.
-  addCandidate('native-devanagari-or-input', clean);
-  addCandidate('slp1', slp1);
-
-  const failures = [];
-
-  for (const candidate of candidates) {
-    try {
-      const tokenIds = vocabularyTokenize(
-        candidate.text,
-        tokenToId,
-        { strict: true }
-      );
-
-      return Object.freeze({
-        original,
-        clean,
-        language,
-        slp1,
-        modelInputText: candidate.text,
-        inputRepresentation: candidate.representation,
-        tokenIds
-      });
-    } catch (error) {
-      failures.push({
-        representation: candidate.representation,
-        code: error?.code || 'TOKENIZATION_FAILED',
-        message: messageOf(error)
-      });
-    }
-  }
-
-  throwCoded(
-    `लोड किए गए मॉडल की vocabulary में ${language === 'vedic-sanskrit' ? 'वैदिक संस्कृत' : language === 'hindi' ? 'हिंदी' : 'संस्कृत'} पाठ को सुरक्षित रूप से tokenize करने के लिए आवश्यक tokens नहीं मिले। मूल पाठ/वैदिक चिह्न हटाए नहीं गए; अनुमानित token IDs का उपयोग नहीं हुआ।`,
-    'LANGUAGE_TOKENS_UNAVAILABLE',
-    {
-      language,
-      original,
-      candidates: failures,
-      vocabularySize: tokenToId?.size ?? 0
-    }
-  );
-}
-
-function walkObjects(root, visitor, path = [], seen = new Set(), depth = 0) {
-  if (!root || typeof root !== 'object' || depth > 18 || seen.has(root)) return;
-
-  seen.add(root);
-  visitor(root, path);
-
-  if (Array.isArray(root)) {
-    for (let i = 0; i < root.length; i += 1) {
-      walkObjects(root[i], visitor, [...path, i], seen, depth + 1);
-    }
-  } else {
-    for (const [key, value] of Object.entries(root)) {
-      walkObjects(value, visitor, [...path, key], seen, depth + 1);
-    }
-  }
-}
-
-function entriesToVocabulary(entries) {
-  const map = new Map();
-
-  if (
-    Array.isArray(entries) &&
-    entries.every(item => typeof item === 'string')
-  ) {
-    entries.forEach((token, id) => map.set(token, id));
-    return map;
-  }
-
-  if (
-    Array.isArray(entries) &&
-    entries.every(item => item && typeof item === 'object')
-  ) {
-    for (const item of entries) {
-      const token = item.token ?? item.text ?? item.symbol ?? item.phoneme;
-      const id = item.id ?? item.index ?? item.token_id;
-
-      if (typeof token === 'string' && Number.isInteger(Number(id))) {
-        map.set(token, Number(id));
-      }
-    }
-
-    if (map.size) return map;
-  }
-
-  if (entries && typeof entries === 'object' && !Array.isArray(entries)) {
-    const values = Object.values(entries);
-
-    if (values.length && values.every(value => Number.isInteger(Number(value)))) {
-      for (const [token, id] of Object.entries(entries)) {
-        map.set(token, Number(id));
-      }
-
-      return map;
-    }
-
-    if (
-      values.length &&
-      values.every(value => typeof value === 'string') &&
-      Object.keys(entries).every(key => /^\d+$/.test(key))
-    ) {
-      for (const [id, token] of Object.entries(entries)) {
-        map.set(token, Number(id));
-      }
-
-      return map;
-    }
-  }
-
-  return map;
-}
-
-function findVocabulary(bank) {
-  const candidates = [];
-  const namedVocabularyKey = /^(vocab|vocabulary|token_to_id|token2id|phoneme_vocab|phoneme_to_id|tokens|phoneme_to_idx|symbol_to_id|token2idx|stoi)$/i;
-  const vocabularyContext = /vocab|token|phoneme|symbol|phone|stoi|idx_to_token|id_to_token/i;
-
-  walkObjects(bank, (node, path) => {
-    const keyContext = path.map(String).join('.').toLowerCase();
-
-    // Form A: ordered token list. Prefer a vocabulary-related path, but also
-    // retain unlabelled lists as low-confidence candidates for schema variants.
-    if (
-      Array.isArray(node) &&
-      node.length > 100 &&
-      node.every(item => typeof item === 'string')
-    ) {
-      candidates.push({
-        map: entriesToVocabulary(node),
-        score: vocabularyContext.test(keyContext) ? 5 : 1,
-        path: keyContext || '<root-array>'
-      });
-    }
-
-    if (node && !Array.isArray(node) && typeof node === 'object') {
-      for (const [key, value] of Object.entries(node)) {
-        const pathLabel = [...path.map(String), key].join('.');
-        const map = entriesToVocabulary(value);
-        if (map.size <= 100) continue;
-
-        if (namedVocabularyKey.test(key)) {
-          candidates.push({ map, score: 12, path: pathLabel });
-          continue;
-        }
-
-        // Form B: token -> integer ID mapping under a differently named key.
-        // Require a large map, unique IDs, and plausible IDs within model range;
-        // this avoids treating arbitrary numeric metadata as a vocabulary.
-        if (
-          value && typeof value === 'object' && !Array.isArray(value) &&
-          map.size === Object.keys(value).length &&
-          new Set(map.values()).size === map.size &&
-          [...map.values()].every(id => Number.isInteger(id) && id >= 0 && id < VOCAB_SIZE) &&
-          [...map.keys()].some(token => /[\p{L}\p{M}]/u.test(token))
-        ) {
-          candidates.push({
-            map,
-            score: vocabularyContext.test(pathLabel.toLowerCase()) ? 8 : 3,
-            path: pathLabel
-          });
-        }
-      }
-    }
-  });
-
-  // A valid vocabulary must fit the model's 1,039-entry embedding table.
-  // Filter out unrelated arrays/maps with numeric IDs outside that range.
-  const valid = candidates.filter(candidate =>
-    candidate.map.size > 100 &&
-    [...candidate.map.values()].every(id => Number.isInteger(id) && id >= 0 && id < VOCAB_SIZE)
-  );
-  valid.sort((a, b) => b.score - a.score || b.map.size - a.map.size);
-
-  const candidate = valid[0];
-  if (!candidate) {
-    // Diagnostic only: this field is present in the user's bank, but its
-    // 0..2544 IDs do not fit the model bridge's declared 0..1038 range.
-    // Do not reinterpret it as the model vocabulary or renumber IDs blindly.
-    const charMap = bank?.vocab_char_map;
-    const charMapValues = charMap && typeof charMap === 'object' && !Array.isArray(charMap)
-      ? Object.values(charMap)
-      : [];
-    const charMapIds = charMapValues.filter(Number.isInteger);
-    const charMapDiagnostic = charMapIds.length
-      ? {
-          path: 'vocab_char_map',
-          entries: charMapValues.length,
-          integerIds: charMapIds.length,
-          uniqueIds: new Set(charMapIds).size,
-          minId: Math.min(...charMapIds),
-          maxId: Math.max(...charMapIds),
-          expectedModelIdRange: `0..${VOCAB_SIZE - 1}`,
-          compatibleWithDeclaredModelRange: charMapIds.every(id => id >= 0 && id < VOCAB_SIZE)
-        }
-      : null;
-
-    throwCoded(
-      charMapDiagnostic
-        ? `baked_bank.json लोड हुई, लेकिन इसकी vocab_char_map में ${charMapDiagnostic.entries} प्रविष्टियाँ और ID सीमा ${charMapDiagnostic.minId}–${charMapDiagnostic.maxId} है; इस इंजन को 1,039-token मॉडल vocabulary (ID 0–${VOCAB_SIZE - 1}) चाहिए। इस मानचित्र को बिना आधिकारिक tokenizer/model mapping के बदलना सुरक्षित नहीं है।`
-        : 'baked_bank.json लोड हुई, लेकिन इंजन की 1,039-token मॉडल vocabulary सुरक्षित रूप से नहीं मिली। अनुमानित token IDs का उपयोग नहीं किया गया।',
-      'BANK_VOCABULARY_UNAVAILABLE',
-      {
-        expectedVocabularySize: VOCAB_SIZE,
-        charMap: charMapDiagnostic,
-        candidates: candidates.map(item => ({
-          path: item.path,
-          size: item.map.size,
-          minId: item.map.size ? Math.min(...item.map.values()) : null,
-          maxId: item.map.size ? Math.max(...item.map.values()) : null
-        }))
-      }
-    );
-  }
-
-  return { tokenToId: candidate.map, source: candidate.path };
-}
-
-/**
- * Require a complete, one-to-one token-ID map for the declared 1,039-entry
- * model vocabulary. Range-only validation can accidentally accept a partial
- * or duplicate map and silently tokenize text incorrectly.
- */
-function validateModelVocabulary(vocabulary, label, url) {
-  const map = vocabulary?.tokenToId;
-  const ids = map instanceof Map ? [...map.values()] : [];
-  const uniqueIds = new Set(ids);
-  const expectedIds = ids.length === VOCAB_SIZE && uniqueIds.size === VOCAB_SIZE &&
-    ids.every(id => Number.isInteger(id) && id >= 0 && id < VOCAB_SIZE);
-
-  if (!map || map.size !== VOCAB_SIZE || !expectedIds) {
-    throwCoded(
-      `${label}: vocabulary को मॉडल के पूरे ${VOCAB_SIZE}-token ID मानचित्र से मिलान नहीं किया जा सका। आकार ${map?.size ?? 0}, अलग IDs ${uniqueIds.size}; अपेक्षित ID सीमा 0–${VOCAB_SIZE - 1} है।`,
-      'BANK_VOCABULARY_SHAPE_MISMATCH',
-      {
-        url,
-        label,
-        expectedVocabularySize: VOCAB_SIZE,
-        actualVocabularySize: map?.size ?? 0,
-        uniqueIdCount: uniqueIds.size,
-        minId: ids.length ? Math.min(...ids) : null,
-        maxId: ids.length ? Math.max(...ids) : null
-      }
-    );
-  }
-
-  return true;
-}
-
-/**
- * Load a bank JSON candidate and require a vocabulary compatible with the
- * model bridge before the candidate can be used. The official model bank is
- * attempted first; the app-root copy is only a validated fallback.
- */
-async function loadBankJsonCandidate(url, label) {
-  const response = await fetchChecked(url, label);
-  let bank;
-
-  try {
-    bank = await response.json();
-  } catch (error) {
-    throwCoded(
-      `${label}: JSON parse नहीं हुआ।`,
-      'BANK_JSON_INVALID',
-      { url, label },
-      error
-    );
-  }
-
-  if (!bank || typeof bank !== 'object' || Array.isArray(bank)) {
-    throwCoded(
-      `${label}: JSON का root object अपेक्षित प्रारूप में नहीं है।`,
-      'BANK_JSON_SCHEMA_INVALID',
-      { url, label }
-    );
-  }
-
-  const vocabulary = findVocabulary(bank);
-  if (!vocabulary?.tokenToId?.size) {
-    throwCoded('Token vocabulary खाली है।', 'BANK_VOCABULARY_EMPTY', { url, label });
-  }
-  validateModelVocabulary(vocabulary, label, url);
-
-  return { bank, vocabulary, url, label };
-}
-
-/**
- * A bank JSON may point into baked_bank.bin. Reject the pair if any explicit
- * byte_offset + byte_length range falls outside the binary file. This is a
- * structural guard, not a cryptographic integrity check.
- */
-function validateBankBinaryReferences(bank, binaryByteLength, label) {
-  const invalid = [];
-
-  walkObjects(bank, (node, path) => {
-    if (!node || Array.isArray(node) || typeof node !== 'object') return;
-
-    const offset = node.byte_offset;
-    const length = node.byte_length;
-
-    if (!Number.isInteger(offset) || !Number.isInteger(length)) return;
-
-    if (offset < 0 || length <= 0 || offset + length > binaryByteLength) {
-      invalid.push({
-        path: path.map(String).join('.') || '<root>',
-        byteOffset: offset,
-        byteLength: length,
-        binaryByteLength
-      });
-    }
-  });
-
-  if (invalid.length) {
-    throwCoded(
-      `${label}: JSON में दिए गए ${invalid.length} binary byte-range संदर्भ baked_bank.bin की सीमा से बाहर हैं; यह JSON/bin जोड़ी असंगत हो सकती है।`,
-      'BANK_BINARY_REFERENCE_MISMATCH',
-      { invalidReferences: invalid.slice(0, 10), invalidCount: invalid.length }
-    );
-  }
-
-  return true;
-}
-
-function findMeterRecord(bank, meterKey) {
-  const key = canonicalMeter(meterKey);
-
-  const directContainers = [
-    bank?.meters,
-    bank?.vṛttas,
-    bank?.vrttas,
-    bank?.prosody,
-    bank?.templates,
-    bank?.references,
-    bank?.bank
-  ];
-
-  for (const container of directContainers) {
-    if (!container || typeof container !== 'object') continue;
-
-    for (const [name, record] of Object.entries(container)) {
-      if (canonicalMeter(name) === key && record && typeof record === 'object') {
-        return { record, path: name };
-      }
-    }
-  }
-
-  const matches = [];
-
-  walkObjects(bank, (node, path) => {
-    if (!node || Array.isArray(node) || typeof node !== 'object') return;
-
-    const name =
-      node.meter ??
-      node.name ??
-      node.key ??
-      node.chandas ??
-      node.vritta ??
-      node.vṛtta;
-
-    const hasReference = Object.keys(node).some(field =>
-      /mel|template|reference|offset|start|shape|length|frames|prosody/i.test(field)
-    );
-
-    if (name != null && canonicalMeter(name) === key && hasReference) {
-      matches.push({ record: node, path: path.join('.') });
-    }
-  });
-
-  if (matches.length) return matches[0];
-
-  // The published bank is documented to include Anuṣṭubh and a default/meter
-  // map. If the requested label is unknown, use Anuṣṭubh only when an explicit
-  // Anuṣṭubh record can be found; never fabricate a prosody vector.
-  if (key !== 'anustubh') return findMeterRecord(bank, 'anustubh');
-
-  return null;
-}
-
-function collectNumericArray(value, maxDepth = 8) {
-  if (maxDepth < 0 || value == null) return null;
-
-  if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
-    return Array.from(value, Number).filter(Number.isFinite);
-  }
-
-  if (Array.isArray(value)) {
-    if (
-      value.length &&
-      value.every(item => typeof item === 'number' && Number.isFinite(item))
-    ) {
-      return value;
-    }
-
-    for (const item of value) {
-      const found = collectNumericArray(item, maxDepth - 1);
-      if (found && found.length) return found;
-    }
-
-    return null;
-  }
-
-  if (typeof value === 'object') {
-    for (const [key, child] of Object.entries(value)) {
-      if (/vocab|token|id|name|meter|key|offset|length|shape/i.test(key)) {
-        continue;
-      }
-
-      if (/mel|template|reference|feature|prosody|data|values|embedding|tensor/i.test(key)) {
-        const found = collectNumericArray(child, maxDepth - 1);
-        if (found && found.length) return found;
-      }
-    }
-
-    for (const child of Object.values(value)) {
-      const found = collectNumericArray(child, maxDepth - 1);
-      if (found && found.length) return found;
-    }
-  }
-
-  return null;
-}
-
-function halfToFloat(bits) {
-  const sign = (bits & 0x8000) ? -1 : 1;
-  const exponent = (bits >> 10) & 0x1f;
-  const fraction = bits & 0x03ff;
-
-  if (exponent === 0) return sign * Math.pow(2, -14) * (fraction / 1024);
-  if (exponent === 31) return fraction ? NaN : sign * Infinity;
-
-  return sign * Math.pow(2, exponent - 15) * (1 + fraction / 1024);
-}
-
-function readTemplateFromBinary(record, bankBytes) {
-  if (!record || !bankBytes || bankBytes.byteLength < 2) return null;
-
-  const offsetRaw =
-    record.byteOffset ??
-    record.offsetBytes ??
-    record.offset ??
-    record.start;
-
-  const byteLengthRaw =
-    record.byteLength ??
-    record.lengthBytes ??
-    record.numelBytes;
-
-  const countRaw =
-    record.numel ??
-    record.count ??
-    record.length ??
-    record.size;
-
-  if (!Number.isFinite(Number(offsetRaw))) return null;
-
-  let byteOffset = Number(offsetRaw);
-
-  if (
-    record.byteOffset == null &&
-    record.offsetBytes == null &&
-    byteOffset < bankBytes.byteLength / 2
-  ) {
-    // The bank's documented storage is FP16; an unlabelled `offset` is treated
-    // as a half-element index unless metadata explicitly says byteOffset.
-    byteOffset *= 2;
-  }
-
-  let count = Number(countRaw);
-
-  if (
-    Number.isFinite(Number(byteLengthRaw)) &&
-    Number(byteLengthRaw) > 0
-  ) {
-    // The packed bank is IEEE-754 FP16: each sample occupies two bytes.
-    count = Number(byteLengthRaw) / 2;
-  }
-
-  if (!Number.isFinite(count) || count <= 0) {
-    const shape = record.shape ?? record.dims ?? record.dimensions;
-
-    if (
-      Array.isArray(shape) &&
-      shape.length &&
-      shape.every(n => Number.isFinite(Number(n)) && Number(n) > 0)
-    ) {
-      count = shape.reduce((product, n) => product * Number(n), 1);
-    }
-  }
-
-  if (!Number.isFinite(count) || count <= 0) return null;
-
-  const start = Math.max(0, Math.floor(byteOffset));
-  const end = Math.min(bankBytes.byteLength, start + Math.floor(count) * 2);
-
-  if (end <= start) return null;
-
-  const view = new DataView(bankBytes);
-  const result = [];
-
-  for (let offset = start; offset + 1 < end; offset += 2) {
-    result.push(halfToFloat(view.getUint16(offset, true)));
-  }
-
-  return result.length ? result : null;
-}
-
-function findUnknownTemplateRecord(bank, meterKey) {
-  const found = findMeterRecord(bank, meterKey);
-  if (found) return found;
-
-  // Some manifests are arrays keyed by an enclosing record rather than a
-  // `meter` property. Find a direct named entry from the recursively tracked path.
-  const wanted = canonicalMeter(meterKey);
-  let output = null;
-
-  walkObjects(bank, (node, path) => {
-    if (output || !node || Array.isArray(node) || typeof node !== 'object') {
-      return;
-    }
-
-    const pathNames = path
-      .filter(item => typeof item === 'string')
-      .map(canonicalMeter);
-
-    if (
-      pathNames.includes(wanted) &&
-      Object.keys(node).some(key => /offset|template|mel|reference|shape/i.test(key))
-    ) {
-      output = { record: node, path: path.join('.') };
-    }
-  });
-
-  return output;
-}
-
-function shapeOf(meta) {
-  const value = meta?.shape ?? meta?.dimensions ?? meta?.dims ?? [];
-  return Array.isArray(value) ? value.map(item => item) : [];
-}
-
-function resolvedShape(
-  meta,
-  { tokenCount = 1, frames = 128, melChannels = MEL_CHANNELS, latentShape = null } = {}
-) {
-  const raw = shapeOf(meta);
-  if (!raw.length) return [];
-
-  const name = String(meta?.name || '').toLowerCase();
-
-  const result = raw.map((dim, index) => {
-    if (typeof dim === 'number' && Number.isFinite(dim) && dim > 0) {
-      return Math.floor(dim);
-    }
-
-    const label = String(dim || '').toLowerCase();
-
-    if (/batch|^b$/.test(label) || index === 0) return 1;
-    if (/token|text|sequence|seq|length|position/.test(label)) {
-      return Math.max(1, tokenCount);
-    }
-    if (/frame|time|step|duration/.test(label)) return Math.max(1, frames);
-    if (/channel|mel_bins|n_mels/.test(label)) return melChannels;
-    if (latentShape && latentShape[index] > 0) return latentShape[index];
-    if (raw.length === 1) return Math.max(1, tokenCount);
-    if (index === raw.length - 1) return Math.max(1, frames);
-    if (index === 1 && /mel|spec|latent|sample|hidden|cond|feature/.test(name)) {
-      return melChannels;
-    }
-
-    return 1;
-  });
-
-  if (result.some(dim => !Number.isInteger(dim) || dim < 1)) {
-    throw new Error(`Invalid dynamic tensor shape: ${JSON.stringify(raw)}.`);
-  }
-
-  const numel = result.reduce((a, b) => a * b, 1);
-
-  if (!Number.isSafeInteger(numel) || numel > 30_000_000) {
-    throw new Error(`Model input shape is too large: ${result.join('×')} (${numel} values).`);
-  }
-
-  return result;
-}
-
-function product(shape) {
-  return shape.reduce((a, b) => a * b, 1);
-}
-
-function typedArrayFor(type, valuesOrLength) {
-  const values = typeof valuesOrLength === 'number' ? null : valuesOrLength;
-  const length = values ? values.length : valuesOrLength;
-  const source = values || null;
-  const lower = String(type || 'float32').toLowerCase();
-
-  let Constructor;
-
-  if (lower.includes('int64') || lower === 'long') {
-    Constructor = BigInt64Array;
-  } else if (lower.includes('uint64')) {
-    Constructor = BigInt64Array;
-  } else if (lower.includes('uint32')) {
-    Constructor = Uint32Array;
-  } else if (lower.includes('int32')) {
-    Constructor = Int32Array;
-  } else if (lower.includes('uint16')) {
-    Constructor = Uint16Array;
-  } else if (lower.includes('int16')) {
-    Constructor = Int16Array;
-  } else if (lower.includes('uint8') || lower === 'bool') {
-    Constructor = Uint8Array;
-  } else if (lower.includes('int8')) {
-    Constructor = Int8Array;
-  } else if (lower.includes('float64') || lower === 'double') {
-    Constructor = Float64Array;
-  } else {
-    Constructor = Float32Array;
-  }
-
-  if (!source) return new Constructor(length);
-
-  if (Constructor === BigInt64Array) {
-    return BigInt64Array.from(
-      source,
-      item => BigInt(Math.trunc(Number(item) || 0))
-    );
-  }
-
-  return Constructor.from(source, item => Number(item) || 0);
-}
-
-function makeTensor(ort, meta, values, shape) {
-  const type = String(meta?.type || 'float32').toLowerCase();
-  const data = typedArrayFor(type, values);
-  const dims = Array.isArray(shape) ? shape : [];
-
-  if (product(dims) !== data.length) {
-    throw new Error(
-      `Input ${meta?.name || '(unnamed)'}: ${data.length} values do not match dimensions ${dims.join('×')}.`
-    );
-  }
-
-  const tensorType =
-    type === 'double' ? 'float64' :
-    type === 'long' ? 'int64' :
-    type;
-
-  return new ort.Tensor(tensorType, data, dims);
-}
-
-function resizeFlat(source, length, { mode = 'linear' } = {}) {
-  if (!source || !source.length) return new Float32Array(length);
-
-  if (source.length === length) {
-    return Float32Array.from(source, value => Number(value) || 0);
-  }
-
-  const out = new Float32Array(length);
-
-  if (length === 1) {
-    out[0] = Number(source[0]) || 0;
-    return out;
-  }
-
-  for (let i = 0; i < length; i += 1) {
-    const position = i * (source.length - 1) / (length - 1);
-
-    if (mode === 'nearest') {
-      out[i] = Number(source[Math.round(position)]) || 0;
+      out += String.fromCodePoint(2304 + offset);
     } else {
-      const left = Math.floor(position);
-      const right = Math.min(source.length - 1, left + 1);
-      const frac = position - left;
-
-      out[i] =
-        (Number(source[left]) || 0) * (1 - frac) +
-        (Number(source[right]) || 0) * frac;
+      out += ch;
     }
   }
-
   return out;
 }
-
-function copyTensorWithShape(ort, sourceTensor, targetMeta, targetShape) {
-  if (!sourceTensor?.data) return null;
-
-  const expected = product(targetShape);
-  let data = sourceTensor.data;
-
-  if (data.length !== expected) {
-    // Dynamic time axes may differ between hemistich and model graph. Resampling
-    // is allowed only for float features (mel/conditioning), never token IDs.
-    const sourceType = String(sourceTensor.type || '').toLowerCase();
-    const targetType = String(targetMeta?.type || 'float32').toLowerCase();
-
-    if (!sourceType.includes('float') || !targetType.includes('float')) {
-      return null;
+function devaToSlp1(deva) {
+  const chars = Array.from(deva);
+  const n = chars.length;
+  let out = "";
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (DEVA_INDEP_VOWELS[c] !== void 0) {
+      out += DEVA_INDEP_VOWELS[c];
+      i++;
+    } else if (DEVA_CONS_TO_SLP1[c] !== void 0) {
+      out += DEVA_CONS_TO_SLP1[c];
+      const nxt = i + 1 < n ? chars[i + 1] : "";
+      if (nxt === "\u094D") {
+        i += 2;
+      } else if (DEVA_MATRA_TO_SLP1[nxt] !== void 0) {
+        out += DEVA_MATRA_TO_SLP1[nxt];
+        i += 2;
+      } else {
+        out += "a";
+        i++;
+      }
+    } else if (DEVA_MATRA_TO_SLP1[c] !== void 0) {
+      out += DEVA_MATRA_TO_SLP1[c];
+      i++;
+    } else if (c === "\u094D") {
+      i++;
+    } else if (DEVA_MISC_TO_SLP1[c] !== void 0) {
+      out += DEVA_MISC_TO_SLP1[c];
+      i++;
+    } else {
+      out += c;
+      i++;
     }
-
-    data = resizeFlat(data, expected);
   }
-
-  return makeTensor(ort, targetMeta, data, targetShape);
+  return out;
 }
-
-function vocabularyTokenize(inputText, tokenToId, { strict = false } = {}) {
-  const tokens = [...tokenToId.keys()]
-    .filter(token => token && token !== '<pad>' && token !== '[PAD]')
-    .sort((a, b) => Array.from(b).length - Array.from(a).length);
-
-  if (!tokens.length) {
-    throwCoded('Token vocabulary खाली है।', 'BANK_VOCABULARY_EMPTY');
+function slp1ToKannada(slp) {
+  const chars = Array.from(slp);
+  const n = chars.length;
+  let out = "";
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (SLP1_CONS_TO_KAN[c] !== void 0) {
+      out += SLP1_CONS_TO_KAN[c];
+      const nxt = i + 1 < n ? chars[i + 1] : "";
+      if (SLP1_MATRA_TO_KAN[nxt] !== void 0) {
+        out += SLP1_MATRA_TO_KAN[nxt];
+        i += 2;
+      } else {
+        out += "\u0CCD";
+        i++;
+      }
+    } else if (SLP1_INDEP_TO_KAN[c] !== void 0) {
+      out += SLP1_INDEP_TO_KAN[c];
+      i++;
+    } else if (SLP1_MISC_TO_KAN[c] !== void 0) {
+      out += SLP1_MISC_TO_KAN[c];
+      i++;
+    } else {
+      out += c;
+      i++;
+    }
   }
-
-  const unknownId =
-    tokenToId.get('<unk>') ??
-    tokenToId.get('[UNK]') ??
-    tokenToId.get('UNK') ??
-    tokenToId.get('<UNK>');
-
-  const points = Array.from(String(inputText ?? '').normalize('NFC'));
-  const ids = [];
-  let index = 0;
-
-  while (index < points.length) {
-    if (/\s/u.test(points[index])) {
-      index += 1;
+  return out;
+}
+var VISARGA = "\u0903";
+var PUNCT_DROP = new Set(Array.from(`\u0964\u0965|/\\\u2014\u2013"'\u201C\u201D\u2018\u2019\u201E\xAB\xBB\u2039\u203A*\u2022\xB7().,;!?\u200C\u200D`));
+function fixColon(deva) {
+  return deva.replace(/:-/g, VISARGA).replace(/:/g, VISARGA);
+}
+function stripPunct(deva) {
+  const s = fixColon(deva);
+  const out = [];
+  for (const c of s) {
+    if (PUNCT_DROP.has(c) || c >= "0" && c <= "9" || c >= "\u0966" && c <= "\u096F" || c === "-" || c === "\u2013" || c === "\u2014") {
       continue;
     }
-
-    let matched = null;
-
-    for (const token of tokens) {
-      const tokenPoints = Array.from(token.normalize('NFC'));
-
-      if (index + tokenPoints.length > points.length) continue;
-
-      let okay = true;
-
-      for (let j = 0; j < tokenPoints.length; j += 1) {
-        if (points[index + j] !== tokenPoints[j]) {
-          okay = false;
-          break;
+    out.push(c);
+  }
+  return out.join("").replace(/\s+/g, " ").trim();
+}
+var VS_VOICED = new Set(Array.from("gGjJqQdDbBNYRnmyrlvh"));
+var VS_OTHERV = new Set(Array.from("iIuUfFxXeEoO"));
+var VS_ALLV = new Set(Array.from("aAiIuUfFxXeEoO"));
+var VS_LEN = { a: "A", i: "I", u: "U", f: "F", A: "A", I: "I", U: "U" };
+function visargaSandhi(slp) {
+  const ws = slp.split(" ");
+  const out = [];
+  let i = 0;
+  while (i < ws.length) {
+    const w = ws[i];
+    if (w.endsWith("H") && i < ws.length - 1 && w.length >= 2) {
+      const V = w[w.length - 2];
+      const base = w.slice(0, -1);
+      const nxt = ws[i + 1];
+      const F = nxt ? nxt[0] : "";
+      if (F === "r") {
+        out.push(base.slice(0, -1) + (VS_LEN[V] || V));
+        i++;
+        continue;
+      }
+      if ((w === "saH" || w === "ezaH") && F !== "a") {
+        out.push(base);
+        i++;
+        continue;
+      }
+      if (!VS_ALLV.has(F) && !VS_VOICED.has(F)) {
+        out.push(w);
+        i++;
+        continue;
+      }
+      if (V === "a") {
+        if (F === "a") {
+          out.push(base.slice(0, -1) + "o");
+          ws[i + 1] = "'" + nxt.slice(1);
+          i++;
+          continue;
+        }
+        if (VS_VOICED.has(F)) {
+          out.push(base.slice(0, -1) + "o");
+          i++;
+          continue;
+        }
+        out.push(base);
+        i++;
+        continue;
+      }
+      if (V === "A") {
+        out.push(base);
+        i++;
+        continue;
+      }
+      if (VS_OTHERV.has(V)) {
+        out.push(base + "r");
+        i++;
+        continue;
+      }
+      out.push(w);
+      i++;
+    } else {
+      out.push(w);
+      i++;
+    }
+  }
+  return out.join(" ");
+}
+function visargaEchoFinal(slp) {
+  const ws = slp.split(" ");
+  if (ws.length > 0) {
+    const last = ws[ws.length - 1];
+    if (last.endsWith("H") && last.length >= 2 && VS_ALLV.has(last[last.length - 2])) {
+      ws[ws.length - 1] = last.slice(0, -1) + "h" + last[last.length - 2];
+    }
+  }
+  return ws.join(" ");
+}
+function modelText(srcText) {
+  let slp = devaToSlp1(stripPunct(toDeva(srcText)));
+  slp = slp.replace(/F/g, "rU");
+  return slp1ToKannada(slp);
+}
+function modelTextSandhi(srcText, echoFinal = true) {
+  let slp = devaToSlp1(stripPunct(toDeva(srcText)));
+  slp = visargaSandhi(slp);
+  if (echoFinal) {
+    slp = visargaEchoFinal(slp);
+  }
+  slp = slp.replace(/F/g, "rU");
+  return slp1ToKannada(slp);
+}
+function alignSlp1(srcText) {
+  let slp = devaToSlp1(stripPunct(toDeva(srcText)));
+  slp = slp.replace(/['’]/g, "");
+  slp = slp.replace(/L/g, "l").replace(/\|/g, "");
+  slp = slp.replace(/F/g, "rU");
+  return slp.replace(/\s+/g, " ").trim();
+}
+var VMATRA = new Set(Array.from("\u0CBE\u0CBF\u0CC0\u0CC1\u0CC2\u0CC3\u0CC4\u0CC6\u0CC7\u0CC8\u0CCA\u0CCB\u0CCC"));
+var VECHO_SHORT = { "\u0CBF": "\u0CB9\u0CBF", "\u0CC1": "\u0CB9\u0CC1", "\u0CC3": "\u0CB9\u0CC3" };
+var VLONG = new Set(Array.from("\u0CBE\u0CC0\u0CC2\u0CC4\u0CC6\u0CC7\u0CC8\u0CCA\u0CCB\u0CCC"));
+function dandaFix(s) {
+  s = s.trimEnd();
+  if (!s) return s;
+  if (s.endsWith("\u0C83")) {
+    const core = s.slice(0, -1);
+    const pv = core ? core[core.length - 1] : "";
+    if (VECHO_SHORT[pv] !== void 0) {
+      s = core + VECHO_SHORT[pv];
+    } else if (VLONG.has(pv)) {
+    } else {
+      s = core + "\u0CB9";
+    }
+  } else if (s.endsWith("\u0C82")) {
+    s = s.slice(0, -1) + "\u0CAE\u0CCD";
+  }
+  return s;
+}
+var AN_KA = new Set(Array.from("\u0C95\u0C96\u0C97\u0C98\u0C99"));
+var AN_CA = new Set(Array.from("\u0C9A\u0C9B\u0C9C\u0C9D\u0C9E"));
+var AN_TTA = new Set(Array.from("\u0C9F\u0CA0\u0CA1\u0CA2\u0CA3"));
+var AN_TA = new Set(Array.from("\u0CA4\u0CA5\u0CA6\u0CA7\u0CA8"));
+function anusvaraM(s) {
+  const chars = Array.from(s);
+  const n = chars.length;
+  const res = [];
+  for (let i = 0; i < n; i++) {
+    const c = chars[i];
+    if (c === "\u0C82") {
+      let j = i + 1;
+      while (j < n && chars[j] === " ") j++;
+      const nxt = j < n ? chars[j] : "";
+      if (!nxt) res.push("\u0C82");
+      else if (AN_KA.has(nxt)) res.push("\u0C99\u0CCD");
+      else if (AN_CA.has(nxt)) res.push("\u0C9E\u0CCD");
+      else if (AN_TTA.has(nxt)) res.push("\u0CA3\u0CCD");
+      else if (AN_TA.has(nxt)) res.push("\u0CA8\u0CCD");
+      else res.push("\u0CAE\u0CCD");
+    } else {
+      res.push(c);
+    }
+  }
+  return res.join("");
+}
+var SATVA_MAP = { "\u0C9A": "\u0CB6\u0CCD", "\u0C9B": "\u0CB6\u0CCD", "\u0C9F": "\u0CB7\u0CCD", "\u0CA0": "\u0CB7\u0CCD", "\u0CA4": "\u0CB8\u0CCD", "\u0CA5": "\u0CB8\u0CCD" };
+function satva(s) {
+  const chars = Array.from(s);
+  const n = chars.length;
+  const out = [];
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (c === "\u0C83") {
+      let j = i + 1;
+      while (j < n && chars[j] === " ") j++;
+      const nxt = j < n ? chars[j] : "";
+      if (SATVA_MAP[nxt] !== void 0) {
+        out.push(SATVA_MAP[nxt]);
+        i = j;
+        continue;
+      }
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join("");
+}
+var KSHA = "\u0C95\u0CCD\u0CB7";
+function visargaKsha(s) {
+  const chars = Array.from(s);
+  const n = chars.length;
+  const out = [];
+  let i = 0;
+  while (i < n) {
+    const c = chars[i];
+    if (c === "\u0C83") {
+      let j = i + 1;
+      while (j < n && chars[j] === " ") j++;
+      if (chars.slice(j, j + 3).join("") === KSHA) {
+        const pv = out.length > 0 ? out[out.length - 1] : "";
+        if (VECHO_SHORT[pv] !== void 0) {
+          out.push(VECHO_SHORT[pv]);
+          i++;
+          continue;
+        } else if (VLONG.has(pv)) {
+          out.push("\u0C83");
+          i++;
+          continue;
+        } else {
+          out.push("\u0CB9");
+          i++;
+          continue;
         }
       }
+    }
+    out.push(c);
+    i++;
+  }
+  return out.join("");
+}
+function hnaMetathesis(s) {
+  return s.replace(/ಹ್ಣ/g, "\u0CA3\u0CCD\u0CB9").replace(/ಹ್ನ/g, "\u0CA8\u0CCD\u0CB9");
+}
+function vocalicL(s) {
+  return s.replace(/ೢ/g, "\u0CCD\u0CB2\u0CC3").replace(/ೣ/g, "\u0CCD\u0CB2\u0CC4").replace(/ಌ/g, "\u0CB2\u0CC3").replace(/ೡ/g, "\u0CB2\u0CC4");
+}
+function nAksharas(s) {
+  const chars = Array.from(s);
+  const L = chars.length;
+  let n = 0;
+  for (let i = 0; i < L; i++) {
+    const o = chars[i].codePointAt(0);
+    const indep = o >= 2309 && o <= 2324 || o >= 3205 && o <= 3220;
+    const cons = o >= 2325 && o <= 2361 || o >= 3221 && o <= 3257;
+    if (indep) {
+      n++;
+    } else if (cons) {
+      const nxt = i + 1 < L ? chars[i + 1] : "";
+      if (nxt !== "\u094D" && nxt !== "\u0CCD") {
+        n++;
+      }
+    }
+  }
+  return n;
+}
+function aksharas(s) {
+  const chars = Array.from(s);
+  const out = [];
+  let cur = "";
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    const o = c.codePointAt(0);
+    const base = o >= 3205 && o <= 3220 || o >= 2309 && o <= 2324 || o >= 3221 && o <= 3257 || o >= 2325 && o <= 2361;
+    const prev = i > 0 ? chars[i - 1] : "";
+    if (base && prev !== "\u0CCD" && prev !== "\u094D") {
+      if (cur) out.push(cur);
+      cur = c;
+    } else {
+      cur += c;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function repDepths(aks) {
+  const n = aks.length;
+  let mono = 1;
+  let i = 0;
+  while (i < n) {
+    let j = i + 1;
+    while (j < n && aks[j] === aks[i]) j++;
+    mono = Math.max(mono, j - i);
+    i = j > i + 1 ? j : i + 1;
+  }
+  let di = 1;
+  i = 0;
+  while (i + 1 < n) {
+    if (aks[i] !== aks[i + 1]) {
+      let cnt = 1;
+      let j = i + 2;
+      while (j + 1 < n && aks[j] === aks[i] && aks[j + 1] === aks[i + 1]) {
+        cnt++;
+        j += 2;
+      }
+      di = Math.max(di, cnt);
+      i = cnt > 1 ? j : i + 1;
+    } else {
+      i++;
+    }
+  }
+  return [mono, di];
+}
+function endsHalant(txt) {
+  const t = txt.replace(/[ ।॥|.,;:!?‌‍]+$/g, "");
+  return t.length > 0 && (t.endsWith("\u094D") || t.endsWith("\u0CCD"));
+}
+function splitPadas(text) {
+  const pieces = [];
+  const norm = text.replace(/॥/g, "\u0964").replace(/\|/g, "\u0964");
+  for (const line of norm.split(/\r?\n/)) {
+    for (const seg of line.split("\u0964")) {
+      const s = seg.trim();
+      if (s) pieces.push(s);
+    }
+  }
+  if (pieces.length === 0 && text.trim()) {
+    return [text.trim()];
+  }
+  return pieces;
+}
+function preparePieces(text, noSandhi = false) {
+  const padas = Array.isArray(text) ? text : splitPadas(text);
+  let pieces = padas.map(
+    (p) => !noSandhi ? modelTextSandhi(p, false) : modelText(p)
+  );
+  if (!noSandhi) {
+    pieces = pieces.map((x) => satva(x));
+  }
+  pieces = pieces.map((x) => dandaFix(visargaKsha(anusvaraM(x))));
+  pieces = pieces.map((x) => hnaMetathesis(x));
+  pieces = pieces.map((x) => vocalicL(x));
+  return { padas, pieces };
+}
+var SLP_VOWELS = new Set(Array.from("aAiIuUfFxXeEoO"));
+var SLP_SEPS = /* @__PURE__ */ new Set([" ", "|"]);
+var LONG_VOWELS = new Set(Array.from("AIUFXeEoO"));
+function syllabify(slp1) {
+  const syllables = [];
+  const n = slp1.length;
+  let i = 0;
+  let onsetBuf = [];
+  function attachTrailingToLast(cons) {
+    if (syllables.length === 0) return;
+    const txt = cons.join("");
+    syllables[syllables.length - 1].coda += txt;
+    syllables[syllables.length - 1].text += txt;
+  }
+  while (i < n) {
+    const c = slp1[i];
+    if (c === "'") {
+      i++;
+      continue;
+    }
+    if (SLP_SEPS.has(c)) {
+      attachTrailingToLast(onsetBuf);
+      onsetBuf = [];
+      if (c === "|" && syllables.length > 0) {
+        syllables[syllables.length - 1].is_pada_final = true;
+        syllables[syllables.length - 1].is_word_final = true;
+      } else if (c === " " && syllables.length > 0) {
+        syllables[syllables.length - 1].is_word_final = true;
+      }
+      i++;
+      continue;
+    }
+    if (SLP_VOWELS.has(c)) {
+      const syl = {
+        text: onsetBuf.join("") + c,
+        onset: onsetBuf.join(""),
+        vowel: c,
+        coda: "",
+        is_word_final: false,
+        is_pada_final: false
+      };
+      syllables.push(syl);
+      onsetBuf = [];
+      i++;
+      const consBetween = [];
+      while (i < n && !SLP_VOWELS.has(slp1[i]) && !SLP_SEPS.has(slp1[i]) && slp1[i] !== "'") {
+        const cc = slp1[i];
+        if (cc === "~" && consBetween.length > 0) {
+          consBetween[consBetween.length - 1] += "~";
+        } else {
+          consBetween.push(cc);
+        }
+        i++;
+      }
+      if (i < n && SLP_VOWELS.has(slp1[i])) {
+        if (consBetween.length >= 2) {
+          const codaPart = consBetween.slice(0, -1);
+          const onsetPart = consBetween.slice(-1);
+          syllables[syllables.length - 1].coda = codaPart.join("");
+          syllables[syllables.length - 1].text += syllables[syllables.length - 1].coda;
+          onsetBuf = onsetPart;
+        } else if (consBetween.length === 1) {
+          onsetBuf = consBetween;
+        }
+      } else {
+        syllables[syllables.length - 1].coda = consBetween.join("");
+        syllables[syllables.length - 1].text += syllables[syllables.length - 1].coda;
+        onsetBuf = [];
+      }
+      continue;
+    }
+    if (c === "~" && onsetBuf.length > 0) {
+      onsetBuf[onsetBuf.length - 1] += "~";
+    } else {
+      onsetBuf.push(c);
+    }
+    i++;
+  }
+  attachTrailingToLast(onsetBuf);
+  if (syllables.length > 0) {
+    syllables[syllables.length - 1].is_word_final = true;
+    syllables[syllables.length - 1].is_pada_final = true;
+  }
+  return syllables;
+}
+function clusterChars(s) {
+  return Array.from(s).filter((c) => c !== "~");
+}
+function tagWeights(syllables) {
+  for (let k = 0; k < syllables.length; k++) {
+    const s = syllables[k];
+    const v = s.vowel;
+    if (LONG_VOWELS.has(v)) {
+      s.weight = "G";
+      s.weight_cause = "long_vowel";
+      continue;
+    }
+    const gap = clusterChars(s.coda);
+    if (!s.is_pada_final && k + 1 < syllables.length) {
+      gap.push(...clusterChars(syllables[k + 1].onset));
+    }
+    if (gap.length > 0 && gap[0] === "H") {
+      s.weight = "G";
+      s.weight_cause = "visarga";
+      continue;
+    }
+    if (gap.length > 0 && gap[0] === "M") {
+      s.weight = "G";
+      s.weight_cause = "anusvara";
+      continue;
+    }
+    if (gap.length >= 2) {
+      s.weight = "G";
+      s.weight_cause = "cluster";
+      continue;
+    }
+    if (s.is_pada_final) {
+      s.weight = "G";
+      s.weight_cause = "pada_final_anceps";
+      continue;
+    }
+    s.weight = "L";
+    s.weight_cause = "light";
+  }
+}
+var METERS = [
+  ["indravajra", 11, ["GGLGGLLGLGG"]],
+  ["upendravajra", 11, ["LGLGGLLGLGG"]],
+  ["upajati", 11, ["GGLGGLLGLGG", "LGLGGLLGLGG"]],
+  ["vamshastha", 12, ["LGLGGLLGLGLG"]],
+  ["indravamsha", 12, ["GGLGGLLGLGLG"]],
+  ["vasantatilaka", 14, ["GGLGLLLGLLGLGG"]],
+  ["malini", 15, ["LLLLLLGGLGGLGGG"]],
+  ["shikharini", 17, ["LGGGGGLLLLLGGGGLG"]],
+  ["mandakranta", 17, ["GGGGLLLLLGGLGGLGG"]],
+  ["harini", 17, ["LLLLLGGGGGLGLLGLG"]],
+  ["prithvi", 17, ["LGLLLGLGLLLGGLGGL"]],
+  ["shardulavikridita", 19, ["GGGLLGLGLLLGGGLGGLG"]],
+  ["sragdhara", 21, ["GGGGLGGGLLLLLLGGLGGLG"]]
+];
+var ANUSHTUBH_PADA = 8;
+function matchPada(observed, template) {
+  if (observed.length !== template.length) return false;
+  for (let i = 0; i < template.length - 1; i++) {
+    if (observed[i] !== template[i]) return false;
+  }
+  return true;
+}
+function matchMeter(pattern, plen, templates) {
+  if (pattern.length !== 4 * plen) return false;
+  for (let i = 0; i < 4; i++) {
+    const pada = pattern.slice(i * plen, (i + 1) * plen);
+    if (!templates.some((t) => matchPada(pada, t))) return false;
+  }
+  return true;
+}
+function detectMeter(syllables) {
+  const pattern = syllables.map((s) => s.weight).join("");
+  const n = pattern.length;
+  for (const [name, plen, templates] of METERS) {
+    if (matchMeter(pattern, plen, templates)) {
+      return {
+        name,
+        pada_length: plen,
+        num_padas: 4,
+        padas: [0, 1, 2, 3].map((i) => pattern.slice(i * plen, (i + 1) * plen))
+      };
+    }
+  }
+  if (n === 4 * ANUSHTUBH_PADA) {
+    return {
+      name: "anushtubh",
+      pada_length: ANUSHTUBH_PADA,
+      num_padas: 4,
+      padas: [0, 1, 2, 3].map((i) => pattern.slice(i * 8, (i + 1) * 8))
+    };
+  }
+  if (n === 2 * ANUSHTUBH_PADA) {
+    return {
+      name: "anushtubh_half",
+      pada_length: ANUSHTUBH_PADA,
+      num_padas: 2,
+      padas: [0, 1].map((i) => pattern.slice(i * 8, (i + 1) * 8))
+    };
+  }
+  return {
+    name: "unknown",
+    pada_length: null,
+    num_padas: null,
+    padas: [pattern]
+  };
+}
+function detectMeterKey(text) {
+  try {
+    let d = toDeva(text).replace(/॥/g, "|").replace(/।/g, "|").replace(/\r?\n/g, " | ");
+    d = Array.from(d).filter((c) => !(c >= "0" && c <= "9" || c >= "\u0966" && c <= "\u096F") && !`"'\u201C\u201D\u2018\u2019()`.includes(c)).join("");
+    const slp = devaToSlp1(d).replace(/\s+/g, " ").trim();
+    const syls = syllabify(slp);
+    tagWeights(syls);
+    const name = detectMeter(syls).name;
+    if (name === "anushtubh_half" || name === "anushtubh") return "anushtubh";
+    if (!name || name === "unknown") return "";
+    return name;
+  } catch {
+    return "";
+  }
+}
+function analyzeVerse(text, noSandhi = false) {
+  let d = toDeva(text).replace(/॥/g, "|").replace(/।/g, "|").replace(/\r?\n/g, " | ");
+  d = Array.from(d).filter((c) => !(c >= "0" && c <= "9" || c >= "\u0966" && c <= "\u096F") && !`"'\u201C\u201D\u2018\u2019()`.includes(c)).join("");
+  const slp = devaToSlp1(d).replace(/\s+/g, " ").trim();
+  const syllables = syllabify(slp);
+  tagWeights(syllables);
+  const meter = detectMeter(syllables);
+  const detectedKey = detectMeterKey(text);
+  const { padas, pieces } = preparePieces(text, noSandhi);
+  const nSylls = pieces.map((x) => nAksharas(x));
+  return {
+    script: detectScript(text),
+    deva: toDeva(text),
+    slp1: slp,
+    syllables,
+    meter,
+    detectedMeterKey: detectedKey || "vasantatilaka",
+    isFallbackMeter: !detectedKey,
+    padas,
+    kannadaPieces: pieces,
+    nSylls
+  };
+}
 
-      if (okay) {
-        matched = token;
+// vagdhenu-onnx.js
+function splitHemistichAtCaesura(line) {
+  const words = line.trim().split(/\s+/);
+  if (words.length < 2) return [line];
+  const totalSylls = nAksharas(toDeva(line));
+  if (totalSylls < 14) return [line];
+  const target = Math.round(totalSylls / 2);
+  let bestIdx = -1;
+  let bestDiff = 999;
+  let acc = 0;
+  for (let i = 0; i < words.length - 1; i++) {
+    acc += nAksharas(toDeva(words[i]));
+    const diff = Math.abs(acc - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx = i;
+    }
+  }
+  if (bestIdx >= 0 && bestDiff <= 2) {
+    return [words.slice(0, bestIdx + 1).join(" "), words.slice(bestIdx + 1).join(" ")];
+  }
+  return [line];
+}
+var SR = 24e3;
+var HOP = 256;
+var CACHE_NAME = "swar-sadhika-vagdhenu-models-v1";
+var FP16_TO_FP32 = new Float32Array(65536);
+(function initFp16Table() {
+  const buf = new ArrayBuffer(4);
+  const f32 = new Float32Array(buf);
+  const u32 = new Uint32Array(buf);
+  for (let i = 0; i < 65536; i++) {
+    const s = (i & 32768) << 16;
+    let e = i >> 10 & 31;
+    let m = i & 1023;
+    if (e === 0) {
+      if (m === 0) {
+        u32[0] = s;
+      } else {
+        e = 1;
+        while ((m & 1024) === 0) {
+          m <<= 1;
+          e--;
+        }
+        m &= 1023;
+        u32[0] = s | e + (127 - 15) << 23 | m << 13;
+      }
+    } else if (e === 31) {
+      u32[0] = s | 2139095040 | m << 13;
+    } else {
+      u32[0] = s | e + (127 - 15) << 23 | m << 13;
+    }
+    FP16_TO_FP32[i] = f32[0];
+  }
+})();
+function decodeFp16Buffer(arrayBuffer, byteOffset, frameCount, channels = 100) {
+  const u16 = new Uint16Array(arrayBuffer, byteOffset, frameCount * channels);
+  const out = new Float32Array(frameCount * channels);
+  for (let i = 0; i < u16.length; i++) {
+    out[i] = FP16_TO_FP32[u16[i]];
+  }
+  return out;
+}
+function createRng(seed) {
+  let a = seed >>> 0;
+  return function nextUniform() {
+    a |= 0;
+    a = a + 1831565813 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function randnArray(length, seed = 60) {
+  const rng = createRng(seed);
+  const out = new Float32Array(length);
+  for (let i = 0; i < length; i += 2) {
+    const u1 = Math.max(1e-7, rng());
+    const u2 = rng();
+    const r = Math.sqrt(-2 * Math.log(u1));
+    const theta = 2 * Math.PI * u2;
+    out[i] = r * Math.cos(theta);
+    if (i + 1 < length) {
+      out[i + 1] = r * Math.sin(theta);
+    }
+  }
+  return out;
+}
+function gateAudio(au, {
+  voice = 0.08,
+  sil = 0.012,
+  fin = 0.015,
+  fout = 0.04,
+  lead = 0.03,
+  keep = 0.06,
+  fade = true,
+  fric = false,
+  halant = false,
+  tailThr = 0.015
+} = {}) {
+  const win = Math.floor(0.02 * SR);
+  if (au.length <= win) return au;
+  const r = [];
+  for (let i = 0; i <= au.length - win; i += win) {
+    let sumSq = 0;
+    for (let j = i; j < i + win; j++) sumSq += au[j] * au[j];
+    r.push(Math.sqrt(sumSq / win));
+  }
+  const n = r.length;
+  if (n === 0) return au;
+  let maxIdx = 0;
+  for (let i = 1; i < n; i++) {
+    if (r[i] > r[maxIdx]) maxIdx = i;
+  }
+  let s = maxIdx;
+  let vdef = maxIdx;
+  if (fric) {
+    const FR = 6e-3;
+    let found = -1;
+    for (let i = 0; i < n - 1; i++) {
+      if (r[i] > FR && r[i + 1] > FR) {
+        found = i;
         break;
       }
     }
-
-    if (matched !== null) {
-      ids.push(tokenToId.get(matched));
-      index += Array.from(matched.normalize('NFC')).length;
-      continue;
-    }
-
-    const current = points[index];
-
-    // Ignore only punctuation separators; never discard letters, phonemes,
-    // combining/vedic marks or digits without explicit vocabulary support.
-    if (/[|।॥,.;:!?\-–—()[\]{}]/u.test(current)) {
-      index += 1;
-      continue;
-    }
-
-    if (!strict && unknownId !== undefined) {
-      ids.push(unknownId);
-      index += 1;
-      continue;
-    }
-
-    throwCoded(
-      `मॉडल vocabulary में अक्षर/phoneme "${current}" नहीं मिला। अनुमानित token ID का उपयोग नहीं किया गया।`,
-      'TOKEN_NOT_IN_VOCABULARY',
-      {
-        character: current,
-        index,
-        input: points.slice(Math.max(0, index - 12), index + 24).join('')
+    s = found >= 0 ? found : maxIdx;
+    while (s > 0 && r[s - 1] > FR) s--;
+    vdef = s;
+  } else {
+    let found = -1;
+    for (let i = 0; i < n - 1; i++) {
+      if (r[i] > voice && r[i + 1] > sil) {
+        found = i;
+        break;
       }
-    );
+    }
+    const vs = found >= 0 ? found : maxIdx;
+    s = vs;
+    while (s > 0 && r[s - 1] > sil) s--;
+    vdef = vs;
   }
-
-  if (!ids.length) {
-    throwCoded('पाठ से कोई model token नहीं बना।', 'TOKENIZATION_EMPTY');
+  const veThr = halant ? 0.012 : tailThr;
+  let ve = vdef;
+  for (let i = 0; i < n; i++) {
+    if (r[i] > veThr) ve = i;
   }
-
-  return ids;
-}
-
-function rankOf(tensor) {
-  return Array.isArray(tensor?.dims) ? tensor.dims.length : 0;
-}
-
-function safeTensorNames(session, side) {
-  const list = side === 'input' ? session.inputMetadata : session.outputMetadata;
-
-  if (Array.isArray(list)) return list.map(meta => meta.name);
-
-  return side === 'input'
-    ? [...(session.inputNames || [])]
-    : [...(session.outputNames || [])];
-}
-
-function metadataFor(session, side) {
-  const listed = side === 'input' ? session.inputMetadata : session.outputMetadata;
-
-  if (Array.isArray(listed) && listed.length) return listed;
-
-  const names = safeTensorNames(session, side);
-
-  return names.map(name => ({
-    name,
-    type: 'float32',
-    shape: []
-  }));
-}
-
-function roleFor(name) {
-  const n = String(name || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_');
-
-  if (/token|phoneme|input_ids|text_ids|^ids$/.test(n)) return 'tokens';
-  if (/position_ids|positions|^pos$/.test(n)) return 'positions';
-  if (/length|len|seq_len|token_count/.test(n)) return 'length';
-  if (/attention_mask|text_mask|token_mask|mask/.test(n)) return 'mask';
-  if (/time|timestep|sigma|^t$|flow_step/.test(n)) return 'time';
-  if (/mel|spectrogram|reference|prosody|template|bank|style/.test(n)) return 'reference';
-  if (/latent|sample|noise|^x$|input_mel|hidden_state/.test(n)) return 'latent';
-  if (/cond|context|embedding|text_enc|encoder|condition/.test(n)) return 'condition';
-  if (/audio|wave|pcm|waveform/.test(n)) return 'audio';
-
-  return 'unknown';
-}
-
-function bestOutputTensor(outputMap, inputMeta) {
-  const outputItems = Object.entries(outputMap || {}).filter(
-    ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
-  );
-
-  if (!outputItems.length) return null;
-
-  const target = String(inputMeta?.name || '').toLowerCase();
-  const aliases = target.split(/[^a-z0-9]+/).filter(part => part.length > 2);
-
-  const named = outputItems.find(([name]) => {
-    const lower = name.toLowerCase();
-    return lower === target || aliases.some(alias => lower.includes(alias));
-  });
-
-  if (named) return named[1];
-
-  const role = roleFor(target);
-
-  const preferred = outputItems.find(([name, tensor]) => {
-    const outRole = roleFor(name);
-
-    return (
-      (role === 'condition' &&
-        ['condition', 'reference'].includes(outRole) &&
-        rankOf(tensor) >= 2) ||
-      (role === 'mask' && outRole === 'mask') ||
-      (role === 'latent' && rankOf(tensor) >= 2)
-    );
-  });
-
-  if (preferred) return preferred[1];
-
-  return outputItems.find(([, tensor]) => rankOf(tensor) >= 2)?.[1] ||
-    outputItems[0][1];
-}
-
-function deterministicRandom(seed) {
-  let state = (Number(seed) >>> 0) || 0x6d2b79f5;
-
-  return () => {
-    state += 0x6d2b79f5;
-
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function shapeTemplateToInput(values, meta, shape) {
-  const targetN = product(shape);
-  return resizeFlat(values, targetN);
-}
-
-function resolveBankTemplate(bank, bankBytes, meter) {
-  const selected =
-    findUnknownTemplateRecord(bank, meter) ||
-    findUnknownTemplateRecord(bank, 'anustubh');
-
-  if (!selected) {
-    throwCoded(
-      `baked_bank.json में "${meter}" या Anuṣṭubh reference नहीं मिला।`,
-      'BANK_TEMPLATE_UNAVAILABLE',
-      { meter }
-    );
-  }
-
-  let values = collectNumericArray(selected.record);
-
-  if ((!values || !values.length) && bankBytes) {
-    values = readTemplateFromBinary(selected.record, bankBytes);
-  }
-
-  if (!values || !values.length) {
-    // Some formats separate the `meters` index from a top-level packed tensor.
-    const rootCandidate = collectNumericArray(bank);
-
-    if (rootCandidate?.length > MEL_CHANNELS * 8) {
-      values = rootCandidate;
+  const keepS = halant ? 0.12 : keep;
+  const start = Math.max(0, s * win - Math.floor(lead * SR));
+  const end = Math.min(au.length, ve * win + Math.floor(keepS * SR));
+  const out = au.slice(start, end);
+  if (fade) {
+    const fi = fric ? 0 : Math.floor(fin * SR);
+    const fo = Math.floor((halant ? 0.018 : fout) * SR);
+    if (fi > 0 && out.length > fi) {
+      for (let i = 0; i < fi; i++) {
+        out[i] *= i / Math.max(1, fi - 1);
+      }
+    }
+    if (fo > 0 && out.length > fo) {
+      const offset = out.length - fo;
+      for (let i = 0; i < fo; i++) {
+        const w = Math.cos(Math.PI * i / Math.max(1, fo - 1)) * 0.5 + 0.5;
+        out[offset + i] *= w;
+      }
     }
   }
-
-  if (!values || !values.length) {
-    throwCoded(
-      `"${selected.path}" reference record मिला, लेकिन उसमें mel data या valid FP16 offset/length नहीं मिला।`,
-      'BANK_TEMPLATE_DATA_UNAVAILABLE',
-      {
-        meter,
-        recordPath: selected.path,
-        keys: Object.keys(selected.record || {})
-      }
-    );
-  }
-
-  return {
-    values: Float32Array.from(
-      values,
-      number => Number.isFinite(Number(number)) ? Number(number) : 0
-    ),
-    record: selected.record,
-    path: selected.path
-  };
+  return out;
 }
-
-function templateTensorForMeta(ort, meta, template, context) {
-  const shape = resolvedShape(meta, context);
-  const values = shapeTemplateToInput(template.values, meta, shape);
-
-  return makeTensor(ort, meta, values, shape);
+function stitchSegments(segs, gaps, fric = false, halant = false, tailThr = 0.015) {
+  if (segs.length === 1) {
+    return gateAudio(segs[0], { fric, halant, tailThr });
+  }
+  const parts = [];
+  const last = segs.length - 1;
+  let totalLen = 0;
+  for (let i = 0; i < segs.length; i++) {
+    const gated = gateAudio(segs[i], {
+      fric: fric && i === 0,
+      halant: halant && i === last,
+      tailThr
+    });
+    parts.push(gated);
+    totalLen += gated.length;
+    if (i < last) {
+      const g = gaps[i] !== void 0 ? gaps[i] : gaps[gaps.length - 1];
+      parts.push(g);
+      totalLen += g.length;
+    }
+  }
+  const merged = new Float32Array(totalLen);
+  let pos = 0;
+  for (const p of parts) {
+    merged.set(p, pos);
+    pos += p.length;
+  }
+  return merged;
 }
-
-function onesForMeta(ort, meta, context, amount = 1) {
-  const shape = resolvedShape(meta, context);
-  const size = product(shape);
-
-  return makeTensor(ort, meta, new Array(size).fill(amount), shape);
-}
-
-function scalarForMeta(ort, meta, value, context) {
-  const shape = resolvedShape(meta, context);
-  const size = Math.max(1, product(shape));
-
-  return makeTensor(ort, meta, new Array(size).fill(value), shape);
-}
-
-function createWavBlob(samples, sampleRate = VAGDHENU_SAMPLE_RATE) {
-  if (
-    !(samples instanceof Float32Array) &&
-    !ArrayBuffer.isView(samples) &&
-    !Array.isArray(samples)
-  ) {
-    throwCoded('Vocoder ने Float32 PCM नहीं लौटाया।', 'INVALID_PCM');
-  }
-
-  const pcm = Float32Array.from(samples, value => Number(value) || 0);
-
-  if (!pcm.length || pcm.length > MAX_AUDIO_SAMPLES) {
-    throwCoded(
-      `अमान्य PCM आकार: ${pcm.length} samples।`,
-      'INVALID_PCM_LENGTH'
-    );
-  }
-
-  let peak = 0;
-  let sumSq = 0;
-
-  for (let i = 0; i < pcm.length; i += 1) {
-    const v = Math.max(-1, Math.min(1, pcm[i]));
-    pcm[i] = v;
-    peak = Math.max(peak, Math.abs(v));
-    sumSq += v * v;
-  }
-
-  const rms = Math.sqrt(sumSq / pcm.length);
-
-  if (peak < 1e-5 || rms < 1e-6) {
-    throwCoded(
-      'Vocoder output लगभग मौन है; इसे सफल गायन नहीं माना गया।',
-      'SILENT_AUDIO',
-      { samples: pcm.length, peak, rms }
-    );
-  }
-
-  const bytesPerSample = 2;
-  const dataLength = pcm.length * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataLength);
+function encodeWavBuffer(samples, sampleRate = SR) {
+  const numSamples = samples.length;
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
   const view = new DataView(buffer);
-
-  const write = (offset, text) => {
-    for (let i = 0; i < text.length; i += 1) {
-      view.setUint8(offset + i, text.charCodeAt(i));
+  function writeStr(offset2, str) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset2 + i, str.charCodeAt(i));
     }
-  };
-
-  write(0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true);
-  write(8, 'WAVE');
-  write(12, 'fmt ');
+  }
+  writeStr(0, "RIFF");
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, 1, true);
   view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * bytesPerSample, true);
-  view.setUint16(32, bytesPerSample, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
-  write(36, 'data');
-  view.setUint32(40, dataLength, true);
-
+  writeStr(36, "data");
+  view.setUint32(40, numSamples * 2, true);
   let offset = 44;
-
-  for (let i = 0; i < pcm.length; i += 1) {
-    const value = pcm[i];
-
-    view.setInt16(
-      offset,
-      value < 0 ? value * 0x8000 : value * 0x7fff,
-      true
-    );
-
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 32768 : s * 32767, true);
     offset += 2;
   }
-
-  return {
-    blob: new Blob([buffer], { type: 'audio/wav' }),
-    pcm,
-    peak,
-    rms
-  };
+  return buffer;
 }
-
-function extractAudioTensor(outputs) {
-  const entries = Object.entries(outputs || {}).filter(
-    ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
-  );
-
-  if (!entries.length) {
-    throwCoded(
-      'Vocos model ने कोई typed tensor output नहीं लौटाया।',
-      'VOCODER_OUTPUT_MISSING'
-    );
-  }
-
-  const ranked = entries.sort((a, b) => {
-    const roleA = roleFor(a[0]) === 'audio' ? 1 : 0;
-    const roleB = roleFor(b[0]) === 'audio' ? 1 : 0;
-
-    return roleB - roleA || b[1].data.length - a[1].data.length;
-  });
-
-  const [name, tensor] = ranked[0];
-
-  if (!tensor.data.length) {
-    throwCoded(
-      `Vocoder output "${name}" खाली है।`,
-      'VOCODER_OUTPUT_EMPTY'
-    );
-  }
-
-  return {
-    name,
-    tensor,
-    samples: Float32Array.from(tensor.data, Number)
-  };
+function encodeWavBlob(samples, sampleRate = SR) {
+  const buffer = encodeWavBuffer(samples, sampleRate);
+  return new Blob([buffer], { type: "audio/wav" });
 }
-
-function modelSummary(session) {
-  const summarize = list =>
-    (Array.isArray(list) ? list : []).map(meta => ({
-      name: meta.name,
-      type: meta.type || 'unknown',
-      shape: Array.isArray(meta.shape) ? [...meta.shape] : [],
-      isTensor: meta.isTensor !== false
-    }));
-
-  return Object.freeze({
-    inputs: summarize(session?.inputMetadata),
-    outputs: summarize(session?.outputMetadata),
-    inputNames: [...(session?.inputNames || [])],
-    outputNames: [...(session?.outputNames || [])]
-  });
+var ORT_CDN_URL = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.2/dist/ort.all.min.js";
+var ortLoadPromise = null;
+async function resolveOrt() {
+  if (typeof globalThis !== "undefined" && globalThis.ort) {
+    return globalThis.ort;
+  }
+  try {
+    const pkgName = "onnxruntime-web";
+    const mod = await import(
+      /* @vite-ignore */
+      pkgName
+    );
+    const resolved = mod?.default?.InferenceSession ? mod.default : mod;
+    if (resolved?.InferenceSession) {
+      if (typeof globalThis !== "undefined" && !globalThis.ort) {
+        globalThis.ort = resolved;
+      }
+      return resolved;
+    }
+  } catch {
+  }
+  if (typeof document !== "undefined") {
+    if (!ortLoadPromise) {
+      ortLoadPromise = new Promise((resolve, reject) => {
+        if (globalThis.ort) return resolve(globalThis.ort);
+        const s = document.createElement("script");
+        s.src = ORT_CDN_URL;
+        s.async = true;
+        s.onload = () => globalThis.ort ? resolve(globalThis.ort) : reject(new Error("ort missing after script load"));
+        s.onerror = () => reject(new Error(`Failed to load ONNX Runtime Web from ${ORT_CDN_URL}`));
+        document.head.appendChild(s);
+      });
+    }
+    return ortLoadPromise;
+  }
+  throw new Error("ONNX Runtime Web (onnxruntime-web) is not available.");
 }
-
-function normalizeOptions(options = {}) {
-  const opts = options && typeof options === 'object' ? options : {};
-
-  const requestedMeter = String(
-    opts.meterKey ?? opts.meter ?? 'auto'
-  ).trim();
-
-  const meter =
-    (!requestedMeter || requestedMeter.toLowerCase() === 'auto')
-      ? 'auto'
-      : canonicalMeter(requestedMeter);
-
-  const nfe = Number(opts.nfe ?? DEFAULT_NFE);
-  const cfg = Number(opts.cfg ?? 3.0);
-  const speed = Number(opts.speed ?? 0.9);
-  const seed = Number(opts.seed ?? 60);
-  const swaySamplingCoef = Number(opts.swaySamplingCoef ?? -1);
-
-  if (!Number.isInteger(nfe) || nfe < 1 || nfe > 24) {
-    throwCoded('nfe 1 से 24 के बीच पूर्णांक होना चाहिए।', 'INVALID_NFE');
+function isMobileDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+  if (navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua)) return true;
+  if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
+    return true;
   }
-
-  if (!Number.isFinite(cfg) || cfg < 0 || cfg > 20) {
-    throwCoded('cfg 0 से 20 के बीच होना चाहिए।', 'INVALID_CFG');
-  }
-
-  if (!Number.isFinite(speed) || speed < 0.3 || speed > 2) {
-    throwCoded('speed 0.3 से 2 के बीच होना चाहिए।', 'INVALID_SPEED');
-  }
-
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0x7fffffff) {
-    throwCoded(
-      'seed non-negative 32-bit integer होना चाहिए।',
-      'INVALID_SEED'
-    );
-  }
-
-  if (
-    !Number.isFinite(swaySamplingCoef) ||
-    swaySamplingCoef < -2 ||
-    swaySamplingCoef > 2
-  ) {
-    throwCoded(
-      'swaySamplingCoef -2 से 2 के बीच होना चाहिए।',
-      'INVALID_SWAY_COEF'
-    );
-  }
-
-  const language = opts.language ?? opts.lang ?? 'auto';
-
-  // Validate the explicit setting here; auto detection is resolved with text.
-  normalizeTextLanguage(language, '');
-
-  return {
-    meter,
-    nfe,
-    cfg,
-    speed,
-    seed,
-    swaySamplingCoef,
-    language,
-    noSandhi: Boolean(opts.noSandhi)
-  };
+  return false;
 }
-
-export class VagdhenuWebEngine {
-  constructor(canvas = null, backendMode = 'wasm', config = {}) {
-    if (
-      canvas &&
-      typeof canvas === 'object' &&
-      !('getContext' in canvas) &&
-      (
-        canvas.backend ||
-        canvas.backendMode ||
-        canvas.allowProviderFallback !== undefined
-      )
-    ) {
-      config = canvas;
-      canvas = config.canvas || null;
-      backendMode = config.backendMode || config.backend || backendMode;
-    }
-
-    this.canvas = canvas;
-    this.config = { allowProviderFallback: true, ...config };
-    this.backendMode = normalizeBackend(
-      backendMode || this.config.backend || 'wasm'
-    );
-
-    this.provider = this.backendMode === 'wasm' ? 'wasm' : 'webgpu';
-    this.isWarmedUp = false;
-    this._ort = null;
-    this._sessions = null;
-    this._bank = null;
-    this._bankBytes = null;
-    this._vocabulary = null;
-    this._bankSource = null;
-    this._initPromise = null;
-    this._disposed = false;
-    this._urls = new Set();
-    this._lastInference = null;
-    this._lastError = null;
-  }
-
-  getRuntimeInfo() {
-    return Object.freeze({
-      engine: 'Swar-Sadhika original Vāgdhenu ONNX bridge',
-      version: VAGDHENU_ENGINE_VERSION,
-      supportedTextLanguages: [...SUPPORTED_TEXT_LANGUAGES],
-      acceptedLanguageOption: 'options.language (vedic-sanskrit | sanskrit | hindi | auto)',
-      backend: this.backendMode,
-      provider: this.provider,
-      initialized: Boolean(this._sessions),
-      modelsLoaded: Boolean(
-        this._sessions &&
-        this._sessions.conditioner &&
-        this._sessions.dit &&
-        this._sessions.vocoder
-      ),
-      modelSignatures: this._sessions
-        ? {
-            conditioner: modelSummary(this._sessions.conditioner),
-            dit: modelSummary(this._sessions.dit),
-            vocoder: modelSummary(this._sessions.vocoder)
-          }
-        : null,
-      vocabularyLoaded: Boolean(this._vocabulary?.tokenToId?.size),
-      referenceBankLoaded: Boolean(this._bank && this._bankBytes),
-      bankSource: this._bankSource || null,
-      lastInference: this._lastInference,
-      lastError: this._lastError,
-      remoteTtsApi: false,
-      localInferenceVerified: Boolean(
-        this._lastInference?.modelStagesCompleted
-      ),
-      offlineInferenceVerified: false,
-      runtimeUrl: `${ORT_BASE}ort.all.min.js`,
-      modelRepository: getModelBase(this.backendMode)
-    });
-  }
-
-  async setBackendMode(mode) {
-    this._assertActive();
-
-    const backend = normalizeBackend(mode);
-
-    if (backend === this.backendMode) {
-      return { ok: true, backend, unchanged: true };
-    }
-
-    await this._releaseSessions();
-
-    this.backendMode = backend;
-    this.provider = backend === 'wasm' ? 'wasm' : 'webgpu';
-    this.isWarmedUp = false;
-    this._bank = null;
-    this._bankBytes = null;
-    this._vocabulary = null;
-    this._bankSource = null;
-
-    return { ok: true, backend, unchanged: false };
-  }
-
-  _assertActive() {
-    if (this._disposed) {
-      throwCoded(
-        'इस engine instance को dispose किया जा चुका है।',
-        'ENGINE_DISPOSED'
-      );
+function safeDisposeTensor(t) {
+  if (t && typeof t.dispose === "function") {
+    try {
+      t.dispose();
+    } catch {
     }
   }
-
-  async _loadBank(progressCallback) {
-    const base = getModelBase(this.backendMode);
-
-    emit(progressCallback, {
-      stage: 'bank',
-      progress: 0.02,
-      message: 'आधिकारिक मॉडल bank और उसके अनुरूप token vocabulary लोड हो रही है।'
-    });
-
-    const officialBankUrl = new URL(VAGDHENU_ASSET_FILES.bank, base).href;
-    const localBankUrl = new URL('../../baked_bank.json', import.meta.url).href;
-    const binaryUrl = new URL(VAGDHENU_ASSET_FILES.bankBinary, base).href;
-
-    // The model JSON and binary bank must come from the same repository
-    // whenever possible. Download concurrently to avoid unnecessary delay.
-    const [binaryOutcome, officialOutcome] = await Promise.allSettled([
-      fetchChecked(binaryUrl, VAGDHENU_ASSET_FILES.bankBinary),
-      loadBankJsonCandidate(officialBankUrl, 'आधिकारिक मॉडल baked_bank.json')
-    ]);
-
-    if (binaryOutcome.status === 'rejected') {
-      throw binaryOutcome.reason;
+}
+async function fetchWithCache(url, onProgress, { skipCacheWrite = false } = {}) {
+  let cache = null;
+  if (typeof caches !== "undefined") {
+    try {
+      cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(url, { ignoreSearch: true });
+      if (cached) {
+        const buf = await cached.arrayBuffer();
+        if (onProgress) onProgress(buf.byteLength, buf.byteLength, true);
+        return buf;
+      }
+    } catch {
+      cache = null;
     }
-
-    const bankBytes = await binaryOutcome.value.arrayBuffer();
-    if (bankBytes.byteLength < 1024) {
-      throwCoded(
-        `baked_bank.bin बहुत छोटा है (${bankBytes.byteLength} bytes)।`,
-        'BANK_BINARY_INVALID',
-        { url: binaryUrl, byteLength: bankBytes.byteLength }
-      );
-    }
-
-    const failures = [];
-    let selected = null;
-
-    if (officialOutcome.status === 'fulfilled') {
-      try {
-        validateBankBinaryReferences(
-          officialOutcome.value.bank,
-          bankBytes.byteLength,
-          'आधिकारिक मॉडल baked_bank.json'
-        );
-        selected = {
-          ...officialOutcome.value,
-          source: 'official-model-repository'
-        };
-      } catch (error) {
-        failures.push({
-          source: 'official-model-repository',
-          code: error?.code || 'BANK_VALIDATION_FAILED',
-          message: messageOf(error)
-        });
+  }
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch ${url} (${resp.status})`);
+  }
+  const total = Number(resp.headers.get("content-length")) || 0;
+  if (!resp.body) {
+    const buf = await resp.arrayBuffer();
+    if (onProgress) onProgress(buf.byteLength, total || buf.byteLength, false);
+    return buf;
+  }
+  const reader = resp.body.getReader();
+  let full = total > 0 ? new Uint8Array(total) : null;
+  const chunks = full ? null : [];
+  let loaded = 0;
+  let lastReportTime = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (full) {
+      if (loaded + value.byteLength <= full.byteLength) {
+        full.set(value, loaded);
+      } else {
+        const grown = new Uint8Array(loaded + value.byteLength);
+        grown.set(full.subarray(0, loaded), 0);
+        grown.set(value, loaded);
+        full = grown;
       }
     } else {
-      failures.push({
-        source: 'official-model-repository',
-        code: officialOutcome.reason?.code || 'BANK_FETCH_FAILED',
-        message: messageOf(officialOutcome.reason)
-      });
+      chunks.push(value);
     }
-
-    // The app-root copy is a recovery path only, never an unconditional
-    // override. It must contain a recognized 1,039-ID vocabulary and its
-    // explicit binary offsets must fit the already-loaded official bank.
-    if (!selected) {
-      try {
-        const localCandidate = await loadBankJsonCandidate(
-          localBankUrl,
-          'स्थानीय fallback baked_bank.json'
-        );
-        validateBankBinaryReferences(
-          localCandidate.bank,
-          bankBytes.byteLength,
-          'स्थानीय fallback baked_bank.json'
-        );
-        selected = { ...localCandidate, source: 'validated-local-fallback' };
-      } catch (error) {
-        failures.push({
-          source: 'validated-local-fallback',
-          code: error?.code || 'LOCAL_BANK_VALIDATION_FAILED',
-          message: messageOf(error),
-          details: error?.details
-        });
+    loaded += value.byteLength;
+    if (onProgress) {
+      const now = performance.now();
+      if (loaded === total || now - lastReportTime >= 50) {
+        lastReportTime = now;
+        onProgress(loaded, total, false);
       }
     }
-
-    if (!selected) {
-      throwCoded(
-        'आधिकारिक और स्थानीय दोनों baked_bank.json विकल्प मॉडल vocabulary के साथ सत्यापित नहीं हो सके। अनुमानित token IDs इस्तेमाल नहीं किए गए और synthesis रोक दी गई।',
-        'BANK_VOCABULARY_UNAVAILABLE',
-        {
-          modelRepository: base,
-          expectedVocabularySize: VOCAB_SIZE,
-          attemptedSources: failures
-        }
-      );
-    }
-
-    this._bank = selected.bank;
-    this._bankBytes = bankBytes;
-    this._vocabulary = selected.vocabulary;
-    this._bankSource = selected.source;
-
-    emit(progressCallback, {
-      stage: 'bank',
-      progress: 0.06,
-      message: `Prosody bank तैयार (${selected.vocabulary.tokenToId.size} vocabulary entries; स्रोत: ${selected.source === 'official-model-repository' ? 'आधिकारिक मॉडल रिपॉज़िटरी' : 'सत्यापित स्थानीय fallback'})।`
-    });
   }
-
-  async _createSession(key, fileName, progressCallback, index, total) {
-    const base = getModelBase(this.backendMode);
-    const url = new URL(fileName, base).href;
-
-    emit(progressCallback, {
-      stage: 'model-session',
-      progress: 0.06 + 0.18 * (index / total),
-      model: key,
-      message: `ONNX model session बन रहा है: ${fileName}`
-    });
-
-    const providers = this.backendMode === 'onnx' ? ['webgpu'] : ['wasm'];
-
+  if (!full) {
+    full = new Uint8Array(loaded);
+    let pos = 0;
+    for (const c of chunks) {
+      full.set(c, pos);
+      pos += c.byteLength;
+    }
+  } else if (loaded < full.byteLength) {
+    full = full.slice(0, loaded);
+  }
+  if (cache && !skipCacheWrite) {
     try {
-      return await this._ort.InferenceSession.create(url, {
-        executionProviders: providers,
-        graphOptimizationLevel: 'all',
-        executionMode: 'sequential',
-        logSeverityLevel: 3
-      });
-    } catch (firstError) {
-      if (
-        this.backendMode === 'onnx' &&
-        this.config.allowProviderFallback !== false
-      ) {
-        console.warn(
-          `[Swar-Sadhika] WebGPU session failed for ${fileName}; retrying with WASM.`,
-          firstError
-        );
-
-        emit(progressCallback, {
-          stage: 'provider-fallback',
-          progress: 0.06 + 0.18 * (index / total),
-          model: key,
-          message: `WebGPU उपलब्ध नहीं; ${fileName} को WASM पर आज़माया जा रहा है।`
-        });
-
-        try {
-          const session = await this._ort.InferenceSession.create(url, {
-            executionProviders: ['wasm'],
-            graphOptimizationLevel: 'all',
-            executionMode: 'sequential',
-            logSeverityLevel: 3
-          });
-
-          this.provider = 'wasm-fallback';
-
-          return session;
-        } catch (fallbackError) {
-          throwCoded(
-            `${fileName}: WebGPU और WASM दोनों पर session नहीं बना।`,
-            'MODEL_SESSION_FAILED',
-            {
-              model: key,
-              url,
-              backend: this.backendMode,
-              webgpuError: messageOf(firstError),
-              wasmError: messageOf(fallbackError)
-            },
-            fallbackError
-          );
-        }
-      }
-
-      throwCoded(
-        `${fileName}: ONNX session नहीं बना (${messageOf(firstError)})`,
-        'MODEL_SESSION_FAILED',
-        { model: key, url, backend: this.backendMode },
-        firstError
+      await cache.put(
+        url,
+        new Response(full.buffer, {
+          headers: { "Content-Type": "application/octet-stream", "Content-Length": String(loaded) }
+        })
       );
+    } catch {
     }
   }
-
-  async initOnnxSessions(progressCallback = null) {
-    this._assertActive();
-
-    if (
-      progressCallback != null &&
-      typeof progressCallback !== 'function'
-    ) {
-      throwCoded(
-        'progressCallback function होना चाहिए।',
-        'INVALID_CALLBACK'
-      );
+  return full.buffer;
+}
+var HF_WASM_BASE = "https://huggingface.co/gnumanth/sanskrit-tts-wasm/resolve/main";
+var HF_ONNX_BASE = "https://huggingface.co/gnumanth/sanskrit-tts-onnx/resolve/main";
+function resolveModelBaseUrl(baseUrl = null, backendMode = "onnx") {
+  if (!baseUrl) {
+    const isLocal = typeof window !== "undefined" && (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost");
+    if (isLocal) return "./models";
+    return backendMode === "wasm" ? HF_WASM_BASE : HF_ONNX_BASE;
+  }
+  if (baseUrl === "wasm") return HF_WASM_BASE;
+  if (baseUrl === "onnx" || baseUrl === "webgpu") return HF_ONNX_BASE;
+  if (typeof baseUrl === "string" && !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") && !baseUrl.startsWith(".") && !baseUrl.startsWith("/") && /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(baseUrl)) {
+    return `https://huggingface.co/${baseUrl}/resolve/main`;
+  }
+  return baseUrl;
+}
+var TAIL_REF_LUT = {
+  "anu\u1E63\u1E6Dubh": { frame: 282, tok: 23, sps: 0.24 },
+  "pram\u0101\u1E47ik\u0101": { frame: 142, tok: 15, sps: 0.275 },
+  "vasantatilak\u0101": { frame: 315, tok: 37, sps: 0.259 },
+  "upaj\u0101ti": { frame: 323, tok: 26, sps: 0.24 },
+  "indravajr\u0101": { frame: 367, tok: 35, sps: 0.24 },
+  "upendravajr\u0101": { frame: 162, tok: 32, sps: 0.269 },
+  "va\u1E43\u015Bastha": { frame: 322, tok: 35, sps: 0.24 },
+  "rathoddhat\u0101": { frame: 969, tok: 72, sps: 0.24 },
+  "\u015B\u0101lin\u012B": { frame: 311, tok: 27, sps: 0.248 },
+  "indrava\u1E43\u015B\u0101": { frame: 381, tok: 43, sps: 0.2484 },
+  "drutavilambita": { frame: 395, tok: 22, sps: 0.2427 },
+  "bhuja\u1E45gapray\u0101ta": { frame: 347, tok: 29, sps: 0.24 },
+  "m\u0101lin\u012B": { frame: 508, tok: 48, sps: 0.2575 },
+  "\u015B\u0101rd\u016Blavikr\u012B\u1E0Dita": { frame: 731, tok: 67, sps: 0.24 },
+  "sragdhar\u0101": { frame: 938, tok: 92, sps: 0.31 },
+  "vrutta-1": { frame: 420, tok: 36, sps: 0.2432 },
+  "gadya": { frame: 497, tok: 50, sps: 0.26 },
+  "gadya_mbtn": { frame: 497, tok: 57, sps: 0.26 },
+  "prime_chata": { frame: 517, tok: 43, sps: 0.24 },
+  "prime_jaya": { frame: 454, tok: 38, sps: 0.24 }
+};
+function computeHarmonicCombStd(melFlat, numFrames) {
+  if (numFrames <= 0) return 0;
+  let sum = 0;
+  let sumSq = 0;
+  let count = 0;
+  for (let f = 0; f < numFrames; f++) {
+    const base = f * 100;
+    for (let c = 15; c < 80; c++) {
+      const c0 = c - 2;
+      const c1 = c + 2;
+      let env = 0;
+      for (let k = c0; k <= c1; k++) {
+        env += melFlat[base + k];
+      }
+      env *= 0.2;
+      const det = melFlat[base + c] - env;
+      sum += det;
+      sumSq += det * det;
+      count++;
     }
-
-    if (this._sessions) {
-      return {
-        ok: true,
-        initialized: true,
-        provider: this.provider,
-        cached: true,
-        signatures: this.getRuntimeInfo().modelSignatures
-      };
+  }
+  if (count <= 1) return 0;
+  const mean = sum / count;
+  return Math.sqrt(Math.max(0, sumSq / count - mean * mean));
+}
+var VagdhenuWebEngine = class {
+  constructor(baseUrl = null, backendMode = null) {
+    this.customBaseUrl = baseUrl;
+    this.isMobile = isMobileDevice();
+    const defaultMode = this.isMobile ? "wasm" : "onnx";
+    const effectiveMode = backendMode || defaultMode;
+    this.backendMode = effectiveMode === "wasm" ? "wasm" : "onnx";
+    const resolvedBase = resolveModelBaseUrl(baseUrl, this.backendMode);
+    this.baseUrl = resolvedBase.replace(/\/$/, "");
+    this.bankManifest = null;
+    this.bankBin = null;
+    this.condSession = null;
+    this.stepSession = null;
+    this.vocosSession = null;
+    this.provider = "wasm";
+    this.isWarmedUp = false;
+    this.initPromise = null;
+    this.ort = null;
+  }
+  setBackendMode(mode) {
+    const normalized = mode === "wasm" ? "wasm" : "onnx";
+    if (normalized === this.backendMode && this.condSession && this.stepSession) {
+      return;
     }
-
-    if (this._initPromise) return this._initPromise;
-
-    this._initPromise = (async () => {
-      emit(progressCallback, {
-        stage: 'runtime',
-        progress: 0,
-        message: `ONNX Runtime Web ${ORT_VERSION} शुरू हो रहा है।`
-      });
-
-      this._ort = await loadOrtRuntime();
-      await this._loadBank(progressCallback);
-
-      const names = [
-        ['conditioner', VAGDHENU_ASSET_FILES.conditioner],
-        ['dit', VAGDHENU_ASSET_FILES.dit],
-        ['vocoder', VAGDHENU_ASSET_FILES.vocoder]
-      ];
-
-      const opened = {};
-
+    this.backendMode = normalized;
+    const resolvedBase = resolveModelBaseUrl(this.customBaseUrl, this.backendMode);
+    this.baseUrl = resolvedBase.replace(/\/$/, "");
+    if (this.condSession) {
       try {
-        for (let i = 0; i < names.length; i += 1) {
-          const [key, file] = names[i];
-
-          opened[key] = await this._createSession(
-            key,
-            file,
-            progressCallback,
-            i,
-            names.length
-          );
-
-          const summary = modelSummary(opened[key]);
-
-          if (!summary.inputs.length || !summary.outputs.length) {
-            throwCoded(
-              `${file}: ONNX Runtime ने वास्तविक input/output metadata नहीं दिया।`,
-              'MODEL_SIGNATURE_MISSING',
-              { model: key, summary }
-            );
+        this.condSession.release?.();
+      } catch {
+      }
+      this.condSession = null;
+    }
+    if (this.stepSession) {
+      try {
+        this.stepSession.release?.();
+      } catch {
+      }
+      this.stepSession = null;
+    }
+    this.isWarmedUp = false;
+    this.initPromise = null;
+  }
+  async loadBank(onProgress) {
+    if (this.bankManifest && this.bankBin) return this.bankManifest;
+    try {
+      const probe = await fetch(`${this.baseUrl}/baked_bank.json?v=23`);
+      if (!probe.ok) throw new Error(`HTTP ${probe.status}`);
+      this.bankManifest = await probe.json();
+    } catch {
+      this.baseUrl = this.backendMode === "wasm" ? HF_WASM_BASE : HF_ONNX_BASE;
+      const fallbackResp = await fetch(`${this.baseUrl}/baked_bank.json?v=23`);
+      this.bankManifest = await fallbackResp.json();
+    }
+    this.bankBin = await fetchWithCache(`${this.baseUrl}/baked_bank.bin?v=23`, onProgress);
+    return this.bankManifest;
+  }
+  async initOnnxSessions(onStatus) {
+    if (this.condSession && this.stepSession && this.vocosSession && this.isWarmedUp) {
+      return;
+    }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    this.initPromise = this._doInitOnnxSessions(onStatus).finally(() => {
+      this.initPromise = null;
+    });
+    return this.initPromise;
+  }
+  async _doInitOnnxSessions(onStatus) {
+    const ort = await resolveOrt();
+    this.ort = ort;
+    this.isMobile = isMobileDevice();
+    await this.loadBank((loaded, total, cached) => {
+      if (onStatus) {
+        onStatus({
+          stage: "bank",
+          message: cached ? "Loaded Baked Reference Bank from browser cache (2.84 MB)" : `Downloading Baked Reference Bank (${(loaded / 1048576).toFixed(1)} MB)...`,
+          progress: total ? loaded / total * 5 : 5
+        });
+      }
+    });
+    let hasWebGpu = false;
+    if (this.backendMode === "onnx" && typeof navigator !== "undefined" && navigator.gpu) {
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (adapter) {
+          const device = await adapter.requestDevice();
+          hasWebGpu = Boolean(device);
+          device?.destroy?.();
+        }
+      } catch {
+        hasWebGpu = false;
+      }
+    }
+    const isIsolated = typeof window !== "undefined" && Boolean(window.crossOriginIsolated);
+    this.provider = this.backendMode === "onnx" && hasWebGpu ? "webgpu" : "wasm";
+    const hc = typeof navigator !== "undefined" && navigator.hardwareConcurrency || 4;
+    const optimalThreads = this.isMobile ? Math.min(6, hc) : hc <= 12 ? Math.min(4, hc) : 6;
+    ort.env.wasm.numThreads = isIsolated ? optimalThreads : 1;
+    ort.env.wasm.simd = true;
+    const useWasmWeights = this.provider === "wasm";
+    const isLocalModels = this.baseUrl === "./models" || this.baseUrl.endsWith("/models");
+    const effectiveBaseUrl = !isLocalModels && !this.customBaseUrl ? useWasmWeights ? HF_WASM_BASE : HF_ONNX_BASE : this.baseUrl;
+    const stepFile = useWasmWeights && isLocalModels ? "vagdhenu_dit_step_wasm_q8.onnx" : "vagdhenu_dit_step_q8.onnx";
+    const condFile = "vagdhenu_cond_q8.onnx";
+    const files = [
+      { key: "vocos", file: "vagdhenu_vocos_q8.onnx", label: "Vocos Neural Vocoder", weight: 12, sizeMB: 56 },
+      {
+        key: "cond",
+        file: condFile,
+        label: "ONNX Static Conditioner",
+        weight: 13,
+        sizeMB: 19
+      },
+      {
+        key: "step",
+        file: stepFile,
+        label: useWasmWeights ? "WASM MatMulInteger DiT Backbone" : "ONNX WebGPU DiT Backbone",
+        weight: 65,
+        sizeMB: useWasmWeights ? 199 : 184
+      }
+    ];
+    let basePct = 5;
+    for (const item of files) {
+      if (item.key === "vocos" && this.vocosSession) {
+        basePct += item.weight;
+        continue;
+      }
+      let buf = await fetchWithCache(
+        `${effectiveBaseUrl}/${item.file}`,
+        (loaded, total, cached) => {
+          if (onStatus) {
+            const frac = total ? loaded / total : 0.5;
+            onStatus({
+              stage: `download_${item.key}`,
+              message: cached ? `Loaded ${item.label} from browser cache` : `Downloading ${item.label}: ${(loaded / 1048576).toFixed(1)} / ${((total || item.sizeMB * 1048576) / 1048576).toFixed(1)} MB`,
+              progress: Math.min(92, basePct + frac * item.weight)
+            });
           }
-
-          emit(progressCallback, {
-            stage: 'model-session',
-            progress: 0.24 + 0.23 * ((i + 1) / names.length),
-            model: key,
-            message: `${file}: ${summary.inputs.length} inputs और ${summary.outputs.length} outputs मिले।`
-          });
-        }
-
-        this._sessions = opened;
-        this.isWarmedUp = true;
-
-        const info = this.getRuntimeInfo();
-
-        emit(progressCallback, {
-          stage: 'ready',
-          progress: 0.48,
-          provider: this.provider,
-          message: 'तीनों ONNX sessions और prosody bank लोड हुए; वास्तविक text-to-audio inference अभी अलग से चलेगा।'
+        },
+        { skipCacheWrite: false }
+      );
+      const useGpuForModel = this.backendMode === "onnx" && item.key === "step" && hasWebGpu;
+      if (onStatus) {
+        onStatus({
+          stage: `compile_${item.key}`,
+          message: `Initializing ${item.label} (${useGpuForModel ? "ONNX WEBGPU" : `WASM SIMD ${ort.env.wasm.numThreads}T`})...`,
+          progress: Math.min(94, basePct + item.weight)
         });
-
-        return {
-          ok: true,
-          initialized: true,
-          provider: this.provider,
-          signatures: info.modelSignatures,
-          vocabularyEntries: this._vocabulary.tokenToId.size
-        };
-      } catch (error) {
-        await Promise.all(
-          Object.values(opened).map(session =>
-            session?.release?.().catch(() => {})
-          )
-        );
-
-        this._sessions = null;
-        this.isWarmedUp = false;
-
-        this._lastError = {
-          stage: 'initialization',
-          code: error.code || 'INITIALIZATION_FAILED',
-          message: messageOf(error)
-        };
-
-        throw error;
       }
-    })();
-
-    try {
-      return await this._initPromise;
-    } finally {
-      this._initPromise = null;
+      const optLevel = useGpuForModel && this.isMobile ? "disabled" : "all";
+      let sess = null;
+      if (useGpuForModel) {
+        try {
+          sess = await ort.InferenceSession.create(buf, {
+            executionProviders: ["webgpu", "wasm"],
+            graphOptimizationLevel: optLevel
+          });
+          this.provider = "webgpu";
+        } catch (gpuErr) {
+          console.warn(`WebGPU session creation failed for ${item.key}, falling back to WASM SIMD:`, gpuErr);
+          if (item.key === "step") this.provider = "wasm";
+        }
+      }
+      if (!sess) {
+        sess = await ort.InferenceSession.create(buf, {
+          executionProviders: ["wasm"],
+          graphOptimizationLevel: "all"
+        });
+      }
+      buf = null;
+      if (this.isMobile) {
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      if (item.key === "vocos") this.vocosSession = sess;
+      else if (item.key === "cond") this.condSession = sess;
+      else if (item.key === "step") this.stepSession = sess;
+      basePct += item.weight;
+    }
+    if (!this.isWarmedUp) {
+      if (onStatus) {
+        onStatus({
+          stage: "warmup",
+          message: `Pre-warming ${this.provider.toUpperCase()} & WASM neural pipelines...`,
+          progress: 96
+        });
+      }
+      const wDur = this.isMobile ? 16 : 64;
+      const cOut = await this.condSession.run({
+        cond_mel: new ort.Tensor("float32", new Float32Array(wDur * 100), [1, wDur, 100]),
+        text_in: new ort.Tensor("int64", new BigInt64Array(wDur), [1, wDur])
+      });
+      safeDisposeTensor(cOut.static_bias);
+      safeDisposeTensor(cOut.rope_cos);
+      safeDisposeTensor(cOut.rope_sin);
+      const wRc = new ort.Tensor("float32", new Float32Array(wDur * 64), [1, wDur, 64]);
+      const wRs = new ort.Tensor("float32", new Float32Array(wDur * 64), [1, wDur, 64]);
+      const sOut2 = await this.stepSession.run({
+        x: new ort.Tensor("float32", new Float32Array(2 * wDur * 100), [2, wDur, 100]),
+        static_bias: new ort.Tensor("float32", new Float32Array(2 * wDur * 1024), [2, wDur, 1024]),
+        t: new ort.Tensor("float32", new Float32Array([0.1, 0.1]), [2]),
+        rope_cos: wRc,
+        rope_sin: wRs
+      });
+      safeDisposeTensor(sOut2.v_out);
+      const sOut1 = await this.stepSession.run({
+        x: new ort.Tensor("float32", new Float32Array(1 * wDur * 100), [1, wDur, 100]),
+        static_bias: new ort.Tensor("float32", new Float32Array(1 * wDur * 1024), [1, wDur, 1024]),
+        t: new ort.Tensor("float32", new Float32Array([0.8]), [1]),
+        rope_cos: wRc,
+        rope_sin: wRs
+      });
+      safeDisposeTensor(sOut1.v_out);
+      safeDisposeTensor(wRc);
+      safeDisposeTensor(wRs);
+      const vOut = await this.vocosSession.run({
+        mel: new ort.Tensor("float32", new Float32Array(100 * 16), [1, 100, 16])
+      });
+      safeDisposeTensor(vOut.wav);
+      this.isWarmedUp = true;
+    }
+    if (onStatus) {
+      onStatus({
+        stage: "ready",
+        message: `100% In-Browser Neural Engine Ready (${this.provider.toUpperCase()} \xB7 Warm & Cached)`,
+        progress: 100
+      });
     }
   }
-
-  _prepareText(sourceText, options) {
-    const original = String(sourceText ?? '')
-      .replace(/\r\n?/g, '\n')
-      .trim();
-
-    if (!original) {
-      throwCoded(
-        'कृपया वैदिक संस्कृत, संस्कृत या हिंदी पाठ लिखें।',
-        'EMPTY_TEXT'
-      );
+  getRefEntry(meter, monoDepth = 1, diDepth = 1) {
+    const m = this.bankManifest;
+    const primes = m.primes || {};
+    if (diDepth >= 3) {
+      for (const k of ["prime_jaya", "prime_chata"]) {
+        if (primes[k] && (primes[k].di_max || 0) >= diDepth) return { ...primes[k], _key: k };
+      }
     }
-
-    if (original.length > MAX_TEXT_CHARS) {
-      throwCoded(
-        `पाठ बहुत लंबा है (${original.length} characters); कृपया एक श्लोक/छोटा खंड दें।`,
-        'TEXT_TOO_LONG'
-      );
+    if (monoDepth >= 2 && primes.prime_mono && (primes.prime_mono.mono_max || 0) >= monoDepth) {
+      return { ...primes.prime_mono, _key: "prime_mono" };
     }
-
-    const prepared = prepareLanguageInput(
-      original,
-      options?.language ?? options?.lang ?? 'auto',
-      this._vocabulary.tokenToId
-    );
-
-    const scan =
-      TextModule.analyzeVerse?.(prepared.clean, { meter: options?.meter }) ??
-      null;
-
-    const meter =
-      options?.meter === 'anustubh' && scan?.meter?.key
-        ? canonicalMeter(scan.meter.key)
-        : options?.meter;
-
-    const pieces = TextModule.preparePieces?.(prepared.clean, { meter }) ?? [];
-
+    const key = (meter || "").toLowerCase().replace(/\.wav$/, "");
+    const resolved = m.aliases[key] || m.aliases[m.fallback_meter] || Object.keys(m.entries)[0];
+    return { ...m.entries[resolved], _key: resolved };
+  }
+  async synthesizeInBrowser(text, { meter = "auto", noSandhi = false, nfe = null, cfg = 3, speed = 0.9, seed = 60, onChunk = null } = {}, onProgress) {
+    await this.initOnnxSessions(onProgress);
+    const ort = this.ort || await resolveOrt();
+    let basePadas = Array.isArray(text) ? text : splitPadas(text);
+    if (!basePadas.length) throw new Error("Please enter a Sanskrit verse.");
+    let firstHemistichSplit = false;
+    if (this.isMobile) {
+      if (basePadas.length === 2) {
+        const firstSplit = splitHemistichAtCaesura(basePadas[0]);
+        const secondSplit = splitHemistichAtCaesura(basePadas[1]);
+        firstHemistichSplit = firstSplit.length === 2;
+        basePadas = [...firstSplit, ...secondSplit];
+      }
+    } else if (basePadas.length === 4) {
+      basePadas = [`${basePadas[0]} ${basePadas[1]}`, `${basePadas[2]} ${basePadas[3]}`];
+    }
+    const { padas, pieces } = preparePieces(basePadas, noSandhi);
+    if (!pieces.length) throw new Error("Please enter a Sanskrit verse.");
+    const unitLabel = pieces.length > 2 ? "Part" : "Hemistich";
+    const resolvedMeter = !meter || meter === "auto" ? detectMeterKey(text) || "vasantatilaka" : meter;
+    let monoMax = 1;
+    let diMax = 1;
+    for (const x of pieces) {
+      const [mo, di] = repDepths(aksharas(x));
+      if (mo > monoMax) monoMax = mo;
+      if (di > diMax) diMax = di;
+    }
+    const entry = this.getRefEntry(resolvedMeter, monoMax, diMax);
+    const fullRefMel = decodeFp16Buffer(this.bankBin, entry.byte_offset, entry.mel_frames, 100);
+    const refLut = this.isMobile || this.provider === "wasm" ? TAIL_REF_LUT[entry._key] : null;
+    let refMel = fullRefMel;
+    let refMelFrames = entry.mel_frames;
+    let refAudioLen = entry.ref_audio_len;
+    let refLenSec = entry.ref_len_sec;
+    let refTokens = entry.ref_tokens;
+    let sps = entry.sec_per_syll;
+    if (refLut && entry.mel_frames > refLut.frame + 10 && entry.ref_tokens.length > refLut.tok) {
+      refMel = fullRefMel.subarray(refLut.frame * 100);
+      refMelFrames = entry.mel_frames - refLut.frame;
+      refAudioLen = refMelFrames;
+      refLenSec = refMelFrames * HOP / SR;
+      refTokens = entry.ref_tokens.slice(refLut.tok);
+      sps = refLut.sps;
+    }
+    const refHarmonicStd = computeHarmonicCombStd(refMel, refMelFrames);
+    const vmap = this.bankManifest.vocab_char_map;
+    const y0Meta = this.bankManifest.y0_seed60;
+    const t12 = new Float32Array(13);
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 12;
+      t12[i] = u - 1 * (Math.cos(Math.PI / 2 * u) - 1 + u);
+    }
+    const tailThr = 0.035;
+    const effectiveNfe = Math.max(3, nfe || (this.isMobile ? 4 : 7));
+    const getChunkSchedule = (pIdx = 0) => {
+      if (effectiveNfe <= 3 || effectiveNfe === 4 && this.isMobile && pIdx === 0) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[6], 1]),
+          stepModes: ["cfg", "cfg", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 4) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[6], 1]),
+          stepModes: ["cfg", "cfg", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 5) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[6], t12[9], 1]),
+          stepModes: ["cfg", "cfg", "b1", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 6) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[4], t12[7], t12[10], 1]),
+          stepModes: ["cfg", "cfg", "cfg", "cfg", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 7) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[3], t12[5], t12[8], t12[10], 1]),
+          stepModes: ["cfg", "cfg", "cfg", "cfg", "cfg", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 8) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[3], t12[4], t12[6], t12[9], t12[11], 1]),
+          stepModes: ["cfg", "cfg", "cfg", "cfg", "cfg", "cfg", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      if (effectiveNfe === 9) {
+        return {
+          tSteps: new Float32Array([t12[0], t12[1], t12[2], t12[3], t12[4], t12[5], t12[7], t12[9], t12[11], 1]),
+          stepModes: ["cfg", "cfg", "cfg", "cfg", "cfg", "cfg", "b1", "b1", "b1"],
+          chunkCfg: cfg
+        };
+      }
+      const customTSteps = new Float32Array(effectiveNfe + 1);
+      const customModes = [];
+      const minCfgSteps = Math.max(1, Math.floor(effectiveNfe * 0.65));
+      for (let i = 0; i <= effectiveNfe; i++) {
+        const u = i / effectiveNfe;
+        customTSteps[i] = u - 1 * (Math.cos(Math.PI / 2 * u) - 1 + u);
+        if (i < effectiveNfe) {
+          customModes.push(cfg > 1e-5 && (customTSteps[i] <= 0.75 || i < minCfgSteps) ? "cfg" : "b1");
+        }
+      }
+      return { tSteps: customTSteps, stepModes: customModes, chunkCfg: cfg };
+    };
+    const chunkSchedules = pieces.map((_, idx) => getChunkSchedule(idx));
+    const totalSteps = chunkSchedules.reduce((acc, s) => acc + s.stepModes.length, 0);
+    let completedSteps = 0;
+    const gaps = pieces.map((p, idx) => {
+      const isIntraHemistich = pieces.length === 4 && (idx === 0 || idx === 2) || pieces.length === 3 && (firstHemistichSplit ? idx === 0 : idx === 1);
+      const baseGap = isIntraHemistich ? 0.16 : 0.5;
+      return new Float32Array(Math.floor(baseGap * SR) + (endsHalant(p) ? Math.floor(0.2 * SR) : 0));
+    });
+    const slp0 = alignSlp1(padas[0]);
+    const fric = Boolean(slp0) && ["S", "z", "s", "h"].includes(slp0[0]);
+    const halant = endsHalant(pieces[pieces.length - 1]);
+    const streamedParts = [];
+    let streamedTotalLen = 0;
+    const isProxyWasm = Boolean(ort?.env?.wasm?.proxy);
+    const preparePieceState = async (pIdx) => {
+      const piece = pieces[pIdx];
+      const cleanPiece = piece.replace(/;/g, ",").replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+      const rawTokens = [...refTokens];
+      for (const ch of cleanPiece) {
+        rawTokens.push(vmap[ch] !== void 0 ? vmap[ch] : 0);
+      }
+      const nSyll = nAksharas(piece);
+      const speedScale = 0.9 / Math.max(0.3, speed || 0.9);
+      const extraBreathSec = nSyll <= 4 ? 0.14 : 0;
+      const fixD = refLenSec + (nSyll * sps + extraBreathSec) * speedScale;
+      const dur = Math.min(4096, Math.max(rawTokens.length + 1, refAudioLen + 10, Math.floor(fixD * SR / HOP)));
+      const condMelArr = new Float32Array(dur * 100);
+      const copyFrames = Math.min(refMelFrames, dur);
+      condMelArr.set(refMel.subarray(0, copyFrames * 100), 0);
+      const textInArr = new BigInt64Array(dur);
+      const tokLimit = Math.min(rawTokens.length, dur);
+      for (let i = 0; i < tokLimit; i++) {
+        textInArr[i] = BigInt(rawTokens[i] + 1);
+      }
+      const tCondMel = new ort.Tensor("float32", condMelArr, [1, dur, 100]);
+      const tTextIn = new ort.Tensor("int64", textInArr, [1, dur]);
+      const condOut = await this.condSession.run({
+        cond_mel: tCondMel,
+        text_in: tTextIn
+      });
+      safeDisposeTensor(tCondMel);
+      safeDisposeTensor(tTextIn);
+      const useSplitCfg = this.isMobile && dur > 1100;
+      const staticBias2B = new Float32Array(condOut.static_bias.data);
+      const staticBiasCond = staticBias2B.slice(0, dur * 1024);
+      const staticBiasNull = useSplitCfg ? staticBias2B.slice(dur * 1024, 2 * dur * 1024) : null;
+      const sbTensor2B = useSplitCfg || isProxyWasm ? null : new ort.Tensor("float32", staticBias2B, [2, dur, 1024]);
+      const sbTensor1B = isProxyWasm ? null : new ort.Tensor("float32", staticBiasCond, [1, dur, 1024]);
+      const sbTensorNull1B = !useSplitCfg || isProxyWasm ? null : new ort.Tensor("float32", staticBiasNull, [1, dur, 1024]);
+      const rcSlice = new Float32Array(condOut.rope_cos.data.slice(0, dur * 64));
+      const rsSlice = new Float32Array(condOut.rope_sin.data.slice(0, dur * 64));
+      safeDisposeTensor(condOut.static_bias);
+      safeDisposeTensor(condOut.rope_cos);
+      safeDisposeTensor(condOut.rope_sin);
+      const ropeCos = isProxyWasm ? null : new ort.Tensor("float32", rcSlice, [1, dur, 64]);
+      const ropeSin = isProxyWasm ? null : new ort.Tensor("float32", rsSlice, [1, dur, 64]);
+      const x = seed === 60 && y0Meta && dur <= y0Meta.frames ? decodeFp16Buffer(this.bankBin, y0Meta.byte_offset, dur, 100) : randnArray(dur * 100, seed);
+      const xBoth = useSplitCfg ? null : new Float32Array(2 * dur * 100);
+      return {
+        pIdx,
+        dur,
+        useSplitCfg,
+        staticBias2B,
+        staticBiasCond,
+        staticBiasNull,
+        rcSlice,
+        rsSlice,
+        sbTensor2B,
+        sbTensor1B,
+        sbTensorNull1B,
+        ropeCos,
+        ropeSin,
+        x,
+        xBoth,
+        schedule: chunkSchedules[pIdx]
+      };
+    };
+    const disposePieceState = (st) => {
+      safeDisposeTensor(st.sbTensor2B);
+      safeDisposeTensor(st.sbTensor1B);
+      safeDisposeTensor(st.sbTensorNull1B);
+      safeDisposeTensor(st.ropeCos);
+      safeDisposeTensor(st.ropeSin);
+    };
+    const runSingleOdeStep = async (st, s) => {
+      const {
+        dur,
+        useSplitCfg,
+        staticBias2B,
+        staticBiasCond,
+        staticBiasNull,
+        rcSlice,
+        rsSlice,
+        sbTensor2B,
+        sbTensor1B,
+        sbTensorNull1B,
+        ropeCos,
+        ropeSin,
+        x,
+        xBoth,
+        schedule
+      } = st;
+      const { tSteps, stepModes, chunkCfg } = schedule;
+      const activeSteps = stepModes.length;
+      const tCurr = tSteps[s];
+      const dt = tSteps[s + 1] - tCurr;
+      const mode = chunkCfg > 1e-5 ? stepModes[s] : "b1";
+      if (onProgress) {
+        const modeLabel = mode === "cfg" ? "Guided CFG" : "Harmonic Refine";
+        onProgress({
+          stage: "ode",
+          message: `${unitLabel} ${st.pIdx + 1}/${pieces.length}: Step ${s + 1}/${activeSteps} (${modeLabel} \xB7 ${this.provider.toUpperCase()})`,
+          progress: Math.round((completedSteps + 0.5) / totalSteps * 100)
+        });
+      }
+      if (useSplitCfg || this.provider === "wasm" && st.pIdx > 0) {
+        await new Promise((r) => setTimeout(r, 4));
+      }
+      if (mode === "cfg" && !useSplitCfg) {
+        let xBuf;
+        if (isProxyWasm) {
+          xBuf = new Float32Array(2 * dur * 100);
+          xBuf.set(x, 0);
+          xBuf.set(x, dur * 100);
+        } else {
+          xBoth.set(x, 0);
+          xBoth.set(x, dur * 100);
+          xBuf = xBoth;
+        }
+        const tX = new ort.Tensor("float32", xBuf, [2, dur, 100]);
+        const tT = new ort.Tensor("float32", new Float32Array([tCurr, tCurr]), [2]);
+        const tSb = isProxyWasm ? new ort.Tensor("float32", staticBias2B.slice(), [2, dur, 1024]) : sbTensor2B;
+        const tRc = isProxyWasm ? new ort.Tensor("float32", rcSlice.slice(), [1, dur, 64]) : ropeCos;
+        const tRs = isProxyWasm ? new ort.Tensor("float32", rsSlice.slice(), [1, dur, 64]) : ropeSin;
+        const stepOut = await this.stepSession.run({
+          x: tX,
+          static_bias: tSb,
+          t: tT,
+          rope_cos: tRc,
+          rope_sin: tRs
+        });
+        const vData = stepOut.v_out.data;
+        const offset = dur * 100;
+        for (let i = 0; i < offset; i++) {
+          const pred = vData[i];
+          const diff = pred - vData[offset + i];
+          x[i] += (pred + diff * chunkCfg) * dt;
+        }
+        safeDisposeTensor(stepOut.v_out);
+        safeDisposeTensor(tX);
+        safeDisposeTensor(tT);
+        if (isProxyWasm) {
+          safeDisposeTensor(tSb);
+          safeDisposeTensor(tRc);
+          safeDisposeTensor(tRs);
+        }
+      } else if (mode === "cfg" && useSplitCfg) {
+        const tX1 = new ort.Tensor("float32", isProxyWasm ? x.slice() : x, [1, dur, 100]);
+        const tT1 = new ort.Tensor("float32", new Float32Array([tCurr]), [1]);
+        const tSb1 = isProxyWasm ? new ort.Tensor("float32", staticBiasCond.slice(), [1, dur, 1024]) : sbTensor1B;
+        const tRc1 = isProxyWasm ? new ort.Tensor("float32", rcSlice.slice(), [1, dur, 64]) : ropeCos;
+        const tRs1 = isProxyWasm ? new ort.Tensor("float32", rsSlice.slice(), [1, dur, 64]) : ropeSin;
+        const condStep = await this.stepSession.run({
+          x: tX1,
+          static_bias: tSb1,
+          t: tT1,
+          rope_cos: tRc1,
+          rope_sin: tRs1
+        });
+        const vCond = new Float32Array(condStep.v_out.data);
+        safeDisposeTensor(condStep.v_out);
+        safeDisposeTensor(tX1);
+        safeDisposeTensor(tT1);
+        if (isProxyWasm) {
+          safeDisposeTensor(tSb1);
+          safeDisposeTensor(tRc1);
+          safeDisposeTensor(tRs1);
+        }
+        if (st.pIdx > 0) {
+          await new Promise((r) => setTimeout(r, 4));
+        }
+        const tX2 = new ort.Tensor("float32", isProxyWasm ? x.slice() : x, [1, dur, 100]);
+        const tT2 = new ort.Tensor("float32", new Float32Array([tCurr]), [1]);
+        const tSb2 = isProxyWasm ? new ort.Tensor("float32", staticBiasNull.slice(), [1, dur, 1024]) : sbTensorNull1B;
+        const tRc2 = isProxyWasm ? new ort.Tensor("float32", rcSlice.slice(), [1, dur, 64]) : ropeCos;
+        const tRs2 = isProxyWasm ? new ort.Tensor("float32", rsSlice.slice(), [1, dur, 64]) : ropeSin;
+        const nullStep = await this.stepSession.run({
+          x: tX2,
+          static_bias: tSb2,
+          t: tT2,
+          rope_cos: tRc2,
+          rope_sin: tRs2
+        });
+        const vNull = nullStep.v_out.data;
+        const len = dur * 100;
+        for (let i = 0; i < len; i++) {
+          const pred = vCond[i];
+          const diff = pred - vNull[i];
+          x[i] += (pred + diff * chunkCfg) * dt;
+        }
+        safeDisposeTensor(nullStep.v_out);
+        safeDisposeTensor(tX2);
+        safeDisposeTensor(tT2);
+        if (isProxyWasm) {
+          safeDisposeTensor(tSb2);
+          safeDisposeTensor(tRc2);
+          safeDisposeTensor(tRs2);
+        }
+      } else {
+        const tX = new ort.Tensor("float32", isProxyWasm ? x.slice() : x, [1, dur, 100]);
+        const tT = new ort.Tensor("float32", new Float32Array([tCurr]), [1]);
+        const tSb = isProxyWasm ? new ort.Tensor("float32", staticBiasCond.slice(), [1, dur, 1024]) : sbTensor1B;
+        const tRc = isProxyWasm ? new ort.Tensor("float32", rcSlice.slice(), [1, dur, 64]) : ropeCos;
+        const tRs = isProxyWasm ? new ort.Tensor("float32", rsSlice.slice(), [1, dur, 64]) : ropeSin;
+        const stepOut = await this.stepSession.run({
+          x: tX,
+          static_bias: tSb,
+          t: tT,
+          rope_cos: tRc,
+          rope_sin: tRs
+        });
+        const vData = stepOut.v_out.data;
+        for (let i = 0; i < dur * 100; i++) {
+          x[i] += vData[i] * dt;
+        }
+        safeDisposeTensor(stepOut.v_out);
+        safeDisposeTensor(tX);
+        safeDisposeTensor(tT);
+        if (isProxyWasm) {
+          safeDisposeTensor(tSb);
+          safeDisposeTensor(tRc);
+          safeDisposeTensor(tRs);
+        }
+      }
+      completedSteps++;
+    };
+    const runVocosAndGate = async (st) => {
+      const { pIdx, dur, x } = st;
+      const genFrames = dur - refAudioLen;
+      const genSlice = x.subarray(refAudioLen * 100, dur * 100);
+      const curHarmonicStd = computeHarmonicCombStd(genSlice, genFrames);
+      const harmonicBoost = curHarmonicStd > 1e-4 && refHarmonicStd > 1e-4 ? Math.min(1.28, Math.max(1, 1.08 * refHarmonicStd / curHarmonicStd)) : 1;
+      const genMelT = new Float32Array(100 * genFrames);
+      for (let f = 0; f < genFrames; f++) {
+        const srcBase = (refAudioLen + f) * 100;
+        if (harmonicBoost > 1.001) {
+          for (let c = 0; c < 100; c++) {
+            const val = x[srcBase + c];
+            if (c >= 15 && c < 80) {
+              const env = (x[srcBase + c - 2] + x[srcBase + c - 1] + val + x[srcBase + c + 1] + x[srcBase + c + 2]) * 0.2;
+              genMelT[c * genFrames + f] = env + (val - env) * harmonicBoost;
+            } else {
+              genMelT[c * genFrames + f] = val;
+            }
+          }
+        } else {
+          for (let c = 0; c < 100; c++) {
+            genMelT[c * genFrames + f] = x[srcBase + c];
+          }
+        }
+      }
+      const tMel = new ort.Tensor("float32", genMelT, [1, 100, genFrames]);
+      const vocOut = await this.vocosSession.run({
+        mel: tMel
+      });
+      const y = new Float32Array(vocOut.wav.data);
+      safeDisposeTensor(vocOut.wav);
+      safeDisposeTensor(tMel);
+      let activeSumSq = 0;
+      let activeCount = 0;
+      for (let i = 0; i < y.length; i++) {
+        const a = Math.abs(y[i]);
+        if (a > 0.015) {
+          activeSumSq += y[i] * y[i];
+          activeCount++;
+        }
+      }
+      const curRms = activeCount > 200 ? Math.sqrt(activeSumSq / activeCount) : 0;
+      const targetRms = entry.ref_rms || 0.095;
+      const scale = curRms > 1e-4 ? Math.min(2.2, Math.max(0.45, targetRms / curRms)) : entry.ref_rms < entry.target_rms ? entry.ref_rms / entry.target_rms : 1;
+      let maxAbs = 0;
+      for (let i = 0; i < y.length; i++) {
+        y[i] *= scale;
+        const a = Math.abs(y[i]);
+        if (a > maxAbs) maxAbs = a;
+      }
+      if (maxAbs > 1) {
+        const norm = 0.97 / maxAbs;
+        for (let i = 0; i < y.length; i++) {
+          y[i] *= norm;
+        }
+      }
+      const isLast = pIdx === pieces.length - 1;
+      const gatedChunk = gateAudio(y, {
+        fric: fric && pIdx === 0,
+        halant: halant && isLast,
+        tailThr,
+        fin: 0.015,
+        fout: 0.04,
+        keep: 0.06
+      });
+      const gapChunk = !isLast ? gaps[pIdx] : new Float32Array(0);
+      return { pIdx, gatedChunk, gapChunk };
+    };
+    for (let pIdx = 0; pIdx < pieces.length; pIdx++) {
+      if (onProgress) {
+        onProgress({
+          stage: "condition",
+          message: `${unitLabel} ${pIdx + 1}/${pieces.length}: Preparing Prosodic Conditioning...`,
+          progress: Math.round(completedSteps / totalSteps * 100)
+        });
+      }
+      if (pIdx > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 6));
+      }
+      const currState = await preparePieceState(pIdx);
+      const chunkSteps = currState.schedule.stepModes.length;
+      for (let s = 0; s < chunkSteps; s++) {
+        await runSingleOdeStep(currState, s);
+        if (pIdx > 0 || this.isMobile || this.provider === "wasm") {
+          await new Promise((resolve) => setTimeout(resolve, pIdx === 0 ? 2 : 8));
+        }
+      }
+      const { gatedChunk, gapChunk } = await runVocosAndGate(currState);
+      disposePieceState(currState);
+      streamedParts.push(gatedChunk);
+      streamedTotalLen += gatedChunk.length;
+      if (gapChunk.length > 0) {
+        streamedParts.push(gapChunk);
+        streamedTotalLen += gapChunk.length;
+      }
+      if (onChunk) {
+        const soFar = new Float32Array(streamedTotalLen);
+        let pos2 = 0;
+        for (const p of streamedParts) {
+          soFar.set(p, pos2);
+          pos2 += p.length;
+        }
+        await onChunk({
+          chunkIndex: pIdx,
+          totalChunks: pieces.length,
+          gatedSamples: gatedChunk,
+          gapSamples: gapChunk,
+          samplesSoFar: soFar,
+          sampleRate: SR,
+          meter: resolvedMeter
+        });
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+    const finalSamples = new Float32Array(streamedTotalLen);
+    let pos = 0;
+    for (const p of streamedParts) {
+      finalSamples.set(p, pos);
+      pos += p.length;
+    }
+    const wavBuffer = encodeWavBuffer(finalSamples, SR);
+    const wavBlob = typeof Blob !== "undefined" ? new Blob([wavBuffer], { type: "audio/wav" }) : null;
+    const url = wavBlob && typeof URL !== "undefined" && URL.createObjectURL ? URL.createObjectURL(wavBlob) : null;
     return {
-      ...prepared,
-      tokenIds: prepared.tokenIds,
-      meter,
-      scansion: scan,
+      wav: wavBuffer,
+      audio: finalSamples,
+      blob: wavBlob,
+      url,
+      durationSec: finalSamples.length / SR,
+      sampleRate: SR,
+      sampling_rate: SR,
+      meter: resolvedMeter,
       pieces
     };
   }
+};
 
-  _getTemplate(meter) {
-    return resolveBankTemplate(this._bank, this._bankBytes, meter);
+// index.js
+var toDevanagari = toDeva;
+var devanagariToSlp1 = devaToSlp1;
+async function sanskritTts(sourceOrOptions = null, maybeOptions = {}) {
+  let baseUrl = null;
+  let defaultOptions = {};
+  if (typeof sourceOrOptions === "string") {
+    defaultOptions = maybeOptions || {};
+    if (sourceOrOptions === "wasm" || sourceOrOptions === "onnx") {
+      defaultOptions = { ...defaultOptions, backend: sourceOrOptions };
+    } else {
+      baseUrl = sourceOrOptions;
+    }
+  } else if (sourceOrOptions && typeof sourceOrOptions === "object") {
+    defaultOptions = sourceOrOptions;
+    baseUrl = defaultOptions.baseUrl || defaultOptions.modelId || null;
   }
-
-  _conditionerFeeds(meta, context, tokenIds, template) {
-    const feeds = {};
-    const missing = [];
-
-    for (const input of metadataFor(this._sessions.conditioner, 'input')) {
-      const role = roleFor(input.name);
-
-      if (role === 'tokens') {
-        const shape = resolvedShape(input, {
-          ...context,
-          tokenCount: tokenIds.length
-        });
-
-        const values = new Array(product(shape));
-
-        for (let i = 0; i < values.length; i += 1) {
-          values[i] = tokenIds[Math.min(i, tokenIds.length - 1)];
-        }
-
-        feeds[input.name] = makeTensor(this._ort, input, values, shape);
-      } else if (role === 'positions') {
-        const shape = resolvedShape(input, {
-          ...context,
-          tokenCount: tokenIds.length
-        });
-
-        feeds[input.name] = makeTensor(
-          this._ort,
-          input,
-          Array.from({ length: product(shape) }, (_, i) => i),
-          shape
-        );
-      } else if (role === 'length') {
-        feeds[input.name] = scalarForMeta(
-          this._ort,
-          input,
-          tokenIds.length,
-          context
-        );
-      } else if (role === 'mask') {
-        feeds[input.name] = onesForMeta(
-          this._ort,
-          input,
-          { ...context, tokenCount: tokenIds.length },
-          1
-        );
-      } else if (role === 'reference') {
-        feeds[input.name] = templateTensorForMeta(
-          this._ort,
-          input,
-          template,
-          context
-        );
-      } else {
-        // Some export graphs call token IDs
-        // For graphs where the name is generic, the integer tensor is likely
-        // the token sequence, while rank-3 float tensors are reference features.
-        if (
-          /int|uint|long|bool/i.test(String(input.type || '')) &&
-          shapeOf(input).length >= 1
-        ) {
-          const shape = resolvedShape(input, {
-            ...context,
-            tokenCount: tokenIds.length
-          });
-
-          const values = Array.from(
-            { length: product(shape) },
-            (_, i) => tokenIds[Math.min(i, tokenIds.length - 1)]
-          );
-
-          feeds[input.name] = makeTensor(this._ort, input, values, shape);
-        } else if (
-          shapeOf(input).length >= 3 &&
-          /float/i.test(String(input.type || ''))
-        ) {
-          feeds[input.name] = templateTensorForMeta(
-            this._ort,
-            input,
-            template,
-            context
-          );
-        } else if (/speed|pace/i.test(input.name)) {
-          feeds[input.name] = scalarForMeta(
-            this._ort,
-            input,
-            context.speed || 0.9,
-            context
-          );
-        } else {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape: shapeOf(input),
-            role
-          });
-        }
-      }
+  const backend = defaultOptions.backend === "onnx" ? "onnx" : "wasm";
+  const engine = new VagdhenuWebEngine(baseUrl, backend);
+  const listeners = {
+    chunk: /* @__PURE__ */ new Set(),
+    progress: /* @__PURE__ */ new Set(),
+    status: /* @__PURE__ */ new Set()
+  };
+  function emit(event, payload) {
+    const set = listeners[event];
+    if (!set) return;
+    for (const fn of set) {
+      fn(payload);
     }
-
-    if (missing.length) {
-      throwCoded(
-        'Conditioner graph के कुछ inputs अर्थपूर्ण रूप से map नहीं हो सके; कोई मनगढ़ंत tensor नहीं दिया गया।',
-        'CONDITIONER_INPUT_CONTRACT_UNKNOWN',
-        {
-          missing,
-          available: metadataFor(this._sessions.conditioner, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          }))
-        }
-      );
-    }
-
-    return feeds;
   }
-
-  _pickLatentInput() {
-    const inputs = metadataFor(this._sessions.dit, 'input');
-
-    const ranked = inputs
-      .map(meta => ({
-        meta,
-        role: roleFor(meta.name),
-        rank: shapeOf(meta).length
-      }))
-      .filter(item =>
-        item.rank >= 2 &&
-        /float/i.test(String(item.meta.type || 'float32'))
-      );
-
-    return (
-      ranked.find(item => item.role === 'latent')?.meta ||
-      ranked.find(item =>
-        /^(x|sample|noise|latents?)$/i.test(item.meta.name)
-      )?.meta ||
-      ranked[0]?.meta ||
-      null
-    );
+  const handleProgress = (statusObj) => {
+    if (typeof defaultOptions.onProgress === "function") {
+      defaultOptions.onProgress(statusObj);
+    }
+    emit("progress", statusObj);
+    emit("status", statusObj);
+  };
+  if (!defaultOptions.lazy) {
+    await engine.initOnnxSessions(handleProgress);
   }
-
-  _conditionTensorFor(
-    inputMeta,
-    conditionerOutputs,
-    context,
-    { unconditional = false } = {}
-  ) {
-    const shape = resolvedShape(inputMeta, context);
-    const exact = conditionerOutputs?.[inputMeta.name];
-
-    let source = exact;
-
-    if (!source) source = bestOutputTensor(conditionerOutputs, inputMeta);
-
-    if (unconditional) {
-      const size = product(shape);
-      return makeTensor(this._ort, inputMeta, new Array(size).fill(0), shape);
-    }
-
-    if (source) {
-      const copied = copyTensorWithShape(this._ort, source, inputMeta, shape);
-      if (copied) return copied;
-    }
-
-    return null;
-  }
-
-  _ditFeeds(
-    latentMeta,
-    latentTensor,
-    t,
-    conditionerOutputs,
-    context,
-    { unconditional = false } = {}
-  ) {
-    const feeds = {};
-    const missing = [];
-
-    for (const input of metadataFor(this._sessions.dit, 'input')) {
-      const role = roleFor(input.name);
-      const name = String(input.name || '').toLowerCase();
-
-      if (
-        input.name === latentMeta.name ||
-        role === 'latent' ||
-        /^(x|sample|noise|latents?)$/i.test(name)
-      ) {
-        const shape = resolvedShape(input, {
-          ...context,
-          latentShape: latentTensor.dims,
-          frames: latentTensor.dims.at(-1) || context.frames
-        });
-
-        const tensor = copyTensorWithShape(
-          this._ort,
-          latentTensor,
-          input,
-          shape
-        );
-
-        if (!tensor) {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape,
-            role,
-            reason: 'latent shape/type mismatch'
-          });
-        } else {
-          feeds[input.name] = tensor;
-        }
-      } else if (role === 'time') {
-        feeds[input.name] = scalarForMeta(this._ort, input, t, context);
-      } else if (role === 'length') {
-        feeds[input.name] = scalarForMeta(
-          this._ort,
-          input,
-          latentTensor.dims.at(-1) || context.frames,
-          context
-        );
-      } else if (role === 'mask') {
-        const cond = unconditional
-          ? null
-          : this._conditionTensorFor(input, conditionerOutputs, context);
-
-        feeds[input.name] = cond || onesForMeta(this._ort, input, context, 1);
-      } else if (role === 'condition' || role === 'reference') {
-        const tensor = this._conditionTensorFor(
-          input,
-          conditionerOutputs,
-          context,
-          { unconditional }
-        );
-
-        if (!tensor) {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape: shapeOf(input),
-            role,
-            reason: 'no compatible conditioner output'
-          });
-        } else {
-          feeds[input.name] = tensor;
-        }
-      } else {
-        const sameName = conditionerOutputs?.[input.name];
-
-        const tensor = sameName
-          ? copyTensorWithShape(
-              this._ort,
-              sameName,
-              input,
-              resolvedShape(input, context)
-            )
-          : null;
-
-        if (tensor) {
-          feeds[input.name] = tensor;
-        } else {
-          missing.push({
-            name: input.name,
-            type: input.type,
-            shape: shapeOf(input),
-            role,
-            reason: 'input name is not mapped to a known semantic role'
-          });
-        }
-      }
-    }
-
-    if (missing.length) {
-      throwCoded(
-        'DiT graph के वास्तविक inputs उपलब्ध metadata से सुरक्षित रूप से map नहीं हो सके।',
-        'DIT_INPUT_CONTRACT_UNKNOWN',
-        {
-          missing,
-          inputs: metadataFor(this._sessions.dit, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          })),
-          conditionerOutputs: Object.keys(conditionerOutputs || {})
-        }
-      );
-    }
-
-    return feeds;
-  }
-
-  _chooseVelocity(outputs, latentTensor) {
-    const entries = Object.entries(outputs || {}).filter(
-      ([, tensor]) => tensor?.data && ArrayBuffer.isView(tensor.data)
-    );
-
-    if (!entries.length) {
-      throwCoded('DiT ने कोई typed tensor output नहीं लौटाया।', 'DIT_OUTPUT_MISSING');
-    }
-
-    const named = entries.find(([name]) =>
-      /velocity|flow|v_pred|model_output|noise_pred|predicted_noise|sample|latent|out/i.test(name)
-    );
-
-    const candidates = entries.filter(
-      ([, tensor]) => tensor.data.length === latentTensor.data.length
-    );
-
-    const picked =
-      (named && named[1].data.length === latentTensor.data.length ? named : null) ||
-      candidates.sort((a, b) => b[1].data.length - a[1].data.length)[0];
-
-    if (!picked) {
-      throwCoded(
-        'DiT output का आकार latent से मेल नहीं खाता; flow update असुरक्षित होगा।',
-        'DIT_OUTPUT_SHAPE_MISMATCH',
-        {
-          latentDims: latentTensor.dims,
-          latentLength: latentTensor.data.length,
-          outputs: entries.map(([name, tensor]) => ({
-            name,
-            dims: tensor.dims,
-            length: tensor.data.length
-          }))
-        }
-      );
-    }
-
-    return {
-      name: picked[0],
-      tensor: picked[1],
-      values: Float32Array.from(picked[1].data, Number)
-    };
-  }
-
-  _makeInitialNoise(meta, context, seed) {
-    const shape = resolvedShape(meta, context);
-    const count = product(shape);
-    const random = deterministicRandom(seed);
-    const values = new Float32Array(count);
-
-    // Gaussian noise via Box–Muller, generated locally and deterministically.
-    for (let i = 0; i < count; i += 2) {
-      const u1 = Math.max(random(), 1e-7);
-      const u2 = random();
-      const radius = Math.sqrt(-2 * Math.log(u1));
-
-      values[i] = radius * Math.cos(2 * Math.PI * u2);
-
-      if (i + 1 < count) {
-        values[i + 1] = radius * Math.sin(2 * Math.PI * u2);
-      }
-    }
-
-    return makeTensor(this._ort, meta, values, shape);
-  }
-
-  async _runConditioner(
-    context,
-    tokenIds,
-    template,
-    progressCallback,
-    index,
-    total
-  ) {
-    const session = this._sessions.conditioner;
-    const feeds = this._conditionerFeeds(null, context, tokenIds, template);
-
-    emit(progressCallback, {
-      stage: 'conditioner',
-      progress: 0.48 + 0.08 * (index / total),
-      message: `खंड ${index + 1}/${total}: text/prosody conditioning चल रहा है।`
-    });
-
-    let outputs;
-
-    try {
-      outputs = await session.run(feeds);
-    } catch (error) {
-      throwCoded(
-        `Conditioner inference विफल: ${messageOf(error)}`,
-        'CONDITIONER_INFERENCE_FAILED',
-        { inputs: Object.keys(feeds) },
-        error
-      );
-    }
-
-    if (!outputs || !Object.keys(outputs).length) {
-      throwCoded('Conditioner ने कोई output नहीं लौटाया।', 'CONDITIONER_OUTPUT_EMPTY');
-    }
-
-    return outputs;
-  }
-
-  async _runDiffusion(
-    context,
-    conditionerOutputs,
-    progressCallback,
-    segmentIndex,
-    segmentCount
-  ) {
-    const session = this._sessions.dit;
-    const latentMeta = this._pickLatentInput();
-
-    if (!latentMeta) {
-      throwCoded(
-        'DiT graph में पहचानने योग्य floating-point latent input नहीं मिला।',
-        'DIT_LATENT_INPUT_MISSING',
-        {
-          inputs: metadataFor(session, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          }))
-        }
-      );
-    }
-
-    const latentShape = resolvedShape(latentMeta, context);
-
-    const latentInput = this._makeInitialNoise(
-      latentMeta,
-      { ...context, latentShape },
-      context.seed + segmentIndex * 104729
-    );
-
-    let latent = latentInput;
-
-    const metaNames = metadataFor(session, 'input').map(item => item.name);
-
-    const hasConditionInput = metadataFor(session, 'input').some(item =>
-      ['condition', 'reference'].includes(roleFor(item.name))
-    );
-
-    const useGuidance = context.cfg > 0 && hasConditionInput;
-
-    const flowTimes = Array.from(
-      { length: context.nfe + 1 },
-      (_, index) => {
-        const base = index / context.nfe;
-
-        // Sway sampling used by flow-matching TTS systems: retain endpoints while
-        // allocating more integration resolution to the curved portions of time.
-        const shifted =
-          base +
-          context.swaySamplingCoef *
-            (Math.cos(Math.PI * base / 2) - 1 + base);
-
-        return Math.min(1, Math.max(0, shifted));
-      }
-    );
-
-    for (let step = 0; step < context.nfe; step += 1) {
-      const t = flowTimes[step];
-
-      const conditionalFeeds = this._ditFeeds(
-        latentMeta,
-        latent,
-        t,
-        conditionerOutputs,
-        {
-          ...context,
-          latentShape,
-          frames: latent.dims.at(-1) || context.frames
-        }
-      );
-
-      let conditional;
-
-      try {
-        conditional = this._chooseVelocity(
-          await session.run(conditionalFeeds),
-          latent
-        );
-      } catch (error) {
-        if (error?.code) throw error;
-
-        throwCoded(
-          `DiT flow-step ${step + 1}/${context.nfe} विफल: ${messageOf(error)}`,
-          'DIT_INFERENCE_FAILED',
-          {
-            step: step + 1,
-            nfe: context.nfe,
-            inputNames: metaNames
-          },
-          error
-        );
-      }
-
-      let velocity = conditional.values;
-
-      if (useGuidance) {
-        const unconditionalFeeds = this._ditFeeds(
-          latentMeta,
-          latent,
-          t,
-          conditionerOutputs,
-          {
-            ...context,
-            latentShape,
-            frames: latent.dims.at(-1) || context.frames
-          },
-          { unconditional: true }
-        );
-
-        let unconditional;
-
-        try {
-          unconditional = this._chooseVelocity(
-            await session.run(unconditionalFeeds),
-            latent
-          );
-        } catch (error) {
-          throwCoded(
-            `Classifier-free guidance का unconditioned pass विफल: ${messageOf(error)}`,
-            'DIT_GUIDANCE_FAILED',
-            { step: step + 1 },
-            error
-          );
-        }
-
-        const guided = new Float32Array(velocity.length);
-
-        for (let i = 0; i < guided.length; i += 1) {
-          guided[i] =
-            unconditional.values[i] +
-            context.cfg * (conditional.values[i] - unconditional.values[i]);
-        }
-
-        velocity = guided;
-      }
-
-      const nextData = new Float32Array(latent.data.length);
-      const dt = Math.max(0, flowTimes[step + 1] - flowTimes[step]);
-
-      for (let i = 0; i < nextData.length; i += 1) {
-        nextData[i] = Number(latent.data[i]) + velocity[i] * dt;
-      }
-
-      latent = new this._ort.Tensor(
-        'float32',
-        nextData,
-        [...latent.dims]
-      );
-
-      emit(progressCallback, {
-        stage: 'flow-matching',
-        progress:
-          0.56 +
-          0.28 *
-            ((segmentIndex + (step + 1) / context.nfe) / segmentCount),
-        segment: segmentIndex + 1,
-        segmentCount,
-        step: step + 1,
-        nfe: context.nfe,
-        message: `Flow-matching ${step + 1}/${context.nfe} · खंड ${segmentIndex + 1}/${segmentCount}`
-      });
-    }
-
-    return latent;
-  }
-
-  _vocoderFeeds(melTensor, context) {
-    const feeds = {};
-    const missing = [];
-
-    for (const input of metadataFor(this._sessions.vocoder, 'input')) {
-      const role = roleFor(input.name);
-
-      if (
-        role === 'latent' ||
-        role === 'reference' ||
-        /^(mel|spec|spectrogram|features|x)$/i.test(input.name)
-      ) {
-        const shape = resolvedShape(input, {
-          ...context,
-          latentShape: melTensor.dims,
-          frames: melTensor.dims.at(-1) || context.frames
-        });
-
-        const tensor = copyTensorWithShape(
-          this._ort,
-          melTensor,
-          input,
-          shape
-        );
-
-        if (tensor) {
-          feeds[input.name] = tensor;
-        } else {
-          missing.push({
-            name: input.name,
-            role,
-            shape,
-            reason: 'final mel shape mismatch'
-          });
-        }
-      } else if (role === 'length') {
-        feeds[input.name] = scalarForMeta(
-          this._ort,
-          input,
-          melTensor.dims.at(-1) || context.frames,
-          context
-        );
-      } else if (role === 'mask') {
-        feeds[input.name] = onesForMeta(this._ort, input, context, 1);
-      } else {
-        missing.push({
-          name: input.name,
-          type: input.type,
-          shape: shapeOf(input),
-          role
-        });
-      }
-    }
-
-    if (missing.length) {
-      throwCoded(
-        'Vocos graph के inputs अंतिम mel tensor से मेल नहीं खाते।',
-        'VOCODER_INPUT_CONTRACT_UNKNOWN',
-        {
-          missing,
-          inputs: metadataFor(this._sessions.vocoder, 'input').map(item => ({
-            name: item.name,
-            type: item.type,
-            shape: shapeOf(item)
-          }))
-        }
-      );
-    }
-
-    return feeds;
-  }
-
-  async _runVocoder(melTensor, context, progressCallback, index, total) {
-    emit(progressCallback, {
-      stage: 'vocoder',
-      progress: 0.86 + 0.04 * (index / total),
-      message: `खंड ${index + 1}/${total}: 24 kHz waveform बन रहा है।`
-    });
-
-    let outputs;
-
-    try {
-      outputs = await this._sessions.vocoder.run(
-        this._vocoderFeeds(melTensor, context)
-      );
-    } catch (error) {
-      throwCoded(
-        `Vocos vocoder inference विफल: ${messageOf(error)}`,
-        'VOCODER_INFERENCE_FAILED',
-        undefined,
-        error
-      );
-    }
-
-    return extractAudioTensor(outputs);
-  }
-
-  _splitForSynthesis(text, meter) {
-    let padas = [];
-
-    try {
-      padas = TextModule.splitPadas?.(text) || [];
-    } catch {
-      /* use one segment */
-    }
-
-    padas = padas
-      .map(item => String(item).trim())
-      .filter(Boolean);
-
-    // A traditional four-pāda verse is synthesized as two hemistichs. For an
-    // unknown/short form, keep the entire user passage together to avoid
-    // forcing a meter or silently deleting any text.
-    if (padas.length >= 4) {
-      const first = padas.slice(0, 2).join(' । ');
-      const second = padas.slice(2, 4).join(' । ');
-      const extra = padas.slice(4);
-
-      return [
-        first,
-        second,
-        ...(extra.length ? [extra.join(' । ')] : [])
-      ].filter(Boolean);
-    }
-
-    return [text];
-  }
-
-  async synthesizeInBrowser(text, options = {}, progressCallback = null) {
-    this._assertActive();
-
-    const source = Array.isArray(text)
-      ? text.map(String).join('\n')
-      : String(text ?? '');
-
-    const opts = normalizeOptions(options);
-
-    if (!this._sessions) {
-      await this.initOnnxSessions(progressCallback);
-    }
-
-    const startedAt = performance.now();
-
-    const normalized =
-      TextModule.prepareTtsTextWithoutMutation?.(source) ?? source.trim();
-
-    if (!normalized) {
-      throwCoded('पाठ खाली है।', 'EMPTY_TEXT');
-    }
-
-    if (normalized.length > MAX_TEXT_CHARS) {
-      throwCoded(
-        `पाठ ${MAX_TEXT_CHARS} characters से अधिक है।`,
-        'TEXT_TOO_LONG'
-      );
-    }
-
-    const language = normalizeTextLanguage(opts.language, normalized);
-    const scan = TextModule.analyzeVerse?.(normalized) ?? null;
-
-    let meter = opts.meter;
-
-    if (!meter || meter === 'auto') {
-      const meterValue =
-        scan?.meter?.key ??
-        scan?.meter?.name ??
-        scan?.meter ??
-        scan?.chandas;
-
-      const detected = TextModule.detectMeterKey?.(meterValue);
-      meter = detected || 'anustubh';
-    }
-
-    const segments = this._splitForSynthesis(normalized, meter);
-
-    if (!segments.length) {
-      throwCoded(
-        'पाठ को गायन खंडों में विभाजित नहीं किया जा सका।',
-        'TEXT_SEGMENTATION_FAILED'
-      );
-    }
-
-    const template = this._getTemplate(meter);
-    const segmentsPcm = [];
-    const stageEvidence = [];
-
-    for (let index = 0; index < segments.length; index += 1) {
-      const segment = segments[index];
-
-      const preparedSegment = prepareLanguageInput(
-        segment,
-        language,
-        this._vocabulary.tokenToId
-      );
-
-      const tokenIds = preparedSegment.tokenIds;
-
-      const frames = Math.max(
-        64,
-        Math.min(4096, Math.ceil(tokenIds.length * 8 / opts.speed))
-      );
-
-      const context = {
-        meter,
-        nfe: opts.nfe,
-        cfg: opts.cfg,
-        speed: opts.speed,
-        seed: opts.seed + index,
-        swaySamplingCoef: opts.swaySamplingCoef,
-        tokenCount: tokenIds.length,
-        frames,
-        melChannels: MEL_CHANNELS,
-        noSandhi: opts.noSandhi
-      };
-
-      const conditionerOutputs = await this._runConditioner(
-        context,
-        tokenIds,
-        template,
-        progressCallback,
-        index,
-        segments.length
-      );
-
-      const finalMel = await this._runDiffusion(
-        context,
-        conditionerOutputs,
-        progressCallback,
-        index,
-        segments.length
-      );
-
-      const audioResult = await this._runVocoder(
-        finalMel,
-        context,
-        progressCallback,
-        index,
-        segments.length
-      );
-
-      if (!audioResult.samples.length) {
-        throwCoded(
-          `खंड ${index + 1} का waveform खाली है।`,
-          'EMPTY_SEGMENT_AUDIO'
-        );
-      }
-
-      segmentsPcm.push(audioResult.samples);
-
-      stageEvidence.push({
-        segment: index + 1,
-        language,
-        inputRepresentation: preparedSegment.inputRepresentation,
-        tokenCount: tokenIds.length,
-        melDims: [...finalMel.dims],
-        vocoderOutputName: audioResult.name,
-        audioSamples: audioResult.samples.length,
-        peak: Math.max(
-          ...audioResult.samples
-            .slice(0, Math.min(8192, audioResult.samples.length))
-            .map(value => Math.abs(Number(value) || 0))
-        )
-      });
-    }
-
-    const silenceFrames =
-      segmentsPcm.length > 1
-        ? Math.round(VAGDHENU_SAMPLE_RATE * 0.12)
-        : 0;
-
-    const totalSamples =
-      segmentsPcm.reduce((sum, samples) => sum + samples.length, 0) +
-      silenceFrames * Math.max(0, segmentsPcm.length - 1);
-
-    if (totalSamples > MAX_AUDIO_SAMPLES) {
-      throwCoded(
-        'संयुक्त ऑडियो 180 सेकंड से अधिक है। कृपया पाठ को छोटे भागों में दें।',
-        'AUDIO_TOO_LONG',
-        { totalSamples }
-      );
-    }
-
-    const pcm = new Float32Array(totalSamples);
-    let position = 0;
-
-    segmentsPcm.forEach((samples, index) => {
-      pcm.set(samples, position);
-      position += samples.length;
-
-      if (index !== segmentsPcm.length - 1 && silenceFrames) {
-        position += silenceFrames;
-      }
-    });
-
-    const wav = createWavBlob(pcm, VAGDHENU_SAMPLE_RATE);
-    const url = URL.createObjectURL(wav.blob);
-
-    this._urls.add(url);
-
-    const elapsedMs = Math.round(performance.now() - startedAt);
-
-    this._lastInference = Object.freeze({
-      at: new Date().toISOString(),
-      elapsedMs,
-      backend: this.backendMode,
-      provider: this.provider,
-      language,
-      modelStagesCompleted:
-        ['conditioner', 'dit-flow-matching', 'vocos'].every(
-          stage => stageEvidence.length > 0
-        ),
-      segments: stageEvidence,
-      sampleRate: VAGDHENU_SAMPLE_RATE,
-      samples: pcm.length,
-      durationSeconds: Number(
-        (pcm.length / VAGDHENU_SAMPLE_RATE).toFixed(3)
-      ),
-      peak: wav.peak,
-      rms: wav.rms,
-      note: 'Model graph outputs were processed into a WAV container. Listening/phoneme quality and offline mode require device-level verification.'
-    });
-
-    this._lastError = null;
-    this.provider = this.provider || (
-      this.backendMode === 'wasm' ? 'wasm' : 'webgpu'
-    );
-
-    emit(progressCallback, {
-      stage: 'complete',
-      progress: 1,
-      message: `मॉडल inference ने ${this._lastInference.durationSeconds}s ऑडियो बनाया। इसे सुनकर उच्चारण और गुणवत्ता जाँचें।`,
-      elapsedMs,
-      durationSeconds: this._lastInference.durationSeconds
-    });
-
-    return {
-      url,
-      audioUrl: url,
-      blob: wav.blob,
-      wav: wav.blob,
-      pcm,
-      sampleRate: VAGDHENU_SAMPLE_RATE,
-      metadata: {
-        engine: VAGDHENU_ENGINE_VERSION,
-        backend: this.backendMode,
-        provider: this.provider,
-        meter,
-        language,
-        originalText: normalized,
-        modelInputText: segments
-          .map(segment =>
-            prepareLanguageInput(
-              segment,
-              language,
-              this._vocabulary.tokenToId
-            ).modelInputText
-          )
-          .join('\n'),
-        inputRepresentations: [
-          ...new Set(stageEvidence.map(item => item.inputRepresentation))
-        ],
-        elapsedMs,
-        durationSeconds: this._lastInference.durationSeconds,
-        modelStages: ['conditioner', 'dit-flow-matching', 'vocos'],
-        segmentCount: segments.length,
-        verifiedOffline: false
-      },
-      evidence: this._lastInference
-    };
-  }
-
-  async _releaseSessions() {
-    if (this._sessions) {
-      await Promise.all(
-        Object.values(this._sessions).map(session => {
-          try {
-            return session?.release?.().catch(() => {});
-          } catch {
-            return Promise.resolve();
+  async function chant(text, options = {}) {
+    const merged = { ...defaultOptions, ...options };
+    const scansion = analyzeVerse(text);
+    const userOnChunk = merged.onChunk;
+    const res = await engine.synthesizeInBrowser(
+      text,
+      {
+        meter: merged.meter || scansion.meter?.name || "auto",
+        noSandhi: Boolean(merged.noSandhi),
+        nfe: merged.nfe ?? null,
+        cfg: merged.cfg ?? 3,
+        speed: merged.speed ?? 0.9,
+        seed: merged.seed ?? 60,
+        onChunk: async (chunk) => {
+          const enriched = {
+            ...chunk,
+            samples: chunk.gatedSamples
+          };
+          emit("chunk", enriched);
+          if (typeof userOnChunk === "function") {
+            await userOnChunk(enriched);
           }
-        })
-      );
-    }
-
-    this._sessions = null;
-    this._initPromise = null;
-    this.isWarmedUp = false;
-  }
-
-  async dispose() {
-    if (this._disposed) return;
-
-    await this._releaseSessions();
-
-    for (const url of this._urls) {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {
-        /* release best-effort */
+        }
+      },
+      merged.onProgress || handleProgress
+    );
+    return {
+      ...res,
+      scansion,
+      play() {
+        if (typeof Audio !== "undefined" && res.url) {
+          const audioEl = new Audio(res.url);
+          audioEl.play();
+          return audioEl;
+        }
+        return null;
       }
-    }
-
-    this._urls.clear();
-    this._bank = null;
-    this._bankBytes = null;
-    this._vocabulary = null;
-    this._bankSource = null;
-    this._ort = null;
-    this._disposed = true;
+    };
   }
+  function stream(text, options = {}) {
+    const queue = [];
+    let resolveNext = null;
+    let done = false;
+    let error = null;
+    const runPromise = chant(text, {
+      ...options,
+      onChunk: async (chunk) => {
+        if (typeof options.onChunk === "function") {
+          await options.onChunk(chunk);
+        }
+        if (resolveNext) {
+          const r = resolveNext;
+          resolveNext = null;
+          r({ value: chunk, done: false });
+        } else {
+          queue.push(chunk);
+        }
+      }
+    }).then(
+      (finalResult) => {
+        done = true;
+        if (resolveNext) {
+          const r = resolveNext;
+          resolveNext = null;
+          r({ value: void 0, done: true });
+        }
+        return finalResult;
+      },
+      (err) => {
+        error = err;
+        done = true;
+        if (resolveNext) {
+          const r = resolveNext;
+          resolveNext = null;
+          r(Promise.reject(err));
+        }
+        throw err;
+      }
+    );
+    return {
+      result: runPromise,
+      then: runPromise.then.bind(runPromise),
+      catch: runPromise.catch.bind(runPromise),
+      finally: runPromise.finally.bind(runPromise),
+      [Symbol.asyncIterator]() {
+        return {
+          next() {
+            if (queue.length > 0) {
+              return Promise.resolve({ value: queue.shift(), done: false });
+            }
+            if (error) {
+              return Promise.reject(error);
+            }
+            if (done) {
+              return Promise.resolve({ value: void 0, done: true });
+            }
+            return new Promise((resolve) => {
+              resolveNext = resolve;
+            });
+          }
+        };
+      }
+    };
+  }
+  const voice = Object.assign(
+    (text, options) => chant(text, options),
+    {
+      chant,
+      speak: chant,
+      stream,
+      setBackend: (mode) => engine.setBackendMode(mode),
+      scan: (text) => analyzeVerse(text),
+      on(event, fn) {
+        if (!listeners[event]) listeners[event] = /* @__PURE__ */ new Set();
+        listeners[event].add(fn);
+        return voice;
+      },
+      off(event, fn) {
+        listeners[event]?.delete(fn);
+        return voice;
+      },
+      engine
+    }
+  );
+  return voice;
 }
-
-export default VagdhenuWebEngine;
+var index_default = sanskritTts;
+export {
+  METERS,
+  VagdhenuWebEngine,
+  aksharas,
+  alignSlp1,
+  analyzeVerse,
+  decodeFp16Buffer,
+  index_default as default,
+  detectMeter,
+  detectMeterKey,
+  detectScript,
+  devaToSlp1,
+  devanagariToSlp1,
+  encodeWavBlob,
+  encodeWavBuffer,
+  endsHalant,
+  gateAudio,
+  isMobileDevice,
+  nAksharas,
+  preparePieces,
+  repDepths,
+  resolveModelBaseUrl,
+  resolveOrt,
+  sanskritTts,
+  slp1ToKannada,
+  stitchSegments,
+  toDeva,
+  toDevanagari
+};
